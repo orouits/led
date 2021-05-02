@@ -1,0 +1,94 @@
+libc/glibc => libmusl (alpine)
+libpcre2
+
+
+
+
+# led CLI
+
+# CLI format 
+led [-rfFzvs] <command> [<file> ...]
+cat <file> | led [-zvs] <command>
+find <filenames> | led [-fFzvs] <command>
+
+# return
+0 if change done
+255 if nothing changed
+
+-r recurse
+-f STDIN=filenames 
+-i infile changes, STDIN=filenames, STDOUT=filenames, 
+-I infile changes, STDIN=filenames, STDOUT=changed filenames
+-z end of line is 0
+-v verbose to STDERR
+-s summary to STDERR
+
+# commands
+command delimiter can be [/#:], defined by first delimiter.
+
+# List
+led l/<n>[:<c>]/[n]
+led l # all lines
+n=not
+n=from line (0 is first) 
+c=line count
+
+# Match 
+led m/<regex>/[n]
+led m # all non blanck
+n=not
+
+# Substitute
+led s/<regex>/<replace>/[gm]
+g=global
+m=output only matching lines 
+
+# eXecute
+led x/<regex>/<execute>/<replace>/[ge]
+led x # execute all non blanck / non #comment
+g=global
+e=stop on error
+\1O is execute output in replace string.
+
+# Extract
+led 'e/<n>[:<c>]/' # extract from n
+led e # extract all
+
+# Translate
+led t/<chars>/<chars>/
+
+# Revert
+led r # revert
+
+# Case
+led c # lowercase
+led C # uppercase 
+
+# Quote
+led q/s # quote ' if not
+led q/d # quote " if not
+led q # unquote if quoted
+
+# trIm
+led i/l # ltrim
+led i/r # rtrim
+led i # rtrim
+
+# sPlit
+led p/<regex>/
+led p # split with all blank ( \t)
+
+# Field
+led f/<regex>/3-5-6/
+led f # delim blanck aggregate, print first if non blank
+
+# Join
+led j/2 # join every 2 lines
+led j # join until blanck line
+
+# encrypt
+led y/<key>/[db]
+d=decrypt
+b=base54 (key empty)
+m=md5 (d unoperant)
+a=aes256 (ey mandatory)

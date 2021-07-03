@@ -39,7 +39,7 @@ struct {
 
     struct {
         int     type;
-        char*   regex;
+        pcre2_code* regex;
         long     count;
     } sel[2];
 
@@ -69,20 +69,25 @@ struct {
 
 } led;
 
-
 int led_assert(int cond, int code, const char* message, ...) {
     if (!cond) {
-        va_list ap;
+        va_list args;
 
-        va_start(ap, message);
-        vsnprintf(led.buf_message, LED_MSG_MAX, message, ap);
-        va_end(ap);
+        va_start(args, message);
+        vsnprintf(led.buf_message, sizeof(led.buf_message), message, args);
+        va_end(args);
 
         fprintf(stderr, "#LED %s\n", led.buf_message);
         if ( led.cur_file ) {
             fclose(led.cur_file);
             led.cur_file = NULL;
             led.cur_fname = NULL;
+        }
+        for (int i = 0; i < 2; i++ ) {
+            if ( led.sel[i].regex != NULL) {
+                pcre2_code_free(led.sel[i].regex);
+                led.sel[i].regex = NULL;
+            }
         }
         exit(code);
     }
@@ -91,11 +96,11 @@ int led_assert(int cond, int code, const char* message, ...) {
 
 void led_verbose(const char* message, ...) {
     if (led.verbose) {
-        va_list ap;
+        va_list args;
 
-        va_start(ap, message);
-        vsnprintf(led.buf_message, LED_MSG_MAX, message, ap);
-        va_end(ap);
+        va_start(args, message);
+        vsnprintf(led.buf_message, LED_MSG_MAX, message, args);
+        va_end(args);
 
         fprintf(stderr, "#LED %s\n", led.buf_message);
     }
@@ -111,6 +116,23 @@ int led_trim(char* line) {
     len = last +1;
     line[len] = '\0';
     return len;
+}
+
+pcre2_code* led_regex_compile(const char* pattern) {
+    int pcre_err;
+    PCRE2_SIZE pcre_erroff;
+    PCRE2_UCHAR pcre_errbuf[256];
+    pcre2_code* regex = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, 0, &pcre_err, &pcre_erroff, NULL);
+    pcre2_get_error_message(pcre_err, pcre_errbuf, sizeof(pcre_errbuf));
+    led_assert(regex != NULL, LED_ERR_ARG, "Regex error \"%s\" offset %d: %s", pattern, pcre_erroff, pcre_errbuf);
+    return regex;
+}
+
+int led_regex_match(pcre2_code* regex, const char* line, int len) {
+    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
+    int rc = pcre2_match(regex, (PCRE2_SPTR)line, len, 0, 0, match_data, NULL);
+    pcre2_match_data_free(match_data);
+    return rc >= 0;
 }
 
 void led_init(int argc, char* argv[]) {
@@ -142,61 +164,53 @@ void led_init(int argc, char* argv[]) {
     led.cur_line_count_sel = 0;
     led.cur_sel = FALSE;
 
-    for (int i=1; i< argc; i++) {
+    for (int argi=1; argi < argc; argi++) {
 
         if (led.cli_st == CLIST_FILES ) {
-            led.file_names = argv + i;
-            led.file_count = argc - i;
+            led.file_names = argv + argi;
+            led.file_count = argc - argi;
             break;
         }
-        else if (led.cli_st < CLIST_FILES && strcmp(argv[i], "-v") == 0 ) {
+        else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-v") == 0 ) {
             led.verbose = TRUE;
         }
-        else if (led.cli_st < CLIST_FILES && strcmp(argv[i], "-f") == 0 ) {
+        else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-f") == 0 ) {
             led.cli_st = CLIST_FILES;
             led.file_mode = TRUE;
         }
-        else if (led.cli_st < CLIST_FUNCT && strcmp(argv[i], "print") == 0 ) {
+        else if (led.cli_st < CLIST_FUNCT && strcmp(argv[argi], "print") == 0 ) {
             led.cli_st = CLIST_FUNCT;
             led.func = FUNC_PRINT;
         }
         else if (led.cli_st == CLIST_FUNCT && led.func_arg[0] == NULL ) {
-            led.func_arg[0] = argv[i];
+            led.func_arg[0] = argv[argi];
         }
         else if (led.cli_st == CLIST_FUNCT && led.func_arg[1] == NULL ) {
-            led.func_arg[1] = argv[i];
+            led.func_arg[1] = argv[argi];
         }
         else if (led.cli_st == CLIST_FUNCT && led.func_arg[2] == NULL ) {
-            led.func_arg[2] = argv[i];
+            led.func_arg[2] = argv[argi];
         }
-        else if (led.cli_st < CLIST_SELFORMAT && strcmp(argv[i], "line") == 0 ) {
+        else if (led.cli_st < CLIST_SELFORMAT && strcmp(argv[argi], "line") == 0 ) {
             led.cli_st = CLIST_SELFORMAT;
             led.func = SEL_FUNC_LINE;
         }
-        else if (led.cli_st < CLIST_SELFORMAT && strcmp(argv[i], "block") == 0 ) {
+        else if (led.cli_st < CLIST_SELFORMAT && strcmp(argv[argi], "block") == 0 ) {
             led.cli_st = CLIST_SELFORMAT;
             led.func = SEL_FUNC_BLOCK;
         }
-        else if (led.cli_st == CLIST_SELECT && !led.sel[0].type ) {
+        else if (led.cli_st == CLIST_SELECT && ! (led.sel[0].type && led.sel[1].type) ) {
             char* str;
-            led.sel[0].type = SEL_TYPE_COUNT;
-            led.sel[0].count = strtol(argv[i], &str, 10);
-            if (led.sel[0].count == 0 && str == argv[i]) {
-                led.sel[0].type = SEL_TYPE_REGEX;
-                led.sel[0].regex = argv[i];
-            }
-        }
-        else if (led.cli_st == CLIST_SELECT && !led.sel[1].type) {
-            char* str;
-            led.sel[1].type = SEL_TYPE_COUNT;
-            led.sel[1].count = strtol(argv[i], &str, 10);
-            if (led.sel[1].count == 0 && str == argv[i]) {
-                led.sel[1].type = SEL_TYPE_REGEX;
-                led.sel[1].regex = argv[i];
+            int i = led.sel[0].type != SEL_TYPE_NONE ? 1 : 0;
+            led.sel[i].type = SEL_TYPE_COUNT;
+            led.sel[i].count = strtol(argv[argi], &str, 10);
+            if (led.sel[i].count == 0 && str == argv[argi]) {
+                led.sel[i].type = SEL_TYPE_REGEX;
+                led.sel[i].regex = led_regex_compile(argv[argi]);
             }
         }
         else {
-            led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s", argv[i]);
+            led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s", argv[argi]);
         }
     }
 
@@ -258,15 +272,24 @@ void led_write_line() {
 }
 
 int led_select() {
-    // if begin selector only, select only matching begin filter
+    // no begin selector => no filter
+    // no end selector => filter only matching line
     if (led.sel[0].type == SEL_TYPE_NONE )
         led.cur_sel = TRUE;
     else if (led.sel[0].type != SEL_TYPE_NONE && led.sel[1].type == SEL_TYPE_NONE && led.cur_sel )
         led.cur_sel = FALSE;
-    else if (led.sel[0].type == SEL_TYPE_COUNT && led.cur_line_count == led.sel[0].count)
+
+    if ( (led.sel[0].type == SEL_TYPE_COUNT && led.cur_line_count == led.sel[0].count)
+         || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.cur_line, led.cur_line_len)) ) {
         led.cur_sel = TRUE;
-    else if (led.sel[1].type == SEL_TYPE_COUNT && led.cur_line_count > led.sel[1].count)
+        led.cur_line_count_sel = 0;
+    }
+    else if ( (led.sel[1].type == SEL_TYPE_COUNT && led.cur_line_count_sel >= led.sel[1].count)
+              || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.cur_line, led.cur_line_len)) ) {
         led.cur_sel = FALSE;
+    }
+
+    if (led.cur_sel) led.cur_line_count_sel++;
 
     led_verbose("Select: beg %d -  end %d - sel %d - count %d", led.sel[0].type, led.sel[1].type, led.cur_sel, led.cur_line_count);
     return led.cur_sel;
@@ -293,5 +316,5 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    led_verbose("Done");
+    led_assert(FALSE, LED_SUCCESS, "Done");
 }

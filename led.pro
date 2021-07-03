@@ -10,3 +10,5 @@ DISTFILES += \
     LICENSE \
     README.md \
     led.txt
+
+LIBS += -lpcre2-8

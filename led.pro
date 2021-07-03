@@ -5,3 +5,8 @@ CONFIG -= qt
 
 SOURCES += \
         main.c
+
+DISTFILES += \
+    LICENSE \
+    README.md \
+    led.txt

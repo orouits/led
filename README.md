@@ -1,6 +1,6 @@
 # LED
 Line Editor (led) is a simple command line utility written in C to edit text files using PCRE2 library for modern REGEX synthax and more.
-It aims to cover in one tool common text search/replace functions that need some times multiple tools like sed, grep, tr, awk, perl ... 
+It aims to cover in one tool common text search/replace functions may need sometimes multiple tools like sed, grep, tr, awk, perl ... 
 
 # Command line synthax
 

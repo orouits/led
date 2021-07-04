@@ -185,13 +185,44 @@ Revert a line.
 
 #### cr|crypt command
 
- Join lines.
+ encrypt or decrypt lines.
 
-`cr [N] [N] ... [<regex>]`
+`cr <type> [<opts>]`
 
-- N: extract the Nth field, by default the first one. 
-- regex: matching delimiter string, by default blanks and tabs
+- type: 
+    - b64
+    - md5
+    - sha1
+    - sha256
+    - aes256<key>
+- opts
+    - e: encrypt (default)
+    - d: decrypt (error for hash algorithms)
 
+#### ul|urlencode command
+
+ URL encode|decode lines.
+
+`ul [<opts>] [<regex>]`
+
+- opts
+    - e: encode (default)
+    - d: decode
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+
+#### ph|path command
+
+ Modify line as path.
+
+`ph [<opts>] [<regex>]`
+
+- opts
+    - c: set canonical path (default)
+    - d: extract directory
+    - f: extract filename
+    - m: rename with magic filename (experimental), make filenames camel case without non-alnum except `.`  
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+ 
 ## Invocation
 
 3 way to invoque led:

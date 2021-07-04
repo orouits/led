@@ -8,7 +8,6 @@ SOURCES += \
 
 DISTFILES += \
     LICENSE \
-    README.md \
-    led.txt
+    README.md
 
 LIBS += -lpcre2-8

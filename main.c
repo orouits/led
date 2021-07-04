@@ -36,6 +36,7 @@
 struct {
     int     cli_st;
     int     verbose;
+    int     tofile;
 
     struct {
         int     type;
@@ -71,13 +72,15 @@ struct {
 
 int led_assert(int cond, int code, const char* message, ...) {
     if (!cond) {
-        va_list args;
+        if (message) {
+            va_list args;
 
-        va_start(args, message);
-        vsnprintf(led.buf_message, sizeof(led.buf_message), message, args);
-        va_end(args);
+            va_start(args, message);
+            vsnprintf(led.buf_message, sizeof(led.buf_message), message, args);
+            va_end(args);
 
-        fprintf(stderr, "#LED %s\n", led.buf_message);
+            fprintf(stderr, "#LED %s\n", led.buf_message);
+        }
         if ( led.cur_file ) {
             fclose(led.cur_file);
             led.cur_file = NULL;
@@ -139,6 +142,7 @@ void led_init(int argc, char* argv[]) {
     led_verbose("Init");
 
     led.verbose = FALSE;
+    led.tofile = FALSE;
     led.cli_st = CLIST_SELECT;
     led.sel[0].type = SEL_TYPE_NONE;
     led.sel[0].regex = NULL;
@@ -173,6 +177,9 @@ void led_init(int argc, char* argv[]) {
         }
         else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-v") == 0 ) {
             led.verbose = TRUE;
+        }
+        else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-F") == 0 ) {
+            led.tofile = TRUE;
         }
         else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-f") == 0 ) {
             led.cli_st = CLIST_FILES;
@@ -316,5 +323,5 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    led_assert(FALSE, LED_SUCCESS, "Done");
+    led_assert(FALSE, LED_SUCCESS, NULL);
 }

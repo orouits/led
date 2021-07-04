@@ -252,22 +252,25 @@ It tells led to read file names from STDIN.
 
 ## Options
 
-### Output
+### File output
 
-- **-F** write content to files, write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
-    - Modifier options
-    - **-w<file>** write content to a fixed <file>
-    - **-a<file>** append content to a fixed <file>
-    - **-e<ext>** write content to input files with .<ext>
-    - **-m** write filename only if changed/match
-    - **-d** delete input file after processing
-    
+`-F[<mode>]` write content to files, write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
+
+mode:
+    - `w` write to file inplace (default)
+    - `w<file>` write content to a fixed <file>
+    - `a<file>` append content to a fixed <file>
+    - `e<ext>` write content to input files with .<ext>
+additional file output options:
+    - `-q` do not ouput unselected lines
+    - `-m` write filename only if changed/match
+
 ### Global
 
-- **-z** end of line is 0
-- **-v** verbose to STDERR
-- **-s** summary to STDERR
-- **-q** do not ouput unselected lines
+- `-z` end of line is 0
+- `-v` verbose to STDERR
+- `-s` summary to STDERR
+- `-d` delete input files after processing
 - **-e<mode>** exit mode:
     - std: 
         0 = match/change

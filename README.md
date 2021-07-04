@@ -30,42 +30,28 @@ addressing examples:
 
 ```
 # select the fisrt line only
-led 1
-```
+cat file.txt | led 1
 
-```
 # select block of lines from line 10 and 3 next ones (including line 10)
-led 10 3
-```
+cat file.txt | led 10 3
 
-```
 # select all lines containing abc (regex)
-led abc
-```
+cat file.txt | led abc
 
-```
 # select all block of lines from a line containing "abc" to a line containing "def" (not included)
-led abc def
-```
+cat file.txt | led abc def
 
-```
 # select all block of lines from a line containing "abc" and 5 next ones
-led abc 5
-```
+cat file.txt | led abc 5
 
-```
 # select block of lines from line 4 to a line containing "def" (not included)
-led 4 def
-```
+cat file.txt | led 4 def
 
-```
 # block of lines selected will be given to the processor line by line (default)
-led abc def line
-```
+cat file.txt | led abc def line
 
-```
 # block of lines selected will be given to the processor once in a multi-line buffer (for multi-line processing)
-led abc def block
+led abc def block -f file.txt
 ```
 
 ## Invocation
@@ -78,6 +64,8 @@ led abc def block
 ### Pipe mode
 
 `cat <file> | led`  
+
+it is the default mode when the [files] section is not given.
 
 ### Direct mode with files
 

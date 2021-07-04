@@ -68,38 +68,60 @@ Extract a rang of characters in the line
 
 `cat file.txt | led ext N [C] [inv]`
 
-* N = Columb from character N, if N is negative, from the end of the line
-* C = Count character, 1 by default
-* inv = all but this range, FALSE by default
+- N = Columb from character N, if N is negative, from the end of the line
+- C = Count character, 1 by default
+- inv = all but this range, FALSE by default
 
 #### sub|substitute command
 
-The `sub` command or `substitute` allows to substitute string from a regex.
+The `sub` command allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
 `sub <regex> <replace> [<opts>]`
 
-* regex = the search regex string
-* replace = th replace string
-* opts = "g" fo global search
+- regex = the search regex string
+- replace = th replace string
+- opts = "g" fo global search
 
 #### exe|execute command
 
-The `sub` command or `substitute` allows to substitute string from a regex.
+The `exe` command allows to substitute string from a regex and execute it.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
 `exe <regex> <command> [<opts>]`
 
-* regex = the search regex string
-* caommand: the replace string to be executed as a command with arguments 
-* opts:
-    * "g" fo global search
-    * "s" fo global search
+- regex = the search regex string
+- command: the replace string to be executed as a command with arguments 
+- opts:
+    - "g" for global search
+    - "s" stop on error
 
+#### trs|translate command
+
+The `trs` command allows to translate characters string of a matching regex.
+
+`trs <regex> <schars> <dchars>
+
+- regex = the search regex, if a capture is present, only the first capture is transformed
+- schars: a sequence of source characters to be replaced by dest characters 
+- dchars: a sequence of dest characters
+
+#### cse|case command
+
+The `cse` command allows to transform the case of a matching regex.
+
+`cse <regex> [<opts>]
+
+- regex = the search regex, if a capture is present, only the first capture is transformed
+- opts: a sequence of source characters to be replaced by dest characters 
+   - l: lowercase (default if no option)
+   - u: uppercase
+   - f: only first is upper
+   - c: camel case by detecting words and suppressing non alnum characters
 
 ## Invocation
 

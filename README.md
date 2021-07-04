@@ -258,14 +258,14 @@ It tells led to read file names from STDIN.
 This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
 
 mode:
-    - `w` write to file inplace (default)
-    - `w<file>` write content to a fixed file
-    - `a<file>` append content to a fixed file
-    - `e<ext>` write content to input files with .ext
+- `w` write to file inplace (default)
+- `w<file>` write content to a fixed file
+- `a<file>` append content to a fixed file
+- `e<ext>` write content to input files with .ext
 
 additional file output options:
-    - `-q` do not ouput unselected lines
-    - `-m` write filename only if changed/match
+- `-q` do not ouput unselected lines
+- `-m` write filename only if changed/match
 
 ### Global
 
@@ -275,12 +275,12 @@ additional file output options:
 - `-d` delete input files after processing
 - `-e<mode>` with exit mode:
     - std: 
-        0 = match/change
-        1 = no match
-        2 = internal error
-    - val
-        0 = output not empty
-        1 = no match/change
-        2 = internal error 
+        - 0 = match/change
+        - 1 = no match
+        - 2 = internal error
+    - val:
+        - 0 = output not empty
+        - 1 = no match/change
+        - 2 = internal error 
 
 # Examples

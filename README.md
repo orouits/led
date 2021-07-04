@@ -6,7 +6,11 @@ It aims to cover in one tool common text search/replace functions that need some
 
 ## Overview
 
-led [selector] [processor] [-options] [files]
+led command line arguements is composed of section in the folling order:
+
+`led [selector] [processor] [-options] [files]`
+
+the section recognition si done by keywork or options.
 
 Led text processor workflow is basic, it optionally select parts of input text (or all if not given), optionally procces selected text and print to output (with options).
 
@@ -63,17 +67,22 @@ led abc def block -f file.txt
 
 ### Pipe mode
 
-`cat <file> | led`  
+`cat <file> | led ...`  
 
-it is the default mode when the [files] section is not given.
+this the default mode when the [files] section is not given.
 
 ### Direct mode with files
 
-`led -f <file> ...`  
+`led ... -f <file> <file> ...`  
+
+the **-f** option tells led to enter into the files section which is the last one, every subsequent argument is considered as an intput file name.
 
 ### Advanced pipe mode with files
 
 `find . -spec <filespec> | led -f`  
+
+the file section is limitted to the **-f** option without any files behind.
+It tells led to read file names from STDIN.
 
 ## Options
 

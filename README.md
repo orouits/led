@@ -60,7 +60,7 @@ cat file.txt | led abc def block
 
 ### The processor  
 
-* processor := command arg arg ...
+* processor := command arg arg ... + command arg arg ... + ...
 
 #### sub|substitute command
 

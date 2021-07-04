@@ -24,11 +24,11 @@ the selector is optional, it must be declared before a recognized processor func
 
 When led is used only with the selector, it is equivalent to grep with a similar addressing feature as sed using PCRE2 as regex engine. 
 
-composition:
+#### syntax:
 
-selector := address1 [address2] [mode]
-address := regex|number
-mode := line|block
+* selector := address1 [address2] [mode]
+* address := regex|number
+* mode := line|block
 
 addressing examples:
 
@@ -55,7 +55,7 @@ cat file.txt | led 4 def
 cat file.txt | led abc def line
 
 # block of lines selected will be given to the processor once in a multi-line buffer (for multi-line processing)
-led abc def block -f file.txt
+cat file.txt | led abc def block
 ```
 
 ## Invocation

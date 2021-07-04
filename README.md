@@ -195,7 +195,7 @@ Revert a line.
     - md5
     - sha1
     - sha256
-    - aes256<key>
+    - aes256`<key>`
 - opts
     - e: encrypt (default)
     - d: decrypt (error for hash algorithms)
@@ -254,13 +254,15 @@ It tells led to read file names from STDIN.
 
 ### File output
 
-`-F[<mode>]` write content to files, write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
+`-F[<mode>]` write content to files, write filenames to STDOUT instead of content. 
+This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
 
 mode:
     - `w` write to file inplace (default)
-    - `w<file>` write content to a fixed <file>
-    - `a<file>` append content to a fixed <file>
-    - `e<ext>` write content to input files with .<ext>
+    - `w<file>` write content to a fixed file
+    - `a<file>` append content to a fixed file
+    - `e<ext>` write content to input files with .ext
+
 additional file output options:
     - `-q` do not ouput unselected lines
     - `-m` write filename only if changed/match
@@ -271,7 +273,7 @@ additional file output options:
 - `-v` verbose to STDERR
 - `-s` summary to STDERR
 - `-d` delete input files after processing
-- **-e<mode>** exit mode:
+- `-e<mode>` with exit mode:
     - std: 
         0 = match/change
         1 = no match

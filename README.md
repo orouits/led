@@ -62,28 +62,28 @@ cat file.txt | led abc def block
 
 - processor := cmd arg arg ...
 
-#### sb|substitute command
+#### sub|substitute command
 
-The `sb` command allows to substitute string from a regex.
+The `sub` command allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`sb <regex> <replace> [<opts>]`
+`sub <regex> <replace> [<opts>]`
 
 - regex: the search regex string
 - replace: th replace string
 - opts:
     - "g" fo global search
 
-#### ex|execute command
+#### exc|execute command
 
-The `ex` command allows to substitute string from a regex and execute it.
+The `exc` command allows to substitute string from a regex and execute it.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`ex <regex> <command> [<opts>]`
+`exc <regex> <command> [<opts>]`
 
 - regex = the search regex string
 - command: the replace string to be executed as a command with arguments 
@@ -91,22 +91,22 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
     - "g" for global search
     - "s" stop on error
 
-#### rg|range command
+#### rng|range command
 
 Extract a range of characters in the line 
 
-`rg N [C] [<opts>]`
+`rng N [C] [<opts>]`
 
-- N: Columb from character N, if N is negative, from the end of the line
-- C: Count character, 1 by default
+- N: from column, relative to the end of line if N is negative
+- C: character count, 1 by default
 - opts:
     - n: all but not this range
 
-#### tr|translate command
+#### trl|translate command
 
 Translate characters string of a matching regex.
 
-`tr <schars> <dchars> [<regex>]`
+`trl <schars> <dchars> [<regex>]`
 
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters
@@ -149,27 +149,27 @@ Trim a line.
    - a: all
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### sp|split command
+#### spt|split command
 
 Split a line.
 
-`sp [<regex>]`
+`spt [<regex>]`
 
 - regex: matching separator string, blank + tab by default
 
-#### rv|revert command
+#### rvt|revert command
 
 Revert a line.
 
-`rv [<regex>]`
+`rvt [<regex>]`
 
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### fl|field command
+#### fld|field command
 
  Extract fields of a line.
 
-`fl [N] [N] ... [<regex>]`
+`fld [N] [N] ... [<regex>]`
 
 - N: extract the Nth field, by default the first one. 
 - regex: matching delimiter string, by default blanks and tabs
@@ -183,12 +183,12 @@ Revert a line.
 
 - N: every N line. 
 
-#### cr|crypt command
+#### cpt|crypt command
 
  encrypt or decrypt lines.
  This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
-`cr <type> [<opts>]`
+`cpt <type> [<opts>]`
 
 - type: 
     - b64
@@ -200,22 +200,22 @@ Revert a line.
     - e: encrypt (default)
     - d: decrypt (error for hash algorithms)
 
-#### ul|urlencode command
+#### url|urlencode command
 
  URL encode|decode lines.
 
-`ul [<opts>] [<regex>]`
+`url [<opts>] [<regex>]`
 
 - opts
     - e: encode (default)
     - d: decode
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### ph|path command
+#### pth|path command
 
  Modify line as path.
 
-`ph [<opts>] [<regex>]`
+`pth [<opts>] [<regex>]`
 
 - opts
     - c: set canonical path (default)
@@ -235,7 +235,7 @@ Revert a line.
 
 `cat <file> | led ...`
 
-this the default mode when the [files] section is not given.
+this is the default mode when the `[files]` section is not given.
 
 ### Direct mode with files
 
@@ -284,3 +284,24 @@ additional file output options:
         - 2 = internal error 
 
 # Examples
+
+## grep
+
+`cat file.txt | led <regex>`
+
+`led <regex> -f file.txt`
+
+## simple substitute
+
+`led sb <regex> <replace> -f file.txt`
+
+`cat file.txt | led sb <regex> <replace> > file-changed.txt`
+
+change inplace:
+
+`led sb <regex> <replace> -F -f file.txt`
+
+
+## massive multi change inplace:
+
+` ls *.txt | led sb <regex> <replace> -F -f | led sb <regex> <replace> -F -f | ...`

@@ -2,13 +2,14 @@
 Line Editor (led) is a simple command line utility wrote in C to edit text files using PCRE2 library for modern REGEX synthax and more.
 It aims to cover in one tool common text search/replace functions that need some times multiple tools like sed, grep, tr, awk, perl ... 
 
-# Commandline synthax
+# Command line synthax
 
-## Global led command format
+## Overview
 
 led [selector] [processor] [-options] [files]
 
-Led text processor workflow is basic, it optionally select part of input text (or all if not given), optionally procces selected text and print to output (with options).
+Led text processor workflow is basic, it optionally select parts of input text (or all if not given), optionally procces selected text and print to output (with options).
+
 There is only one selector and one processor function per led call. *led* do not embeed a complex transformation language as *sed* to achieve multiple transformation.
 The choice is to manage complex multiple tranformation through step by step calls with pipe invocation with an advanced way that allows pipes and massive file change together.
 

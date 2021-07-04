@@ -1,0 +1,157 @@
+libc/glibc => libmusl (alpine)
+libpcre2
+
+# led CLI
+
+# CLI format 
+led [selector] [format] [command] [options] -f <file> ...
+cat <file> | led [selector] [format] [command] [options]
+find ... | led [selector] [format] [command] [options] -f
+
+# return
+0 if change done
+255 if nothing changed
+
+# input / output mode
+-f: read content from files, input is filenames, or filenames in next args
+-F: write content to files, output is filenames
+
+# -F modifier
+-w <file> : write content to a fixed <file>
+-a <file> : append content to a fixed <file>
+-e <ext> : write content to input files with .<ext>
+-m : write filename only if changed/match
+-d : delete input file after processing
+
+-z end of line is 0
+-g process the file as one global line
+-v verbose to STDERR
+-s summary to STDERR
+-q do not ouput unselected lines
+-e <mode>
+
+exit mode:
+std
+0 match/change
+1 no match/change
+2 internal error
+
+val
+0 output not empty
+1 output empty
+2 internal error
+²
+# selector format
+addr[,addr]
+# addr format
+/regex/ # regex delimiter can be [/#@%:], defined by first delimiter.
+N  # line N
++N # count
+
+N = line N
+/regex/ = lines matching regex
+addr, /regex/ = from addr to next regex maching
+addr, N = from addr to line N
+addr, +N = from addr and N next lines
+sel! = all not in selector
+
+# modifier
+regex delimiter can be [/#@%:], defined by first delimiter.
+
+# no modifier
+do nothing (print matching lines)
+
+# extract
+e/N,M/n
+N = col N (<0 from end)
+N,M = cols N to M (<0 => from end)
+N,+M = cols N + next M (N<0 => from end)
+n = not in selector
+
+# substitute
+s/<regex>/<replace>/[g]
+g = global
+\N is Nth capture block in replace string.
+
+# eXecute
+x/<regex>/<execute>/<replace>/[ge]
+x # execute all non blanck / non #comment
+g=global
+e=stop on error
+\X is execute output in replace string.
+
+# Translate
+y/<regex>/<chars>/<chars>
+
+# Revert
+r/<regex>/ # revert
+
+# Case
+c/<regex>/l # lowercase
+c/<regex>/u # uppercase
+c/<regex>/f # first uppercase on words
+led c # lowercase
+
+# Quote
+q/<regex>/s # quote ' if not
+q/<regex>/d # quote " if not
+q/<regex>/u # unquote if quoted
+q/<regex>/ # unquote if quoted
+
+# Trim
+t/l # ltrim
+t/r # rtrim
+t # rtrim
+
+# sPlit
+p/<regex>
+p # split with all blank ( \t)
+
+# Field
+f/<regex>/3/5/6
+f # delim blanck aggregate, print first if non blank
+
+# Join
+j/n # join every n lines
+j # join until blanck line
+
+# encrypt
+k/<type>[key][/de]
+d=decrypt
+e=encrypt
+default=encrypt
+type:
+- b64
+- md5 (d=>error)
+- aes256<key>
+
+# urlencode
+u/e # url encode
+u/d # url decode
+u # url encode
+
+# paths
+h/m # magic clean file name without blanc
+h/d # extract directory
+h/f # extract filename
+h/c # canonical path
+
+led regex p => print matching lines
+led regex => print matching lines
+led [1-2] => print matching lines
+
+led regex s/replace/ => replace
+led regex k/md5/ => encrypt
+
+led regex -f file
+led -c s/regex/replace -f file
+led regex -c s/regex/regex -f file
+
+led regex -c cmd -f files...
+led regex regex -f files...
+led N N -f files...
+led regex +N -f files...
+
+led regex => $1 not a command => select regex / do print
+
+led regex N print

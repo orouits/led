@@ -252,4 +252,32 @@ It tells led to read file names from STDIN.
 
 ## Options
 
+### Output
+
+- **-F**: write content to files, output is filenames
+
+**-F** Modifier options
+- **-w<file>** : write content to a fixed <file>
+- **-a<file>** : append content to a fixed <file>
+- **-e<ext>** : write content to input files with .<ext>
+- **-m** : write filename only if changed/match
+- **-d** : delete input file after processing
+
+### global
+
+- **-z** end of line is 0
+- **-g** process the file as one global line
+- **-v** verbose to STDERR
+- **-s** summary to STDERR
+- **-q** do not ouput unselected lines
+- **-e<mode>** exit mode:
+    - std: 
+        0 = match/change
+        1 = no match
+        2 = internal error
+    - val
+        0 = output not empty
+        1 = no match/change
+        2 = internal error 
+
 # Examples

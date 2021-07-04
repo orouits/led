@@ -186,6 +186,7 @@ Revert a line.
 #### cr|crypt command
 
  encrypt or decrypt lines.
+ This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
 `cr <type> [<opts>]`
 

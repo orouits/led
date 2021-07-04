@@ -293,15 +293,15 @@ additional file output options:
 
 ## simple substitute
 
-`led sb <regex> <replace> -f file.txt`
+`led sub <regex> <replace> -f file.txt`
 
-`cat file.txt | led sb <regex> <replace> > file-changed.txt`
+`cat file.txt | led sub <regex> <replace> > file-changed.txt`
 
 change inplace:
 
-`led sb <regex> <replace> -F -f file.txt`
+`led sub <regex> <replace> -F -f file.txt`
 
 
 ## massive multi change inplace:
 
-` ls *.txt | led sb <regex> <replace> -F -f | led sb <regex> <replace> -F -f | ...`
+` ls *.txt | led sub <regex> <replace> -F -f | led sub <regex> <replace> -F -f | ...`

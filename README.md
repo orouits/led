@@ -1,5 +1,5 @@
 # LED
-Line Editor (led) is a simple command line utility written in C to edit text files using the well known PCRE2 library written by Philip Hazel for modern REGEX synthax and more.
+Line Editor (led) is a simple command line utility written in C to edit text files using the well known PCRE2 library by Philip Hazel for modern REGEX synthax and more.
 It aims to cover in one tool common text search/replace functions may need sometimes multiple tools like sed, grep, tr, awk, perl ... 
 
 # Command line synthax
@@ -62,20 +62,44 @@ cat file.txt | led abc def block
 
 * processor := command arg arg ...
 
-#### print command
+#### ext|extract command
 
-`cat file.txt | led <regex> print`
-equivalent to 
-`cat file.txt | led <regex>`
+Extract a rang of characters in the line 
 
-The `print` command is the default if no processor is defined. It has no argument. 
+`cat file.txt | led ext N [C] [inv]`
 
-#### sub, substitute command
-The `sub` command or `substitute`  
+* N = Columb from character N, if N is negative, from the end of the line
+* C = Count character, 1 by default
+* inv = all but this range, FALSE by default
 
-`sub regex regex opt`
+#### sub|substitute command
 
-The `sub` command is equivalent to sed s command. 
+The `sub` command or `substitute` allows to substitute string from a regex.
+
+PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
+`PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
+
+`sub <regex> <replace> [<opts>]`
+
+* regex = the search regex string
+* replace = th replace string
+* opts = "g" fo global search
+
+#### exe|execute command
+
+The `sub` command or `substitute` allows to substitute string from a regex.
+
+PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
+`PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
+
+`exe <regex> <command> [<opts>]`
+
+* regex = the search regex string
+* caommand: the replace string to be executed as a command with arguments 
+* opts:
+    * "g" fo global search
+    * "s" fo global search
+
 
 ## Invocation
 

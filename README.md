@@ -60,30 +60,30 @@ cat file.txt | led abc def block
 
 ### The processor  
 
-* processor := command arg arg ... + command arg arg ... + ...
+- processor := cmd arg arg ...
 
-#### sub|substitute command
+#### sb|substitute command
 
-The `sub` command allows to substitute string from a regex.
+The `sb` command allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`sub <regex> <replace> [<opts>]`
+`sb <regex> <replace> [<opts>]`
 
 - regex: the search regex string
 - replace: th replace string
 - opts:
     - "g" fo global search
 
-#### exe|execute command
+#### ex|execute command
 
-The `exe` command allows to substitute string from a regex and execute it.
+The `ex` command allows to substitute string from a regex and execute it.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`exe <regex> <command> [<opts>]`
+`ex <regex> <command> [<opts>]`
 
 - regex = the search regex string
 - command: the replace string to be executed as a command with arguments 
@@ -91,32 +91,32 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
     - "g" for global search
     - "s" stop on error
 
-#### ext|extract command
+#### rg|range command
 
-Extract a rang of characters in the line 
+Extract a range of characters in the line 
 
-`cat file.txt | led ext N [C] [<opts>]`
+`rg N [C] [<opts>]`
 
 - N: Columb from character N, if N is negative, from the end of the line
 - C: Count character, 1 by default
 - opts:
     - n: all but not this range
 
-#### trs|translate command
+#### tr|translate command
 
 Translate characters string of a matching regex.
 
-`trs <schars> <dchars> [<regex>]`
+`tr <schars> <dchars> [<regex>]`
 
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### cse|case command
+#### cs|case command
 
 Modify the case of a line.
 
-`cse [<opts>] [<regex>]`
+`cs [<opts>] [<regex>]`
 
 - opts: (only one) 
    - l: lowercase (default)
@@ -125,11 +125,11 @@ Modify the case of a line.
    - c: camel case by detecting words and suppressing non alnum characters
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### qte|quote command
+#### qt|quote command
 
 Quote / uquote a line (idempotent).
 
-`qte [<opts>] [<regex>]`
+`qt [<opts>] [<regex>]`
 
 - opts: (only one) 
    - s: simple quote (default)
@@ -137,11 +137,11 @@ Quote / uquote a line (idempotent).
    - u: unquote (simple or double)
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### trm|trim command
+#### tm|trim command
 
 Trim a line.
 
-`trm [<opts>] [<regex>]`
+`tm [<opts>] [<regex>]`
 
 - opts: (only one)
    - r: right (default)
@@ -149,13 +149,48 @@ Trim a line.
    - a: all
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### spl|split command
+#### sp|split command
 
 Split a line.
 
-`spl [<regex>]`
+`sp [<regex>]`
 
 - regex: matching separator string, blank + tab by default
+
+#### rv|revert command
+
+Revert a line.
+
+`rv [<regex>]`
+
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+
+#### fl|field command
+
+ Extract fields of a line.
+
+`fl [N] [N] ... [<regex>]`
+
+- N: extract the Nth field, by default the first one. 
+- regex: matching delimiter string, by default blanks and tabs
+
+#### jn|join command
+
+ Join lines.
+ This function needs selector `block` mode to transmit all lines in the same buffer.
+
+`jn [N]`
+
+- N: every N line. 
+
+#### cr|crypt command
+
+ Join lines.
+
+`cr [N] [N] ... [<regex>]`
+
+- N: extract the Nth field, by default the first one. 
+- regex: matching delimiter string, by default blanks and tabs
 
 ## Invocation
 

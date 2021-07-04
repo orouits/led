@@ -63,11 +63,16 @@ cat file.txt | led abc def block
 * processor := command arg arg ...
 
 #### print command
-`print`
+
+`cat file.txt | led <regex> print`
+equivalent to 
+`cat file.txt | led <regex>`
 
 The `print` command is the default if no processor is defined. It has no argument. 
 
-#### sub command
+#### sub, substitute command
+The `sub` command or `substitute`  
+
 `sub regex regex opt`
 
 The `sub` command is equivalent to sed s command. 

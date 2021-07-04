@@ -58,6 +58,20 @@ cat file.txt | led abc def line
 cat file.txt | led abc def block
 ```
 
+### The processor  
+
+* processor := command arg arg ...
+
+#### print command
+`print`
+
+The `print` command is the default if no processor is defined. It has no argument. 
+
+#### sub command
+`sub regex regex opt`
+
+The `sub` command is equivalent to sed s command. 
+
 ## Invocation
 
 3 way to invoque led:

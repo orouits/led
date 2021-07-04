@@ -26,9 +26,9 @@ When led is used only with the selector, it is equivalent to grep with a similar
 
 #### syntax:
 
-* selector := address1 [address2] [mode]
-* address := regex|number
-* mode := line|block
+- selector := address1 [address2] [mode]
+- address := regex|number
+- mode := line|block
 
 addressing examples:
 

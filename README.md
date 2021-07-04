@@ -254,7 +254,7 @@ It tells led to read file names from STDIN.
 
 ### Output
 
-- **-F** write content to files, output is filenames
+- **-F** write content to files, write filenames to STDOUT instead of content
     - Modifier options
     - **-w<file>** write content to a fixed <file>
     - **-a<file>** append content to a fixed <file>

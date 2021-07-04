@@ -62,16 +62,6 @@ cat file.txt | led abc def block
 
 * processor := command arg arg ...
 
-#### ext|extract command
-
-Extract a rang of characters in the line 
-
-`cat file.txt | led ext N [C] [inv]`
-
-- N = Columb from character N, if N is negative, from the end of the line
-- C = Count character, 1 by default
-- inv = all but this range, FALSE by default
-
 #### sub|substitute command
 
 The `sub` command allows to substitute string from a regex.
@@ -81,9 +71,10 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
 
 `sub <regex> <replace> [<opts>]`
 
-- regex = the search regex string
-- replace = th replace string
-- opts = "g" fo global search
+- regex: the search regex string
+- replace: th replace string
+- opts:
+    - "g" fo global search
 
 #### exe|execute command
 
@@ -100,28 +91,51 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
     - "g" for global search
     - "s" stop on error
 
+#### ext|extract command
+
+Extract a rang of characters in the line 
+
+`cat file.txt | led ext N [C] [<opts>]`
+
+- N: Columb from character N, if N is negative, from the end of the line
+- C: Count character, 1 by default
+- opts:
+    - n: all but not this range
+
 #### trs|translate command
 
-The `trs` command allows to translate characters string of a matching regex.
+Translate characters string of a matching regex.
 
-`trs <regex> <schars> <dchars>
+`trs <schars> <dchars> [<regex>]`
 
-- regex = the search regex, if a capture is present, only the first capture is transformed
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters
+- regex = modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 #### cse|case command
 
-The `cse` command allows to transform the case of a matching regex.
+Modify the case of a line.
 
-`cse <regex> [<opts>]
+`cse [<opts>] [<regex>]`
 
-- regex = the search regex, if a capture is present, only the first capture is transformed
-- opts: a sequence of source characters to be replaced by dest characters 
-   - l: lowercase (default if no option)
+- opts: (only one) 
+   - l: lowercase (default)
    - u: uppercase
    - f: only first is upper
    - c: camel case by detecting words and suppressing non alnum characters
+- regex = modification of the matching zone in line, if a capture is present, only the first capture is modified
+
+#### trm|trim command
+
+Trim a line.
+
+`trim [<opts>] [<regex>]`
+
+- opts: (only one)
+   - r: right (default)
+   - l: left
+   - a: all
+- regex = modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 ## Invocation
 
@@ -132,19 +146,19 @@ The `cse` command allows to transform the case of a matching regex.
 
 ### Pipe mode
 
-`cat <file> | led ...`  
+`cat <file> | led ...`
 
 this the default mode when the [files] section is not given.
 
 ### Direct mode with files
 
-`led ... -f <file> <file> ...`  
+`led ... -f <file> <file> ...`
 
 the **-f** option tells led to enter into the files section which is the last one, every subsequent argument is considered as an intput file name.
 
 ### Advanced pipe mode with files
 
-`find . -spec <filespec> | led -f`  
+`find . -spec <filespec> | led -f`
 
 the file section is limitted to the **-f** option without any files behind.
 It tells led to read file names from STDIN.

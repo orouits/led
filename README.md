@@ -254,14 +254,14 @@ It tells led to read file names from STDIN.
 
 ### Output
 
-- **-F** write content to files, write filenames to STDOUT instead of content
+- **-F** write content to files, write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
     - Modifier options
     - **-w<file>** write content to a fixed <file>
     - **-a<file>** append content to a fixed <file>
     - **-e<ext>** write content to input files with .<ext>
     - **-m** write filename only if changed/match
     - **-d** delete input file after processing
-
+    
 ### Global
 
 - **-z** end of line is 0

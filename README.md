@@ -285,13 +285,13 @@ additional file output options:
 
 # Examples
 
-## grep
+## "grep" like
 
 `cat file.txt | led <regex>`
 
 `led <regex> -f file.txt`
 
-## simple substitute
+## "sed" like for simple substitute
 
 `led sub <regex> <replace> -f file.txt`
 

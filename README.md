@@ -110,7 +110,7 @@ Translate characters string of a matching regex.
 
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters
-- regex = modification of the matching zone in line, if a capture is present, only the first capture is modified
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 #### cse|case command
 
@@ -123,19 +123,39 @@ Modify the case of a line.
    - u: uppercase
    - f: only first is upper
    - c: camel case by detecting words and suppressing non alnum characters
-- regex = modification of the matching zone in line, if a capture is present, only the first capture is modified
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+
+#### qte|quote command
+
+Quote / uquote a line (idempotent).
+
+`qte [<opts>] [<regex>]`
+
+- opts: (only one) 
+   - s: simple quote (default)
+   - d: double quote
+   - u: unquote (simple or double)
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 #### trm|trim command
 
 Trim a line.
 
-`trim [<opts>] [<regex>]`
+`trm [<opts>] [<regex>]`
 
 - opts: (only one)
    - r: right (default)
    - l: left
    - a: all
-- regex = modification of the matching zone in line, if a capture is present, only the first capture is modified
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+
+#### spl|split command
+
+Split a line.
+
+`spl [<regex>]`
+
+- regex: matching separator string, blank + tab by default
 
 ## Invocation
 

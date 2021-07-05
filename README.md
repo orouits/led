@@ -280,16 +280,16 @@ It tells led to read file names from STDIN.
 - `-v` verbose to STDERR
 - `-s` summary to STDERR
 - `-q` quiet, do not ouptut anything (exit code only)
-- `-e` exit mode on val
+- `-e` exit code on value
 
 ## Exit code
 
-Stadnard:
+Standard:
 - 0 = match/change
 - 1 = no match
 - 2 = internal error
 
-On val (see -e):
+On value (see -e):
 - 0 = output not empty
 - 1 = no match/change
 - 2 = internal error 
@@ -304,15 +304,15 @@ On val (see -e):
 
 ## "sed" like for simple substitute
 
-`led sub <regex> <replace> -f file.txt`
+`led sb <regex> <replace> -f file.txt`
 
-`cat file.txt | led sub <regex> <replace> > file-changed.txt`
+`cat file.txt | led sb <regex> <replace> > file-changed.txt`
 
 change inplace:
 
-`led sub <regex> <replace> -F -f file.txt`
+`led sb <regex> <replace> -FIf file.txt`
 
 
 ## massive multi change inplace:
 
-` ls *.txt | led sub <regex> <replace> -F -f | led sub <regex> <replace> -F -f | ...`
+` ls *.txt | led sb <regex> <replace> -FIUf | led sb <regex> <replace> -FIUf | ...`

@@ -10,10 +10,9 @@
 #define FALSE 0
 #define TRUE 1
 
-#define CLIST_SELECT 0
-#define CLIST_SELFORMAT 1
-#define CLIST_FUNCT 2
-#define CLIST_FILES 3
+#define ARGST_SELECT 0
+#define ARGST_FUNCT 1
+#define ARGST_FILES 2
 
 #define SEL_TYPE_NONE 0
 #define SEL_TYPE_REGEX 1
@@ -34,7 +33,7 @@
 #define LED_MSG_MAX 4096
 
 struct {
-    int     cli_st;
+    int     argst;
     int     verbose;
     int     tofile;
 
@@ -143,7 +142,7 @@ void led_init(int argc, char* argv[]) {
 
     led.verbose = FALSE;
     led.tofile = FALSE;
-    led.cli_st = CLIST_SELECT;
+    led.argst = ARGST_SELECT;
     led.sel[0].type = SEL_TYPE_NONE;
     led.sel[0].regex = NULL;
     led.sel[0].count = 0;
@@ -170,43 +169,43 @@ void led_init(int argc, char* argv[]) {
 
     for (int argi=1; argi < argc; argi++) {
 
-        if (led.cli_st == CLIST_FILES ) {
+        if (led.argst == ARGST_FILES ) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
             break;
         }
-        else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-v") == 0 ) {
-            led.verbose = TRUE;
-        }
-        else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-F") == 0 ) {
-            led.tofile = TRUE;
-        }
-        else if (led.cli_st < CLIST_FILES && strcmp(argv[argi], "-f") == 0 ) {
-            led.cli_st = CLIST_FILES;
+        else if (led.argst < ARGST_FILES && strcmp(argv[argi], "-f") == 0 ) {
+            led.argst = ARGST_FILES;
             led.file_mode = TRUE;
         }
-        else if (led.cli_st < CLIST_FUNCT && strcmp(argv[argi], "print") == 0 ) {
-            led.cli_st = CLIST_FUNCT;
+        else if (led.argst < ARGST_FILES && strcmp(argv[argi], "-v") == 0 ) {
+            led.verbose = TRUE;
+        }
+        else if (led.argst < ARGST_FILES && strcmp(argv[argi], "-F") == 0 ) {
+            led.tofile = TRUE;
+        }
+        else if (led.argst < ARGST_FUNCT && strcmp(argv[argi], "print") == 0 ) {
+            led.argst = ARGST_FUNCT;
             led.func = FUNC_PRINT;
         }
-        else if (led.cli_st == CLIST_FUNCT && led.func_arg[0] == NULL ) {
+        else if (led.argst == ARGST_FUNCT && led.func_arg[0] == NULL ) {
             led.func_arg[0] = argv[argi];
         }
-        else if (led.cli_st == CLIST_FUNCT && led.func_arg[1] == NULL ) {
+        else if (led.argst == ARGST_FUNCT && led.func_arg[1] == NULL ) {
             led.func_arg[1] = argv[argi];
         }
-        else if (led.cli_st == CLIST_FUNCT && led.func_arg[2] == NULL ) {
+        else if (led.argst == ARGST_FUNCT && led.func_arg[2] == NULL ) {
             led.func_arg[2] = argv[argi];
         }
-        else if (led.cli_st < CLIST_SELFORMAT && strcmp(argv[argi], "line") == 0 ) {
-            led.cli_st = CLIST_SELFORMAT;
+        else if (led.argst < ARGST_SELFORMAT && strcmp(argv[argi], "line") == 0 ) {
+            led.argst = ARGST_SELFORMAT;
             led.func = SEL_FUNC_LINE;
         }
-        else if (led.cli_st < CLIST_SELFORMAT && strcmp(argv[argi], "block") == 0 ) {
-            led.cli_st = CLIST_SELFORMAT;
+        else if (led.argst < ARGST_SELFORMAT && strcmp(argv[argi], "block") == 0 ) {
+            led.argst = ARGST_SELFORMAT;
             led.func = SEL_FUNC_BLOCK;
         }
-        else if (led.cli_st == CLIST_SELECT && ! (led.sel[0].type && led.sel[1].type) ) {
+        else if (led.argst == ARGST_SELECT && ! (led.sel[0].type && led.sel[1].type) ) {
             char* str;
             int i = led.sel[0].type != SEL_TYPE_NONE ? 1 : 0;
             led.sel[i].type = SEL_TYPE_COUNT;
@@ -221,7 +220,7 @@ void led_init(int argc, char* argv[]) {
         }
     }
 
-    led_verbose("Status: %d", led.cli_st);
+    led_verbose("Status: %d", led.argst);
 }
 int led_next_file() {
     led_verbose("Next file");

@@ -52,8 +52,8 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = main.c 
-OBJECTS       = main.o
+SOURCES       = led.c 
+OBJECTS       = led.o
 DIST          = LICENSE \
 		README.md \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -138,7 +138,7 @@ DIST          = LICENSE \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		led.pro  main.c
+		led.pro  led.c
 QMAKE_TARGET  = led
 DESTDIR       = 
 TARGET        = led
@@ -360,8 +360,8 @@ compiler_clean:
 
 ####### Compile
 
-main.o: main.c 
-	$(CC) -c $(CFLAGS) $(INCPATH) -o main.o main.c
+led.o: led.c 
+	$(CC) -c $(CFLAGS) $(INCPATH) -o led.o led.c
 
 ####### Install
 

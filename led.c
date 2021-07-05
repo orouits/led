@@ -450,10 +450,18 @@ int led_select() {
 void led_funct_substitute () {
 }
 
+void led_funct_execute () {
+}
+
 void led_process() {
     led_verbose("Process");
     switch (led.func) {
-        case FUNC_SUBSTITUTE: led_funct_substitute();
+    case FUNC_SUBSTITUTE:
+        led_funct_substitute();
+        break;
+    case FUNC_EXECUTE:
+        led_funct_execute();
+        break;
     }
 }
 

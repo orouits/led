@@ -26,9 +26,8 @@ When led is used only with the selector, it is equivalent to grep with a similar
 
 #### syntax:
 
-- selector := address1 [address2] [mode]
+- selector := address1 [address2]
 - address := regex|number
-- mode := line|block
 
 addressing examples:
 
@@ -62,28 +61,28 @@ cat file.txt | led abc def block
 
 - processor := cmd arg arg ...
 
-#### sub|substitute command
+#### sb|substitute command
 
-The `sub` command allows to substitute string from a regex.
+The `su` command allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`sub <regex> <replace> [<opts>]`
+`sb <regex> <replace> [<opts>]`
 
 - regex: the search regex string
 - replace: th replace string
 - opts:
     - "g" fo global search
 
-#### exc|execute command
+#### ex|execute command
 
-The `exc` command allows to substitute string from a regex and execute it.
+The `ex` command allows to substitute string from a regex and execute it.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`exc <regex> <command> [<opts>]`
+`ex <regex> <command> [<opts>]`
 
 - regex = the search regex string
 - command: the replace string to be executed as a command with arguments 
@@ -91,22 +90,28 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
     - "g" for global search
     - "s" stop on error
 
-#### rng|range command
+#### rm|remove command
+
+Remove line 
+
+`rm`
+
+#### rn|range command
 
 Extract a range of characters in the line 
 
-`rng N [C] [<opts>]`
+`rn N [C] [<opts>]`
 
 - N: from column, relative to the end of line if N is negative
 - C: character count, 1 by default
 - opts:
     - n: all but not this range
 
-#### trl|translate command
+#### tr|translate command
 
 Translate characters string of a matching regex.
 
-`trl <schars> <dchars> [<regex>]`
+`tr <schars> <dchars> [<regex>]`
 
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters
@@ -149,27 +154,27 @@ Trim a line.
    - a: all
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### spt|split command
+#### sp|split command
 
 Split a line.
 
-`spt [<regex>]`
+`sp [<regex>]`
 
 - regex: matching separator string, blank + tab by default
 
-#### rvt|revert command
+#### rv|revert command
 
 Revert a line.
 
-`rvt [<regex>]`
+`rv [<regex>]`
 
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### fld|field command
+#### fl|field command
 
  Extract fields of a line.
 
-`fld [N] [N] ... [<regex>]`
+`fl [N] [N] ... [<regex>]`
 
 - N: extract the Nth field, by default the first one. 
 - regex: matching delimiter string, by default blanks and tabs
@@ -183,12 +188,12 @@ Revert a line.
 
 - N: every N line. 
 
-#### cpt|crypt command
+#### cr|crypt command
 
  encrypt or decrypt lines.
  This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
-`cpt <type> [<opts>]`
+`cr <type> [<opts>]`
 
 - type: 
     - b64
@@ -200,22 +205,22 @@ Revert a line.
     - e: encrypt (default)
     - d: decrypt (error for hash algorithms)
 
-#### url|urlencode command
+#### uc|urlencode command
 
  URL encode|decode lines.
 
-`url [<opts>] [<regex>]`
+`uc [<opts>] [<regex>]`
 
 - opts
     - e: encode (default)
     - d: decode
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### pth|path command
+#### ph|path command
 
  Modify line as path.
 
-`pth [<opts>] [<regex>]`
+`ph [<opts>] [<regex>]`
 
 - opts
     - c: set canonical path (default)
@@ -252,36 +257,42 @@ It tells led to read file names from STDIN.
 
 ## Options
 
-### File output
+### Selector options
 
-`-F[<mode>]` write content to files, write filenames to STDOUT instead of content. 
-This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
+`-n` not select. 
+`-b` selected lines as blocks. 
 
-mode:
-- `w` write to file inplace (default)
-- `w<file>` write content to a fixed file
-- `a<file>` append content to a fixed file
-- `e<ext>` write content to input files with .ext
+### File options
 
-additional file output options:
-- `-q` do not ouput unselected lines
-- `-m` write filename only if changed/match
+- `-f` read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)  
+- `-F` write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
+- `-I` write content to filename inplace
+- `-W<path>` write content to a fixed file
+- `-A<path>` append content to a fixed file
+- `-E<ext>` write content to filename.ext
+- `-E<3>` write content to filename.NNN
+- `-D<dir>` write files in dir. 
+- `-U` write unchanged filenames
 
-### Global
+### Global options
 
 - `-z` end of line is 0
 - `-v` verbose to STDERR
 - `-s` summary to STDERR
-- `-d` delete input files after processing
-- `-e<mode>` with exit mode:
-    - std: 
-        - 0 = match/change
-        - 1 = no match
-        - 2 = internal error
-    - val:
-        - 0 = output not empty
-        - 1 = no match/change
-        - 2 = internal error 
+- `-q` quiet, do not ouptut anything (exit code only)
+- `-e` exit mode on val
+
+## Exit code
+
+Stadnard:
+- 0 = match/change
+- 1 = no match
+- 2 = internal error
+
+On val (see -e):
+- 0 = output not empty
+- 1 = no match/change
+- 2 = internal error 
 
 # Examples
 

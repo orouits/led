@@ -63,7 +63,7 @@ cat file.txt | led abc def block
 
 #### sb|substitute command
 
-The `su` command allows to substitute string from a regex.
+The `sb` command allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).

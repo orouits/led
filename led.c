@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <pcre2.h>
+#include <ctype.h>
 
 #define FALSE 0
 #define TRUE 1
@@ -112,7 +113,7 @@ struct {
     } curfile;
 
     struct {
-        char* str;
+        const unsigned char* str;
         int len;
         long count;
         long count_sel;
@@ -120,10 +121,10 @@ struct {
     } curline;
 
     // runtime buffers
-    char   buf_fname[LED_FNAME_MAX];
-    char   buf_line[LED_LINE_MAX];
-    char   buf_line_trans[LED_LINE_MAX];
-    char   buf_message[LED_MSG_MAX];
+    unsigned char buf_fname[LED_FNAME_MAX];
+    unsigned char buf_line[LED_LINE_MAX];
+    unsigned char buf_line_trans[LED_LINE_MAX];
+    unsigned char buf_message[LED_MSG_MAX];
 
 } led;
 
@@ -173,7 +174,7 @@ void led_verbose(const char* message, ...) {
 int led_str_trim(char* line) {
     int len = strlen(line);
     int last = len - 1;
-    while (last >= 0 && (led.curfile.name[last] == '\n' || led.curfile.name[last] == ' ' || led.curfile.name[last] == '\t') ) {
+    while (last >= 0 && isspace(led.curfile.name[last])) {
         last--;
     }
     len = last +1;
@@ -186,14 +187,14 @@ int led_str_equal(const char* str1, const char* str2) {
 }
 
 int led_str_startwith(const char* str1, const char* str2) {
-    return strncmp(str1, str2, strlen(str2)) == 0;
+    return strstr(str1, str2) == str1;
 }
 
 pcre2_code* led_regex_compile(const char* pattern) {
     int pcre_err;
     PCRE2_SIZE pcre_erroff;
     PCRE2_UCHAR pcre_errbuf[256];
-    led_assert(pattern == NULL, LED_ERR_ARG, "Missing regex");
+    led_assert(pattern != NULL, LED_ERR_ARG, "Missing regex");
     pcre2_code* regex = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, 0, &pcre_err, &pcre_erroff, NULL);
     pcre2_get_error_message(pcre_err, pcre_errbuf, sizeof(pcre_errbuf));
     led_assert(regex != NULL, LED_ERR_ARG, "Regex error \"%s\" offset %d: %s", pattern, pcre_erroff, pcre_errbuf);
@@ -456,10 +457,10 @@ int led_select() {
 void led_funct_substitute () {
     if (led.func_regex == NULL) {
         led.func_regex = led_regex_compile(led.func_arg[0].str);
-        led_assert(led.func_arg[1].str == NULL, LED_ERR_ARG, "substitute: missing replace argument");
+        led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
     }
 
-    PCRE2_SIZE len;
+    PCRE2_SIZE len = led.curline.len;
     int rc = pcre2_substitute(
                 led.func_regex,
                 led.curline.str,

@@ -59,7 +59,9 @@
 #define LED_FILE_OUT_APPEND 3
 #define LED_FILE_OUT_NEWEXT 4
 
-
+//-----------------------------------------------
+// LED runtime data struct
+//-----------------------------------------------
 
 struct {
     // section while cli is decoded
@@ -92,7 +94,7 @@ struct {
     // processor function
     int     func;
     struct {
-        const char* str;
+        const unsigned char* str;
         int len;
         long val;
     } func_arg[LED_FARG_MAX];
@@ -127,6 +129,10 @@ struct {
     unsigned char buf_message[LED_MSG_MAX];
 
 } led;
+
+//-----------------------------------------------
+// LED tech functions
+//-----------------------------------------------
 
 void led_free() {
     if ( led.curfile.file ) {
@@ -170,6 +176,9 @@ void led_verbose(const char* message, ...) {
     }
 }
 
+//-----------------------------------------------
+// LED str functions
+//-----------------------------------------------
 
 int led_str_trim(char* line) {
     int len = strlen(line);
@@ -207,6 +216,10 @@ int led_regex_match(pcre2_code* regex, const char* line, int len) {
     pcre2_match_data_free(match_data);
     return rc >= 0;
 }
+
+//-----------------------------------------------
+// LED init functions
+//-----------------------------------------------
 
 int led_init_opt(const char* arg) {
     int rc = led_str_startwith(arg, "-");
@@ -375,6 +388,11 @@ void led_init(int argc, char* argv[]) {
 
     led_verbose("Func: %d", led.func);
 }
+
+//-----------------------------------------------
+// LED process functions
+//-----------------------------------------------
+
 int led_next_file() {
     led_verbose("Next file");
 
@@ -492,6 +510,10 @@ void led_process() {
         break;
     }
 }
+
+//-----------------------------------------------
+// LED main
+//-----------------------------------------------
 
 int main(int argc, char* argv[]) {
     led_init(argc, argv);

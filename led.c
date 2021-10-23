@@ -23,7 +23,7 @@
 #define SEL_FUNC_LINE 0
 #define SEL_FUNC_BLOCK 1
 
-#define FUNC_NONE 0
+#define FUNC_PRINT 0
 #define FUNC_SUBSTITUTE 1
 #define FUNC_EXECUTE 2
 #define FUNC_REMOVE 3
@@ -58,6 +58,25 @@
 #define LED_FILE_OUT_WRITE 2
 #define LED_FILE_OUT_APPEND 3
 #define LED_FILE_OUT_NEWEXT 4
+
+const char* LED_FUNC_LABELS[] = {
+    "pr", "print",
+    "sb", "substitute",
+    "ex", "execute",
+    "rm", "remove",
+    "rn", "range",
+    "tr", "translate",
+    "cs", "case",
+    "qt", "quote",
+    "tm", "trim",
+    "sp", "split",
+    "rv", "revert",
+    "fl", "field",
+    "jn", "join",
+    "cr", "crypt",
+    "uc", "urlencode",
+    "ph", "path"
+};
 
 //-----------------------------------------------
 // LED runtime data struct
@@ -151,6 +170,7 @@ void led_free() {
         led.func_regex = NULL;
     }
 }
+
 int led_assert(int cond, int code, const char* message, ...) {
     if (!cond) {
         if (message) {
@@ -164,6 +184,15 @@ int led_assert(int cond, int code, const char* message, ...) {
         exit(code);
     }
     return cond;
+}
+
+void led_assert_pcre(int rc) {
+    if (rc < 0) {
+        pcre2_get_error_message(rc, led.buf_message, LED_MSG_MAX);
+        fprintf(stderr, "#LED PCRE ERR: %s\n", led.buf_message);
+        led_free();
+        exit(LED_ERR_ARG);
+    }
 }
 
 void led_verbose(const char* message, ...) {
@@ -299,28 +328,11 @@ int led_init_opt(const char* arg) {
 
 int led_init_func(const char* arg) {
     int rc = FALSE;
-    char* labels[] = {
-        "sb", "substitute",
-        "ex", "execute",
-        "rm", "remove",
-        "rn", "range",
-        "tr", "translate",
-        "cs", "case",
-        "qt", "quote",
-        "tm", "trim",
-        "sp", "split",
-        "rv", "revert",
-        "fl", "field",
-        "jn", "join",
-        "cr", "crypt",
-        "uc", "urlencode",
-        "ph", "path"
-    };
-    int labels_sz = sizeof(labels)/sizeof(char*);
+    int labels_sz = sizeof(LED_FUNC_LABELS)/sizeof(char*);
     for (int i = 0; i < labels_sz; i+=2) {
-        if ( led_str_equal(arg, labels[i]) || led_str_equal(arg, labels[i + 1]) ) {
+        if ( led_str_equal(arg, LED_FUNC_LABELS[i]) || led_str_equal(arg, LED_FUNC_LABELS[i + 1]) ) {
             // match with define constant
-            led.func = i/2 + 1;
+            led.func = i/2;
             rc = TRUE;
             break;
         }
@@ -436,6 +448,8 @@ int led_read_line() {
     led_verbose("Read line");
 
     if (feof(led.curfile.file)) return 0;
+    //memset(led.buf_line, 0, sizeof(led.buf_line));
+
     led.curline.str = fgets(led.buf_line, LED_LINE_MAX, led.curfile.file);
     if (led.curline.str == NULL) return 0;
     led.curline.len = strlen(led.curline.str);
@@ -445,7 +459,11 @@ int led_read_line() {
 
 void led_write_line() {
     led_verbose("Write line");
-    fwrite(led.curline.str, sizeof(char), led.curline.len, stdout);
+    int nb = 0;
+    if (led.curline.str) {
+        nb = fwrite(led.curline.str, sizeof(char), led.curline.len, stdout);
+        fflush(stdout);
+    }
 }
 
 int led_select() {
@@ -472,42 +490,56 @@ int led_select() {
     return led.curline.selected;
 }
 
-void led_funct_substitute () {
-    if (led.func_regex == NULL) {
-        led.func_regex = led_regex_compile(led.func_arg[0].str);
-        led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
-    }
-
-    PCRE2_SIZE len = led.curline.len;
-    int rc = pcre2_substitute(
-                led.func_regex,
-                led.curline.str,
-                led.curline.len,
-                0,
-                PCRE2_SUBSTITUTE_EXTENDED,
-                NULL,
-                NULL,
-                led.func_arg[1].str,
-                led.func_arg[1].len,
-                led.buf_line_trans,
-                &len);
-    led.curline.str = led.buf_line_trans;
-    led.curline.len = len;
+void led_funct_print () {
+    if (!led.curline.selected)
+        led.curline.str = NULL;
 }
 
-void led_funct_execute () {
+void led_funct_substitute () {
+    if (led.curline.selected) {
+        if (led.func_regex == NULL) {
+            led.func_regex = led_regex_compile(led.func_arg[0].str);
+            led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
+        }
 
+        PCRE2_SIZE len = LED_LINE_MAX;
+        int rc = pcre2_substitute(
+                    led.func_regex,
+                    led.curline.str,
+                    led.curline.len,
+                    0,
+                    PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
+                    NULL,
+                    NULL,
+                    led.func_arg[1].str,
+                    led.func_arg[1].len,
+                    led.buf_line_trans,
+                    &len);
+        led_assert_pcre(rc);
+        led.curline.str = led.buf_line_trans;
+        led.curline.len = len;
+    }
+}
+
+void led_funct_remove () {
+    if (led.curline.selected)
+        led.curline.str = NULL;
 }
 
 void led_process() {
     led_verbose("Process");
     switch (led.func) {
+    case FUNC_PRINT:
+        led_funct_print();
+        break;
     case FUNC_SUBSTITUTE:
         led_funct_substitute();
         break;
-    case FUNC_EXECUTE:
-        led_funct_execute();
+    case FUNC_REMOVE:
+        led_funct_remove();
         break;
+    default:
+        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func*2+1]);
     }
 }
 
@@ -520,10 +552,9 @@ int main(int argc, char* argv[]) {
 
     while (led_next_file()) {
         while (led_read_line()) {
-            if (led_select()) {
-                led_process();
-                led_write_line();
-            }
+            led_select();
+            led_process();
+            led_write_line();
         }
     }
     led_assert(FALSE, LED_SUCCESS, NULL);

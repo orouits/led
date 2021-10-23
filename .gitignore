@@ -54,3 +54,4 @@ dkms.conf
 **/led
 **/*.debug
 **/*.pro.user
+debug

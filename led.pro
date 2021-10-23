@@ -7,7 +7,9 @@ SOURCES += \
         led.c
 
 DISTFILES += \
+    .gitignore \
     LICENSE \
-    README.md
+    README.md \
+    test/test1.txt
 
 LIBS += -lpcre2-8

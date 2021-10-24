@@ -465,7 +465,7 @@ int led_read_line() {
     //memset(led.buf_line, 0, sizeof(led.buf_line));
 
     led.curline.str = fgets(led.buf_line, LED_LINE_MAX, led.curfile.file);
-    if (led.curline.str == NULL) return 0;
+    if (led.curline.str == NULL) return FALSE;
     led.curline.len = strlen(led.curline.str);
     if (led.curline.str[led.curline.len - 1] == '\n') {
         // no \n for processing
@@ -473,7 +473,7 @@ int led_read_line() {
         led.buf_line[led.curline.len] = '\0';
     }
     led.curline.count++;
-    return led.curline.len;
+    return TRUE;
 }
 
 void led_write_line() {

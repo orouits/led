@@ -23,7 +23,7 @@
 #define SEL_FUNC_LINE 0
 #define SEL_FUNC_BLOCK 1
 
-#define FUNC_PRINT 0
+#define FUNC_NONE 0
 #define FUNC_SUBSTITUTE 1
 #define FUNC_EXECUTE 2
 #define FUNC_REMOVE 3
@@ -60,7 +60,7 @@
 #define LED_FILE_OUT_NEWEXT 4
 
 const char* LED_FUNC_LABELS[] = {
-    "pr", "print",
+    "nn", "none",
     "sb", "substitute",
     "ex", "execute",
     "rm", "remove",
@@ -93,6 +93,7 @@ struct {
     int     o_zero;
     int     o_exit_mode;
     int     o_sel_not;
+    int     o_sel_print;
     int     o_sel_block;
     int     o_file_in;
     int     o_file_out;
@@ -111,7 +112,8 @@ struct {
     } sel[LED_SEL_MAX];
 
     // processor function
-    int     func;
+    int     func_id;
+    const char* func_str;
     struct {
         const unsigned char* str;
         int len;
@@ -279,6 +281,9 @@ int led_init_opt(const char* arg) {
             case 'b':
                 led.o_sel_block = TRUE;
                 break;
+            case 'p':
+                led.o_sel_print = TRUE;
+                break;
             case 'f':
                 led.o_file_in = TRUE;
                 led.argsection = ARGS_FILES;
@@ -332,7 +337,8 @@ int led_init_func(const char* arg) {
     for (int i = 0; i < labels_sz; i+=2) {
         if ( led_str_equal(arg, LED_FUNC_LABELS[i]) || led_str_equal(arg, LED_FUNC_LABELS[i + 1]) ) {
             // match with define constant
-            led.func = i/2;
+            led.func_id = i/2;
+            led.func_str = LED_FUNC_LABELS[i + 1];
             rc = TRUE;
             break;
         }
@@ -398,7 +404,10 @@ void led_init(int argc, char* argv[]) {
         else led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s", arg);
     }
 
-    led_verbose("Func: %d", led.func);
+    led_verbose("Function: %s (%d)", led.func_str, led.func_id);
+
+    // if a function is defined set print mode
+    led.o_sel_print = led.o_sel_print || led.func_id > FUNC_NONE;
 }
 
 //-----------------------------------------------
@@ -441,6 +450,7 @@ int led_next_file() {
     }
     led.curline.count = 0;
     led.curline.count_sel = 0;
+    led.curline.selected = FALSE;
     return led.curfile.file != NULL;
 }
 
@@ -460,77 +470,76 @@ int led_read_line() {
 void led_write_line() {
     led_verbose("Write line");
     int nb = 0;
-    if (led.curline.str) {
+    if (led.curline.str && (led.o_sel_print || led.curline.selected == !led.o_sel_not)) {
         nb = fwrite(led.curline.str, sizeof(char), led.curline.len, stdout);
         fflush(stdout);
     }
 }
 
 int led_select() {
-    // no begin selector => no filter
-    // no end selector => filter only matching line
-    if (led.sel[0].type == SEL_TYPE_NONE )
-        led.curline.selected = TRUE;
-    else if (led.sel[0].type != SEL_TYPE_NONE && led.sel[1].type == SEL_TYPE_NONE && led.curline.selected )
-        led.curline.selected = FALSE;
 
-    if ( (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
-         || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.curline.str, led.curline.len)) ) {
-        led.curline.selected = TRUE;
-        led.curline.count_sel = 0;
+    if (!led.curline.selected) {
+        // last line not selected
+        if (led.sel[0].type == SEL_TYPE_NONE
+            || (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
+            || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.curline.str, led.curline.len)) ) {
+            led.curline.selected = TRUE;
+            led.curline.count_sel = 0;
+        }
     }
-    else if ( (led.sel[1].type == SEL_TYPE_COUNT && led.curline.count_sel >= led.sel[1].val)
-              || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.curline.str, led.curline.len)) ) {
-        led.curline.selected = FALSE;
+    else {
+        // last line selected
+        if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE)
+            || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.count_sel >= led.sel[1].val)
+            || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.curline.str, led.curline.len)) ) {
+            led.curline.selected = FALSE;
+            led.curline.count_sel = 0;
+        }
     }
 
     if (led.curline.selected) led.curline.count_sel++;
 
-    led_verbose("Select: beg %d -  end %d - sel %d - count %d", led.sel[0].type, led.sel[1].type, led.curline.selected, led.curline.count);
+    led_verbose("Select: %d (%d)", led.curline.selected, led.curline.count);
     return led.curline.selected;
 }
 
-void led_funct_print () {
-    if (!led.curline.selected)
-        led.curline.str = NULL;
-}
-
 void led_funct_substitute () {
-    if (led.curline.selected) {
-        if (led.func_regex == NULL) {
-            led.func_regex = led_regex_compile(led.func_arg[0].str);
-            led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
-        }
-
-        PCRE2_SIZE len = LED_LINE_MAX;
-        int rc = pcre2_substitute(
-                    led.func_regex,
-                    led.curline.str,
-                    led.curline.len,
-                    0,
-                    PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
-                    NULL,
-                    NULL,
-                    led.func_arg[1].str,
-                    led.func_arg[1].len,
-                    led.buf_line_trans,
-                    &len);
-        led_assert_pcre(rc);
-        led.curline.str = led.buf_line_trans;
-        led.curline.len = len;
+    if (led.func_regex == NULL) {
+        led.func_regex = led_regex_compile(led.func_arg[0].str);
+        led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
     }
+
+    PCRE2_SIZE len = LED_LINE_MAX;
+    int rc = pcre2_substitute(
+                led.func_regex,
+                led.curline.str,
+                led.curline.len,
+                0,
+                PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
+                NULL,
+                NULL,
+                led.func_arg[1].str,
+                led.func_arg[1].len,
+                led.buf_line_trans,
+                &len);
+    led_assert_pcre(rc);
+    led.curline.str = led.buf_line_trans;
+    led.curline.len = len;
 }
 
 void led_funct_remove () {
-    if (led.curline.selected)
-        led.curline.str = NULL;
+    led.curline.str = NULL;
+    led.curline.len = 0;
+}
+
+void led_funct_range () {
+    //TODO
 }
 
 void led_process() {
-    led_verbose("Process");
-    switch (led.func) {
-    case FUNC_PRINT:
-        led_funct_print();
+    led_verbose("Process line");
+    switch (led.func_id) {
+    case FUNC_NONE:
         break;
     case FUNC_SUBSTITUTE:
         led_funct_substitute();
@@ -538,8 +547,11 @@ void led_process() {
     case FUNC_REMOVE:
         led_funct_remove();
         break;
+    case FUNC_RANGE:
+        led_funct_range();
+        break;
     default:
-        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func*2+1]);
+        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func_id*2 + 1]);
     }
 }
 
@@ -553,7 +565,8 @@ int main(int argc, char* argv[]) {
     while (led_next_file()) {
         while (led_read_line()) {
             led_select();
-            led_process();
+            if (led.curline.selected == !led.o_sel_not)
+                led_process();
             led_write_line();
         }
     }

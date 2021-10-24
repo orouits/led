@@ -259,8 +259,9 @@ It tells led to read file names from STDIN.
 
 ### Selector options
 
-`-n` not select. 
-`-b` selected lines as blocks. 
+_ `-n` invert select. 
+_ `-b` selected lines as blocks. 
+_ `-p` print not selected
 
 ### File options
 

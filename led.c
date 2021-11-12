@@ -181,7 +181,7 @@ int led_assert(int cond, int code, const char* message, ...) {
             va_start(args, message);
             vsnprintf(led.buf_message, sizeof(led.buf_message), message, args);
             va_end(args);
-            fprintf(stderr, "#LED %s\n", led.buf_message);
+            fprintf(stderr, "\e[31m<LED ERROR> %s\e[0m\n", led.buf_message);
         }
         led_free();
         exit(code);
@@ -192,7 +192,7 @@ int led_assert(int cond, int code, const char* message, ...) {
 void led_assert_pcre(int rc) {
     if (rc < 0) {
         pcre2_get_error_message(rc, led.buf_message, LED_MSG_MAX);
-        fprintf(stderr, "#LED PCRE ERR: %s\n", led.buf_message);
+        fprintf(stderr, "\e[31m<LED PCRE ERROR> %s\e[0m\n", led.buf_message);
         led_free();
         exit(LED_ERR_ARG);
     }
@@ -204,7 +204,7 @@ void led_verbose(const char* message, ...) {
         va_start(args, message);
         vsnprintf(led.buf_message, LED_MSG_MAX, message, args);
         va_end(args);
-        fprintf(stderr, "#LED %s\n", led.buf_message);
+        fprintf(stderr, "\e[34m<LED> %s\e[0m\n", led.buf_message);
     }
 }
 

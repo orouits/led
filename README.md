@@ -111,7 +111,7 @@ Extract a range of characters in the line
 
 Translate characters string of a matching regex.
 
-`tr <schars> <dchars> [<regex>]`
+`tr <schars> <dchars>`
 
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters

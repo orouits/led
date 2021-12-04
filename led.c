@@ -224,7 +224,7 @@ int led_str_trim(char* line) {
 }
 
 int led_str_equal(const char* str1, const char* str2) {
-    return strcmp(str1, str2) == 0;
+    return str1 && str2 && strcmp(str1, str2) == 0;
 }
 
 pcre2_code* led_regex_compile(const char* pattern) {
@@ -517,7 +517,7 @@ int led_select() {
     return led.curline.selected;
 }
 
-void led_funct_substitute () {
+void led_funct_substitute() {
     if (led.func_regex == NULL) {
         led.func_regex = led_regex_compile(led.func_arg[0].str);
         led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
@@ -541,12 +541,12 @@ void led_funct_substitute () {
     led.curline.len = len;
 }
 
-void led_funct_remove () {
+void led_funct_remove() {
     led.curline.str = NULL;
     led.curline.len = 0;
 }
 
-void led_funct_range () {
+void led_funct_range() {
     int start = 0;
     int count = led.curline.len;
 
@@ -562,10 +562,42 @@ void led_funct_range () {
     }
     if (count + start > led.curline.len) count = led.curline.len - start;
 
-    memcpy(led.buf_line_trans,led.curline.str + start, count);
+    if (led_str_equal(led.func_arg[2].str, "n")) {
+        memcpy(led.buf_line_trans,led.curline.str, start);
+        memcpy(led.buf_line_trans + start,led.curline.str + start + count, led.curline.len - start - count);
+        led.buf_line_trans[led.curline.len - count] = '\0';
+        led.curline.len = led.curline.len - count;
+    }
+    else {
+        memcpy(led.buf_line_trans,led.curline.str + start, count);
+        led.buf_line_trans[count] = '\0';
+        led.curline.len = count;
+    }
     led.curline.str = led.buf_line_trans;
-    led.curline.str[count] = '\0';
-    led.curline.len = count;
+}
+
+void led_funct_translate() {
+    // to be optimized, basic search currently, UTF8 not supported
+    // with UTF8 it should be better to build an associative array or have a quicksearch.
+    for (int i=0; i<led.curline.len; i++) {
+        char c = led.curline.str[i];
+        led.buf_line_trans[i] = c;
+        for (int j=0; j<led.func_arg[0].len; j++) {
+            if (led.func_arg[0].str[j] == c) {
+                if (j < led.func_arg[1].len) led.buf_line_trans[i] = led.func_arg[1].str[j];
+                break;
+            }
+        }
+    }
+    led.buf_line_trans[led.curline.len] = '\0';
+    led.curline.str = led.buf_line_trans;
+}
+
+void led_funct_case() {
+    for (int i=0; i<led.curline.len; i++) {
+    }
+    led.buf_line_trans[led.curline.len] = '\0';
+    led.curline.str = led.buf_line_trans;
 }
 
 void led_process() {
@@ -581,6 +613,9 @@ void led_process() {
         break;
     case FUNC_RANGE:
         led_funct_range();
+        break;
+    case FUNC_TRANSLATE:
+        led_funct_translate();
         break;
     default:
         led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func_id*2 + 1]);

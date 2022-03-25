@@ -17,7 +17,7 @@ Led text processor workflow is basic, it optionally select parts of input text (
 There is only one selector and one processor function per led call. *led* do not embeed a complex transformation language as *sed* to achieve multiple transformation.
 The choice is to manage complex multiple tranformation through step by step calls with pipe invocation with an advanced way that allows pipes and massive file change together.
 
-### The selector  
+### The selector
 
 the selector allows to apply the line processor on selected lines of the input text.
 the selector is optional, it must be declared before a recognized processor function, the default lines selector is set as none (all lines selected)  
@@ -26,8 +26,9 @@ When led is used only with the selector, it is equivalent to grep with a similar
 
 #### syntax:
 
-- selector := address1 [address2]
-- address := regex|number
+- selector := address_from [+shift_from] [address_to] [+shift_to] 
+- address := regex|number|*number
+- shift := number (negative or positive)
 
 addressing examples:
 
@@ -50,12 +51,20 @@ cat file.txt | led abc 5
 # select block of lines from line 4 to a line containing "def" (not included)
 cat file.txt | led 4 def
 
+# select block of lines from 1 line after lines containing "abc" to 1 line after line containing "def" (not included)
+cat file.txt | led abc +1 def +1
+
+# select lines 2 lines after lines containing "abc"
+cat file.txt | led abc +2
+
 # block of lines selected will be given to the processor line by line (default)
 cat file.txt | led abc def line
 
 # block of lines selected will be given to the processor once in a multi-line buffer (for multi-line processing)
 cat file.txt | led abc def block
+
 ```
+
 
 ### The processor  
 
@@ -73,7 +82,7 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
 - regex: the search regex string
 - replace: th replace string
 - opts:
-    - "g" fo global search
+    - `g` for global search
 
 #### ex|execute command
 
@@ -317,3 +326,5 @@ change inplace:
 ## massive multi change inplace:
 
 ` ls *.txt | led sb <regex> <replace> -FIUf | led sb <regex> <replace> -FIUf | ...`
+
+led cs u A.+B

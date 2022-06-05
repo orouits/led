@@ -4,10 +4,6 @@ CFLAGS        = -pipe -O2 -Wall -Wextra -fPIC $(DEFINES)
 INCPATH       = -I.
 LINK          = g++
 LFLAGS        = -Wl,-O1
-AR            = ar cqs
-RANLIB        = 
-SED           = sed
-STRIP         = strip
 
 ####### Output directory
 
@@ -15,7 +11,7 @@ STRIP         = strip
 SOURCES       = led.c 
 OBJECTS       = led.o
 LIBS          = -lpcre2-8   
-DESTDIR       = 
+DESTDIR       = .
 TARGET        = led
 DISTNAME      = led-1.0.0
 DISTDIR       = /home/ol/src/led/$(DISTNAME)
@@ -28,14 +24,16 @@ led:  $(OBJECTS)
 all: led
 
 clean:
-	rm *.o led
+	rm -f *.o led
 
 distclean: clean
 
-####### Sub-libraries
+####### actons
 
-test:
-	./test.sh
+test: FORCE
+	test/test.sh
+
+FORCE: 
 
 ####### Compile
 

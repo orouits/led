@@ -105,6 +105,18 @@ Remove line
 
 `rm`
 
+#### in|insert command
+
+Insert line(s) 
+
+`in string [N]`
+
+#### ap|append command
+
+Append line(s) 
+
+`ap string [N]`
+
 #### rn|range command
 
 Extract a range of characters in the line 

@@ -39,6 +39,8 @@
 #define FUNC_CRYPT 13
 #define FUNC_URLENCODE 14
 #define FUNC_PATH 15
+#define FUNC_INSERT 16
+#define FUNC_APPEND 17
 
 #define LED_SUCCESS 0
 #define LED_ERR_ARG 1
@@ -75,7 +77,9 @@ const char* LED_FUNC_LABELS[] = {
     "jn", "join",
     "cr", "crypt",
     "uc", "urlencode",
-    "ph", "path"
+    "ph", "path",
+    "in", "insert",
+    "ap", "append"
 };
 
 //-----------------------------------------------
@@ -600,6 +604,24 @@ void led_funct_case() {
     led.curline.str = led.buf_line_trans;
 }
 
+void led_funct_insert() {
+    memcpy(led.buf_line_trans, led.func_arg[0].str, led.func_arg[0].len);
+    led.buf_line_trans[led.func_arg[0].len] = '\n';
+    memcpy(led.buf_line_trans + led.func_arg[0].len + 1, led.curline.str, led.curline.len);
+    led.buf_line_trans[led.func_arg[0].len + 1 + led.curline.len] = '\0';
+    led.curline.str = led.buf_line_trans;
+    led.curline.len += led.func_arg[0].len + 1;
+}
+
+void led_funct_append() {
+    memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
+    led.buf_line_trans[led.curline.len] = '\n';
+    memcpy(led.buf_line_trans + led.curline.len + 1, led.func_arg[0].str, led.func_arg[0].len);
+    led.buf_line_trans[led.curline.len + 1 + led.func_arg[0].len] = '\0';
+    led.curline.str = led.buf_line_trans;
+    led.curline.len += led.func_arg[0].len + 1;
+}
+
 void led_process() {
     led_verbose("Process line");
     switch (led.func_id) {
@@ -616,6 +638,12 @@ void led_process() {
         break;
     case FUNC_TRANSLATE:
         led_funct_translate();
+        break;
+    case FUNC_INSERT:
+        led_funct_insert();
+        break;
+    case FUNC_APPEND:
+        led_funct_append();
         break;
     default:
         led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func_id*2 + 1]);

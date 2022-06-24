@@ -51,6 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+.vscode/
 **/led
 **/*.debug
 **/*.pro.user

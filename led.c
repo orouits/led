@@ -598,9 +598,43 @@ void led_funct_translate() {
 }
 
 void led_funct_case() {
-    for (int i=0; i<led.curline.len; i++) {
+    if ( led.func_arg[0].len == 0 || led.func_arg[0].str[0] == 'u' ) {
+        memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
+        for (int i=0; i<led.curline.len; i++) {
+            led.buf_line_trans[i] = toupper(led.buf_line_trans[i]);
+        }
+        led.buf_line_trans[led.curline.len] = '\0';
     }
-    led.buf_line_trans[led.curline.len] = '\0';
+    else if ( led.func_arg[0].str[0] == 'l' ) {
+        memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
+        for (int i=0; i<led.curline.len; i++) {
+            led.buf_line_trans[i] = tolower(led.buf_line_trans[i]);
+        }
+        led.buf_line_trans[led.curline.len] = '\0';
+    }
+    else if ( led.func_arg[0].str[0] == 'f' ) {
+        memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
+        led.buf_line_trans[0] = toupper(led.buf_line_trans[0]);
+        for (int i=1; i<led.curline.len; i++) {
+            led.buf_line_trans[i] = tolower(led.buf_line_trans[i]);
+        }
+        led.buf_line_trans[led.curline.len] = '\0';
+    }
+    else if ( led.func_arg[0].str[0] == 'c' ) {
+        int wasword = FALSE;
+        int j=0;
+        for (int i=0; i<led.curline.len; i++) {
+            int c = led.curline.str[i];
+            int isword = isalnum(c) || c == '_';
+            if (isword) {
+                if (wasword) led.buf_line_trans[j++] = tolower(led.curline.str[i]);
+                else led.buf_line_trans[j++] = toupper(led.curline.str[i]);
+            }
+            wasword = isword;
+        }
+        led.buf_line_trans[j] = '\0';
+        led.curline.len = j;
+    }
     led.curline.str = led.buf_line_trans;
 }
 
@@ -644,6 +678,9 @@ void led_process() {
         break;
     case FUNC_APPEND:
         led_funct_append();
+        break;
+    case FUNC_CASE:
+        led_funct_case();
         break;
     default:
         led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func_id*2 + 1]);

@@ -37,7 +37,7 @@ FORCE:
 
 ####### Compile
 
-led.o: led.c 
+led.o: led.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o led.o led.c
 
 ####### Install

@@ -11,36 +11,42 @@
 #define FALSE 0
 #define TRUE 1
 
-#define ARGS_SELECT 0
-#define ARGS_FUNCT 1
-#define ARGS_FILES 2
+#define ARGS_SEC_SELECT 0
+#define ARGS_SEC_FUNCT 1
+#define ARGS_SEC_FILES 2
+
+const char* LED_SEC_LABEL[3] = {
+    "selector",
+    "function",
+    "files"
+};
 
 #define SEL_TYPE_NONE 0
 #define SEL_TYPE_REGEX 1
 #define SEL_TYPE_COUNT 2
 #define SEL_COUNT 2
 
-#define SEL_FUNC_LINE 0
-#define SEL_FUNC_BLOCK 1
+#define SEL_FN_LINE 0
+#define SEL_FN_BLOCK 1
 
-#define FUNC_NONE 0
-#define FUNC_SUBSTITUTE 1
-#define FUNC_EXECUTE 2
-#define FUNC_REMOVE 3
-#define FUNC_RANGE 4
-#define FUNC_TRANSLATE 5
-#define FUNC_CASE 6
-#define FUNC_QUOTE 7
-#define FUNC_TRIM 8
-#define FUNC_SPLIT 9
-#define FUNC_REVERT 10
-#define FUNC_FIELD 11
-#define FUNC_JOIN 12
-#define FUNC_CRYPT 13
-#define FUNC_URLENCODE 14
-#define FUNC_PATH 15
-#define FUNC_INSERT 16
-#define FUNC_APPEND 17
+#define FN_NONE 0
+#define FN_SUBSTITUTE 1
+#define FN_EXECUTE 2
+#define FN_REMOVE 3
+#define FN_RANGE 4
+#define FN_TRANSLATE 5
+#define FN_CASE 6
+#define FN_QUOTE 7
+#define FN_TRIM 8
+#define FN_SPLIT 9
+#define FN_REVERT 10
+#define FN_FIELD 11
+#define FN_JOIN 12
+#define FN_CRYPT 13
+#define FN_URLENCODE 14
+#define FN_PATH 15
+#define FN_INSERT 16
+#define FN_APPEND 17
 
 #define LED_SUCCESS 0
 #define LED_ERR_ARG 1
@@ -61,25 +67,34 @@
 #define LED_FILE_OUT_APPEND 3
 #define LED_FILE_OUT_NEWEXT 4
 
-const char* LED_FUNC_LABELS[] = {
-    "nn", "none",
-    "sb", "substitute",
-    "ex", "execute",
-    "rm", "remove",
-    "rn", "range",
-    "tr", "translate",
-    "cs", "case",
-    "qt", "quote",
-    "tm", "trim",
-    "sp", "split",
-    "rv", "revert",
-    "fl", "field",
-    "jn", "join",
-    "cr", "crypt",
-    "uc", "urlencode",
-    "ph", "path",
-    "in", "insert",
-    "ap", "append"
+void led_fn_none();
+void led_fn_substitute();
+void led_fn_remove();
+void led_fn_range();
+void led_fn_translate();
+void led_fn_case();
+void led_fn_insert();
+void led_fn_append();
+
+const void* LED_FN_MAP[] = {
+    "nn", "none", &led_fn_none,
+    "sb", "substitute", &led_fn_substitute, 
+    "ex", "execute", NULL,
+    "rm", "remove", &led_fn_remove,
+    "rn", "range", &led_fn_range,
+    "tr", "translate", &led_fn_translate,
+    "cs", "case", &led_fn_case,
+    "qt", "quote", NULL,
+    "tm", "trim", NULL,
+    "sp", "split", NULL,
+    "rv", "revert", NULL,
+    "fl", "field", NULL,
+    "jn", "join", NULL,
+    "cr", "crypt", NULL,
+    "uc", "urlencode", NULL,
+    "ph", "path", NULL,
+    "in", "insert", &led_fn_insert,
+    "ap", "append", &led_fn_append,
 };
 
 //-----------------------------------------------
@@ -117,8 +132,11 @@ struct {
     } sel[LED_SEL_MAX];
 
     // processor function
-    int     func_id;
-    const char* func_str;
+    struct {
+        int     id;
+        const char* label;
+        void (*ptr)();
+    } func;
     struct {
         const unsigned char* str;
         int len;
@@ -185,7 +203,7 @@ int led_assert(int cond, int code, const char* message, ...) {
             va_start(args, message);
             vsnprintf(led.buf_message, sizeof(led.buf_message), message, args);
             va_end(args);
-            fprintf(stderr, "\e[31m<LED ERROR> %s\e[0m\n", led.buf_message);
+            fprintf(stderr, "\e[31m[LED_ERROR] %s\e[0m\n", led.buf_message);
         }
         led_free();
         exit(code);
@@ -196,7 +214,7 @@ int led_assert(int cond, int code, const char* message, ...) {
 void led_assert_pcre(int rc) {
     if (rc < 0) {
         pcre2_get_error_message(rc, led.buf_message, LED_MSG_MAX);
-        fprintf(stderr, "\e[31m<LED PCRE ERROR> %s\e[0m\n", led.buf_message);
+        fprintf(stderr, "\e[31m[LED_ERROR_PCRE] %s\e[0m\n", led.buf_message);
         led_free();
         exit(LED_ERR_ARG);
     }
@@ -208,7 +226,7 @@ void led_verbose(const char* message, ...) {
         va_start(args, message);
         vsnprintf(led.buf_message, LED_MSG_MAX, message, args);
         va_end(args);
-        fprintf(stderr, "\e[34m<LED> %s\e[0m\n", led.buf_message);
+        fprintf(stderr, "\e[34m[LED_DEBUG] %s\e[0m\n", led.buf_message);
     }
 }
 
@@ -294,7 +312,7 @@ int led_init_opt(const char* arg) {
                 break;
             case 'f':
                 led.o_file_in = TRUE;
-                led.argsection = ARGS_FILES;
+                led.argsection = ARGS_SEC_FILES;
                 break;
             case 'F':
                 led.o_file_out = TRUE;
@@ -341,12 +359,16 @@ int led_init_opt(const char* arg) {
 
 int led_init_func(const char* arg) {
     int rc = FALSE;
-    int labels_sz = sizeof(LED_FUNC_LABELS)/sizeof(char*);
-    for (int i = 0; i < labels_sz; i+=2) {
-        if ( led_str_equal(arg, LED_FUNC_LABELS[i]) || led_str_equal(arg, LED_FUNC_LABELS[i + 1]) ) {
+    int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
+    led.func.id = 0;
+    led.func.label = (const char*)LED_FN_MAP[1];
+    led.func.ptr = (void (*)(void))LED_FN_MAP[2];
+    for (int i = 0; i < map_sz; i+=3) {
+        if ( led_str_equal(arg, (const char*)LED_FN_MAP[i]) || led_str_equal(arg, (const char*)LED_FN_MAP[i + 1]) ) {
             // match with define constant
-            led.func_id = i/2;
-            led.func_str = LED_FUNC_LABELS[i + 1];
+            led.func.id = i/3;
+            led.func.label = (const char*)LED_FN_MAP[i + 1];
+            led.func.ptr = (void (*)(void))LED_FN_MAP[i + 2];
             rc = TRUE;
             break;
         }
@@ -400,22 +422,21 @@ void led_init(int argc, char* argv[]) {
     for (int argi=1; argi < argc; argi++) {
         const char* arg = argv[argi];
 
-        if (led.argsection == ARGS_FILES ) {
+        if (led.argsection == ARGS_SEC_FILES ) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
-            break;
         }
-        else if (led.argsection < ARGS_FILES && led_init_opt(arg) ) ;
-        else if (led.argsection == ARGS_FUNCT && led_init_func_arg(arg) ) ;
-        else if (led.argsection < ARGS_FUNCT && led_init_func(arg) ) led.argsection = ARGS_FUNCT;
-        else if (led.argsection == ARGS_SELECT && led_init_sel(arg) ) ;
-        else led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s", arg);
+        else if (led.argsection < ARGS_SEC_FILES && led_init_opt(arg) ) ;
+        else if (led.argsection == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) ;
+        else if (led.argsection < ARGS_SEC_FUNCT && led_init_func(arg) ) led.argsection = ARGS_SEC_FUNCT;
+        else if (led.argsection == ARGS_SEC_SELECT && led_init_sel(arg) ) ;
+        else led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s (%s)", arg, LED_SEC_LABEL[led.argsection]);
     }
 
     // if a process function is not defined filter unselected
-    led.o_filter_unsel = led.o_filter_unsel || !led.func_id;
+    led.o_filter_unsel = led.o_filter_unsel || !led.func.id;
 
-    led_verbose("Function: %s (%d)", led.func_str, led.func_id);
+    led_verbose("Function: %s (%d)", led.func.label, led.func.id);
 }
 
 //-----------------------------------------------
@@ -463,7 +484,6 @@ int led_next_file() {
 }
 
 int led_read_line() {
-    led_verbose("Read line");
 
     if (feof(led.curfile.file)) return 0;
     //memset(led.buf_line, 0, sizeof(led.buf_line));
@@ -471,17 +491,18 @@ int led_read_line() {
     led.curline.str = fgets(led.buf_line, LED_LINE_MAX, led.curfile.file);
     if (led.curline.str == NULL) return FALSE;
     led.curline.len = strlen(led.curline.str);
-    if (led.curline.str[led.curline.len - 1] == '\n') {
-        // no \n for processing
+    while (led.curline.len > 0 && led.curline.str[led.curline.len - 1] == '\n') {
+        // no trailing \n for processing
         led.curline.len--;
         led.buf_line[led.curline.len] = '\0';
     }
     led.curline.count++;
+    led_verbose("New line: (%d) %s", led.curline.count, led.curline.str);
     return TRUE;
 }
 
 void led_write_line() {
-    led_verbose("Write line len:%d (%d)", led.curline.len, led.curline.count);
+    led_verbose("Write line: (%d) %d", led.curline.count, led.curline.len);
     int nb = 0;
 
     // if no filter empty empty strings are output
@@ -494,34 +515,34 @@ void led_write_line() {
 }
 
 int led_select() {
-    // in this function do not take care of led.o_sel_invert option.
-    // this option is took in account by function that consume the current line.
-    if (!led.curline.selected) {
-        // last line not selected
-        if (led.sel[0].type == SEL_TYPE_NONE
-            || (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
-            || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.curline.str, led.curline.len)) ) {
-            led.curline.selected = TRUE;
-            led.curline.count_sel = 0;
-        }
+    // led.o_sel_invert option is not handled here but by main process.
+
+    // stop selection on second boundary
+    if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE)
+        || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.count_sel >= led.sel[1].val)
+        || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.curline.str, led.curline.len)) ) {
+        led.curline.selected = FALSE;
+        led.curline.count_sel = 0;
     }
-    else {
-        // last line selected
-        if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE)
-            || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.count_sel >= led.sel[1].val)
-            || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.curline.str, led.curline.len)) ) {
-            led.curline.selected = FALSE;
-            led.curline.count_sel = 0;
-        }
+
+    // start selection on first boundary
+    if (led.sel[0].type == SEL_TYPE_NONE
+        || (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
+        || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.curline.str, led.curline.len)) ) {
+        led.curline.selected = TRUE;
+        led.curline.count_sel = 0;
     }
 
     if (led.curline.selected) led.curline.count_sel++;
 
-    led_verbose("Select: %d (%d)", led.curline.selected, led.curline.count);
+    led_verbose("Select: %d", led.curline.selected);
     return led.curline.selected;
 }
 
-void led_funct_substitute() {
+void led_fn_none() {
+}
+
+void led_fn_substitute() {
     if (led.func_regex == NULL) {
         led.func_regex = led_regex_compile(led.func_arg[0].str);
         led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
@@ -545,12 +566,12 @@ void led_funct_substitute() {
     led.curline.len = len;
 }
 
-void led_funct_remove() {
+void led_fn_remove() {
     led.curline.str = NULL;
     led.curline.len = 0;
 }
 
-void led_funct_range() {
+void led_fn_range() {
     int start = 0;
     int count = led.curline.len;
 
@@ -580,7 +601,7 @@ void led_funct_range() {
     led.curline.str = led.buf_line_trans;
 }
 
-void led_funct_translate() {
+void led_fn_translate() {
     // to be optimized, basic search currently, UTF8 not supported
     // with UTF8 it should be better to build an associative array or have a quicksearch.
     for (int i=0; i<led.curline.len; i++) {
@@ -597,7 +618,7 @@ void led_funct_translate() {
     led.curline.str = led.buf_line_trans;
 }
 
-void led_funct_case() {
+void led_fn_case() {
     if ( led.func_arg[0].len == 0 || led.func_arg[0].str[0] == 'u' ) {
         memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
         for (int i=0; i<led.curline.len; i++) {
@@ -638,7 +659,7 @@ void led_funct_case() {
     led.curline.str = led.buf_line_trans;
 }
 
-void led_funct_insert() {
+void led_fn_insert() {
     memcpy(led.buf_line_trans, led.func_arg[0].str, led.func_arg[0].len);
     led.buf_line_trans[led.func_arg[0].len] = '\n';
     memcpy(led.buf_line_trans + led.func_arg[0].len + 1, led.curline.str, led.curline.len);
@@ -647,7 +668,7 @@ void led_funct_insert() {
     led.curline.len += led.func_arg[0].len + 1;
 }
 
-void led_funct_append() {
+void led_fn_append() {
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
     led.buf_line_trans[led.curline.len] = '\n';
     memcpy(led.buf_line_trans + led.curline.len + 1, led.func_arg[0].str, led.func_arg[0].len);
@@ -658,33 +679,10 @@ void led_funct_append() {
 
 void led_process() {
     led_verbose("Process line");
-    switch (led.func_id) {
-    case FUNC_NONE:
-        break;
-    case FUNC_SUBSTITUTE:
-        led_funct_substitute();
-        break;
-    case FUNC_REMOVE:
-        led_funct_remove();
-        break;
-    case FUNC_RANGE:
-        led_funct_range();
-        break;
-    case FUNC_TRANSLATE:
-        led_funct_translate();
-        break;
-    case FUNC_INSERT:
-        led_funct_insert();
-        break;
-    case FUNC_APPEND:
-        led_funct_append();
-        break;
-    case FUNC_CASE:
-        led_funct_case();
-        break;
-    default:
-        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FUNC_LABELS[led.func_id*2 + 1]);
-    }
+    if (led.func.ptr) 
+        (*led.func.ptr)();
+    else 
+        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", led.func.label);
 }
 
 //-----------------------------------------------

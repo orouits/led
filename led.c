@@ -15,10 +15,10 @@
 #define ARGS_SEC_FUNCT 1
 #define ARGS_SEC_FILES 2
 
-const char* LED_SEC_LABEL[3] = {
+const char* LED_SEC_LABEL[] = {
     "selector",
     "function",
-    "files"
+    "files",
 };
 
 #define SEL_TYPE_NONE 0
@@ -360,9 +360,6 @@ int led_init_opt(const char* arg) {
 int led_init_func(const char* arg) {
     int rc = FALSE;
     int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
-    led.func.id = 0;
-    led.func.label = (const char*)LED_FN_MAP[1];
-    led.func.ptr = (void (*)(void))LED_FN_MAP[2];
     for (int i = 0; i < map_sz; i+=3) {
         if ( led_str_equal(arg, (const char*)LED_FN_MAP[i]) || led_str_equal(arg, (const char*)LED_FN_MAP[i + 1]) ) {
             // match with define constant
@@ -416,6 +413,11 @@ void led_init(int argc, char* argv[]) {
     led_verbose("Init");
 
     memset(&led, 0, sizeof(led));
+    
+    led.func.id = 0;
+    led.func.label = (const char*)LED_FN_MAP[1];
+    led.func.ptr = (void (*)(void))LED_FN_MAP[2];
+
     led.stdin_ispipe = !isatty(fileno(stdin));
     led.stdout_ispipe = !isatty(fileno(stdout));
 

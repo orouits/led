@@ -50,7 +50,8 @@ const char* LED_SEC_LABEL[] = {
 
 #define LED_SUCCESS 0
 #define LED_ERR_ARG 1
-#define LED_ERR_FILE 2
+#define LED_ERR_PCRE 2
+#define LED_ERR_FILE 3
 
 #define LED_SEL_MAX 2
 #define LED_FARG_MAX 3
@@ -196,7 +197,7 @@ void led_free() {
     }
 }
 
-int led_assert(int cond, int code, const char* message, ...) {
+void led_assert(int cond, int code, const char* message, ...) {
     if (!cond) {
         if (message) {
             va_list args;
@@ -208,7 +209,6 @@ int led_assert(int cond, int code, const char* message, ...) {
         led_free();
         exit(code);
     }
-    return cond;
 }
 
 void led_assert_pcre(int rc) {
@@ -216,7 +216,7 @@ void led_assert_pcre(int rc) {
         pcre2_get_error_message(rc, led.buf_message, LED_MSG_MAX);
         fprintf(stderr, "\e[31m[LED_ERROR_PCRE] %s\e[0m\n", led.buf_message);
         led_free();
-        exit(LED_ERR_ARG);
+        exit(LED_ERR_PCRE);
     }
 }
 
@@ -256,7 +256,7 @@ pcre2_code* led_regex_compile(const char* pattern) {
     led_assert(pattern != NULL, LED_ERR_ARG, "Missing regex");
     pcre2_code* regex = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, 0, &pcre_err, &pcre_erroff, NULL);
     pcre2_get_error_message(pcre_err, pcre_errbuf, sizeof(pcre_errbuf));
-    led_assert(regex != NULL, LED_ERR_ARG, "Regex error \"%s\" offset %d: %s", pattern, pcre_erroff, pcre_errbuf);
+    led_assert(regex != NULL, LED_ERR_PCRE, "Regex error \"%s\" offset %d: %s", pattern, pcre_erroff, pcre_errbuf);
     return regex;
 }
 
@@ -703,5 +703,6 @@ int main(int argc, char* argv[]) {
                 led_write_line();
         }
     }
-    led_assert(FALSE, LED_SUCCESS, NULL);
+    led_free();
+    return 0;
 }

@@ -153,14 +153,22 @@ Modify the case of a line.
 
 #### qt|quote command
 
-Quote / uquote a line (idempotent).
+Quote a line (idempotent).
 
 `qt [<opts>] [<regex>]`
 
 - opts: (only one) 
    - s: simple quote (default)
    - d: double quote
-   - u: unquote (simple or double)
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+
+#### uqt|unquote command
+
+Unquote a line (idempotent), detect kind of quote (' " `) with the first char
+
+`qt [<opts>] [<regex>]`
+
+- opts: (only one) 
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 #### tm|trim command

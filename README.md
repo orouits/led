@@ -8,7 +8,7 @@ It aims to cover in one tool common text search/replace functions that can somet
 
 led command line arguements is composed of section in the folling order:
 
-`led [selector] [processor] [-options] [files]`
+`led [selector] :[processor] [-options] [files]`
 
 the section recognition si done by keywork or options.
 
@@ -26,9 +26,8 @@ When led is used only with the selector, it is equivalent to grep with a similar
 
 #### syntax:
 
-- selector := address_from [+shift_from] [address_to] [+shift_to] 
-- address := regex|number|*number
-- shift := number (negative or positive)
+- selector := [address_from] [address_to]  
+- address := regex|number
 
 addressing examples:
 
@@ -72,192 +71,173 @@ cat file.txt | led abc def block
 
 #### sb|substitute command
 
-The `sb` command allows to substitute string from a regex.
+The `:sub|:substitute` command allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`sb <regex> <replace> [<opts>]`
+`:sub|:substitute <regex> <replace>`
 
 - regex: the search regex string
 - replace: th replace string
-- opts:
-    - `g` for global search
 
 #### ex|execute command
 
-The `ex` command allows to substitute string from a regex and execute it.
+The `:exe|:execute` command allows to substitute string from a regex and execute it.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`ex <regex> <command> [<opts>]`
+`:exe|:execute <regex> <command>`
 
 - regex = the search regex string
 - command: the replace string to be executed as a command with arguments 
-- opts:
-    - "g" for global search
-    - "s" stop on error
 
 #### rm|remove command
 
 Remove line 
 
-`rm`
+`:rm|:remove`
 
 #### in|insert command
 
 Insert line(s) 
 
-`in string [N]`
+`:ins|:insert string [N]`
 
 #### ap|append command
 
 Append line(s) 
 
-`ap string [N]`
+`:app|:append string [N]`
 
 #### rn|range command
 
 Extract a range of characters in the line 
 
-`rn N [C] [<opts>]`
+`:rn|:range N [C]`
+`:rnn|:rangenot N [C]`
 
 - N: from column, relative to the end of line if N is negative
 - C: character count, 1 by default
-- opts:
-    - n: all but not this range
+
 
 #### tr|translate command
 
 Translate characters string of a matching regex.
 
-`tr <schars> <dchars>`
+`:tr|:translate <schars> <dchars>`
 
 - schars: a sequence of source characters to be replaced by dest characters 
 - dchars: a sequence of dest characters
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### cs|case command
+#### case commands
 
-Modify the case of a line.
+`csl|caselower [<regex>]`
+`csu|caseupper [<regex>]`
+`csf|casefirst [<regex>]`
+`csc|casecamel [<regex>]`
 
-`cs [<opts>] [<regex>]`
-
-- opts: (only one) 
-   - l: lowercase (default)
-   - u: uppercase
-   - f: only first is upper
-   - c: camel case by detecting words and suppressing non alnum characters
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### qt|quote command
+#### quote commands
 
-Quote a line (idempotent).
+`qts|quotesimple [<regex>]`
+`qtd|quotedouble [<regex>]`
+`qtb|quoteback [<regex>]`
+`qtr|quoteremove [<regex>]`
 
-`qt [<opts>] [<regex>]`
-
-- opts: (only one) 
-   - s: simple quote (default)
-   - d: double quote
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### uqt|unquote command
 
-Unquote a line (idempotent), detect kind of quote (' " `) with the first char
-
-`qt [<opts>] [<regex>]`
-
-- opts: (only one) 
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
-
-#### tm|trim command
+#### trim commands
 
 Trim a line.
 
-`tm [<opts>] [<regex>]`
+`tm|trim       [<regex>]`
+`tml|trimleft  [<regex>]`
+`tmr|trimright [<regex>]`
 
-- opts: (only one)
-   - r: right (default)
-   - l: left
-   - a: all
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### sp|split command
+#### split commands
 
-Split a line.
-
-`sp [<regex>]`
+`sp|split [<regex>]`
 
 - regex: matching separator string, blank + tab by default
 
-#### rv|revert command
+#### revert commands
 
-Revert a line.
-
-`rv [<regex>]`
+`rv|revert [<regex>]`
 
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
-#### fl|field command
+#### field commands
 
  Extract fields of a line.
 
-`fl [N] [N] ... [<regex>]`
+`fl|field [N] [N] ... [<regex>]`
 
 - N: extract the Nth field, by default the first one. 
 - regex: matching delimiter string, by default blanks and tabs
 
-#### jn|join command
+#### join command
 
  Join lines.
  This function needs selector `block` mode to transmit all lines in the same buffer.
 
-`jn [N]`
+`jn|join [N]`
 
 - N: every N line. 
 
-#### cr|crypt command
+#### crypt commands
 
  encrypt or decrypt lines.
  This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
-`cr <type> [<opts>]`
+`ecrb64|encriptbase64`
+`ecrmd5|encriptmd5`
+`ecrsha1|encriptsha1`
+`ecrsha256|encriptsha256`
+`ecraes256|encriptaes256`
 
-- type: 
-    - b64
-    - md5
-    - sha1
-    - sha256
-    - aes256`<key>`
-- opts
-    - e: encrypt (default)
-    - d: decrypt (error for hash algorithms)
+`dcrb64|decriptbase64`
+`dcrmd5|decriptmd5`
+`dcrsha1|decriptsha1`
+`dcrsha256|decriptsha256`
+`dcraes256|decriptaes256`
 
 #### uc|urlencode command
 
  URL encode|decode lines.
 
-`uc [<opts>] [<regex>]`
+`urc|urlencode [<regex>]`
+`urd|urldecode [<regex>]`
 
-- opts
-    - e: encode (default)
-    - d: decode
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 #### ph|path command
 
  Modify line as path.
 
-`ph [<opts>] [<regex>]`
+`phc|pathcanonical [<regex>]`   set canonical path (default)
+`phd|pathdir [<regex>]`         extract directory
+`phf|pathfile [<regex>]`        extract filename
+`phr|pathrename [<regex>]`      rename with magic filename (experimental), make filenames camel case without non-alnum except `.`  
 
-- opts
-    - c: set canonical path (default)
-    - d: extract directory
-    - f: extract filename
-    - m: rename with magic filename (experimental), make filenames camel case without non-alnum except `.`  
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
- 
+
+#### rn|randomize
+
+ Generate randomized characters
+
+`rnn|randomnum [<regex>]`
+`rna|randomalpha [<regex>]`
+`rnan|randomalphanum [<regex>]`
+
+- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+
 ## Invocation
 
 3 way to invoque led:
@@ -288,9 +268,9 @@ It tells led to read file names from STDIN.
 
 ### Selector options
 
-_ `-n` invert select. 
+_ `-n` invert selection 
 _ `-b` selected lines as blocks. 
-_ `-p` print not selected
+_ `-s` output only selected
 
 ### File options
 
@@ -308,7 +288,7 @@ _ `-p` print not selected
 
 - `-z` end of line is 0
 - `-v` verbose to STDERR
-- `-s` summary to STDERR
+- `-r` report to STDERR
 - `-q` quiet, do not ouptut anything (exit code only)
 - `-e` exit code on value
 
@@ -346,5 +326,3 @@ change inplace:
 ## massive multi change inplace:
 
 ` ls *.txt | led sb <regex> <replace> -FIUf | led sb <regex> <replace> -FIUf | ...`
-
-led cs u A.+B

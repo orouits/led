@@ -28,25 +28,41 @@ const char* LED_SEC_LABEL[] = {
 #define LED_FILE_OUT_NEWEXT 4
 
 const void* LED_FN_MAP[] = {
-    "nn", "none", &led_fn_none,
-    "sb", "substitute", &led_fn_substitute, 
-    "ex", "execute", NULL,
-    "rm", "remove", &led_fn_remove,
-    "rn", "range", &led_fn_range,
-    "tr", "translate", &led_fn_translate,
-    "cs", "case", &led_fn_case,
-    "qt", "quote", &led_fn_quote,
-    "uq", "unquote", &led_fn_unquote,
-    "tm", "trim", NULL,
-    "sp", "split", NULL,
-    "rv", "revert", NULL,
-    "fl", "field", NULL,
-    "jn", "join", NULL,
-    "cr", "crypt", NULL,
-    "uc", "urlencode", NULL,
-    "ph", "path", NULL,
-    "in", "insert", &led_fn_insert,
-    "ap", "append", &led_fn_append,
+    ":nn", ":none", &led_fn_none, "No processing",
+    ":sub", ":substitute", &led_fn_substitute, "Substitute <regex> <replace>",
+    ":exe", ":execute", NULL, "Execute <regex> <replace=command>",
+    ":rm", ":remove", &led_fn_remove, "Remove the line",
+    ":ins", ":insert", &led_fn_insert, "Insert <string> [N]",
+    ":app", ":append", &led_fn_append, "Append <string> [N]",
+    ":rns", ":rangesel", &led_fn_rangesel, "Range select <start> [count]",
+    ":rnu", ":rangeunsel", NULL, "Range unselect <start> [count]",
+    ":tr", ":translate", &led_fn_translate, "Translate <chars> <chars>",
+    ":csl", ":caselower", &led_fn_caselower, "Case to lower",
+    ":csu", ":caseupper", &led_fn_caseupper, "Case to upper",
+    ":csf", ":casefirst", &led_fn_casefirst, "Case first upper",
+    ":csc", ":casecamel", &led_fn_casecamel, "Case to camel style",
+    ":qts", ":quotesimple", &led_fn_quotesimple, "Quote simple",
+    ":qtd", ":quotedouble", &led_fn_quotedouble, "Quote double",
+    ":qtb", ":quoteback", &led_fn_quoteback, "Quote back",
+    ":qtr", ":quoteremove", NULL, "Quote remove",
+    ":tm", ":trim", NULL, "Trim",
+    ":tml", ":trimleft", NULL, "Trim left",
+    ":tmr", ":trimright", NULL, "Trim right",
+    ":sp", ":split", NULL, "Split",
+    ":rv", ":revert", NULL, "Revert",
+    ":fl", ":field", NULL, "Extract fields",
+    ":jn", ":join", NULL, "Join lines",
+    ":ecrb64", ":encryptbase64", NULL, "Encrypt base64",
+    ":dcrb64", ":decryptbase64", NULL, "Decrypt base64",
+    ":urc", ":urlencode", NULL, "Encode URL",
+    ":urd", ":urldecode", NULL, "Decode URL",
+    ":phc", ":pathcanonical", NULL, "Conert to canonical path",
+    ":phd", ":pathdir", NULL, "Extract last dir of the path",
+    ":phf", ":pathfile", NULL, "Extract file of the path",
+    ":phr", ":pathrename", NULL, "Rename file of the path without specific chars",
+    ":rnn", ":randomizenum", NULL, "Randomize numeric values",
+    ":rna", ":randomizealpha", NULL, "Randomize alpha values",
+    ":rnan", ":randomizealphaum", NULL, "Randomize alpha numeric values",
 };
 
 led_struct led;
@@ -63,6 +79,9 @@ int led_init_opt(const char* arg) {
         while (opti < optl) {
             led_debug("options: %c", arg[opti]);
             switch (arg[opti]) {
+            case 'h':
+                led.o_help = TRUE;
+                break;
             case 'z':
                 led.o_zero = TRUE;
                 break;
@@ -72,8 +91,8 @@ int led_init_opt(const char* arg) {
             case 'q':
                 led.o_quiet = TRUE;
                 break;
-            case 's':
-                led.o_summary = TRUE;
+            case 'r':
+                led.o_report = TRUE;
                 break;
             case 'x':
                 led.o_exit_mode = LED_EXIT_VAL;
@@ -84,8 +103,8 @@ int led_init_opt(const char* arg) {
             case 'b':
                 led.o_sel_block = TRUE;
                 break;
-            case 'u':
-                led.o_filter_unsel = TRUE;
+            case 's':
+                led.o_output_selected = TRUE;
                 break;
             case 'e':
                 led.o_filter_empty = TRUE;
@@ -140,10 +159,10 @@ int led_init_opt(const char* arg) {
 int led_init_func(const char* arg) {
     int rc = FALSE;
     int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
-    for (int i = 0; i < map_sz; i+=3) {
+    for (int i = 0; i < map_sz; i+=4) {
         if ( led_str_equal(arg, (const char*)LED_FN_MAP[i]) || led_str_equal(arg, (const char*)LED_FN_MAP[i + 1]) ) {
             // match with define constant
-            led.func.id = i/3;
+            led.func.id = i/4;
             led.func.label = (const char*)LED_FN_MAP[i + 1];
             led.func.ptr = (void (*)(void))LED_FN_MAP[i + 2];
             rc = TRUE;
@@ -216,9 +235,23 @@ void led_init(int argc, char* argv[]) {
     }
 
     // if a process function is not defined filter unselected
-    led.o_filter_unsel = led.o_filter_unsel || !led.func.id;
+    led.o_output_selected = led.o_output_selected || !led.func.id;
 
     led_debug("Function: %s (%d)", led.func.label, led.func.id);
+}
+
+void led_help() {
+    fprintf(stderr, "led <selector> [:<processor>] [-options] [files] ...\n\n");
+    fprintf(stderr, "Processor commands:\n");
+    fprintf(stderr, "| %-8s | %-20s | %-50s |\n", "Short", "Long name", "Description");
+    int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
+    for (int i = 0; i < map_sz; i+=4) {
+        fprintf(stderr, "| %-8s | %-20s | %-50s |\n",
+            (const char*)LED_FN_MAP[i],
+            (const char*)LED_FN_MAP[i+1],
+            (const char*)LED_FN_MAP[i+3]
+        );
+    }
 }
 
 //-----------------------------------------------
@@ -336,15 +369,19 @@ void led_process() {
 int main(int argc, char* argv[]) {
     led_init(argc, argv);
 
-    while (led_next_file()) {
-        while (led_read_line()) {
-            led_select();
-            if (led.curline.selected == !led.o_sel_invert)
-                led_process();
-            if (led.curline.selected == !led.o_sel_invert || !led.o_filter_unsel)
-                led_write_line();
+    if (led.o_help)
+        led_help();
+    else 
+        while (led_next_file()) {
+            while (led_read_line()) {
+                led_select();
+                if (led.curline.selected == !led.o_sel_invert)
+                    led_process();
+                if (led.curline.selected == !led.o_sel_invert || !led.o_output_selected)
+                    led_write_line();
+            }
         }
-    }
+    
     led_free();
     return 0;
 }

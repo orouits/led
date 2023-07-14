@@ -26,13 +26,17 @@
 void led_fn_none();
 void led_fn_substitute();
 void led_fn_remove();
-void led_fn_range();
+void led_fn_rangesel();
 void led_fn_translate();
-void led_fn_case();
+void led_fn_caselower();
+void led_fn_caseupper();
+void led_fn_casefirst();
+void led_fn_casecamel();
 void led_fn_insert();
 void led_fn_append();
-void led_fn_quote();
-void led_fn_unquote();
+void led_fn_quotesimple();
+void led_fn_quotedouble();
+void led_fn_quoteback();
 
 void led_free();
 void led_assert(int cond, int code, const char* message, ...);
@@ -54,14 +58,15 @@ typedef struct {
     int     argsection;
 
     // options
+    int     o_help;
     int     o_verbose;
-    int     o_summary;
+    int     o_report;
     int     o_quiet;
     int     o_zero;
     int     o_exit_mode;
     int     o_sel_invert;
     int     o_sel_block;
-    int     o_filter_unsel;
+    int     o_output_selected;
     int     o_filter_empty;
     int     o_file_in;
     int     o_file_out;

@@ -57,9 +57,6 @@ int led_str_match(const char* str, const char* regex);
 //-----------------------------------------------
 
 typedef struct {
-    // section while cli is decoded
-    int     argsection;
-
     // options
     int     o_help;
     int     o_verbose;

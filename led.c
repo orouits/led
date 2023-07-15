@@ -4,7 +4,7 @@
 #define ARGS_SEC_FUNCT 1
 #define ARGS_SEC_FILES 2
 
-const char* LED_SEC_LABEL[] = {
+const char* LED_SEC_TABLE[] = {
     "selector",
     "function",
     "files",
@@ -42,7 +42,8 @@ led_fn_struct LED_FN_TABLE[] = {
     { ":nn", ":none", &led_fn_impl_none, "", "No processing", ":none" },
     { ":sub", ":substitute", &led_fn_impl_substitute, "RS", "Substitute", ":substitute <regex> <replace>" },
     { ":exe", ":execute", NULL, "RS", "Execute", ":execute <regex> <replace=command>" },
-    { ":rm", ":remove", &led_fn_impl_remove, "", "Remove line", ":remove" },
+    { ":rm", ":remove", &led_fn_impl_remove, "s", "Remove line", ":remove [<regex>]" },
+    { ":rmb", ":remove_blank", NULL, "", "Remove blank/empty lines", ":remove_blank" },
     { ":ins", ":insert", &led_fn_impl_insert, "Sn", "Insert line", ":insert <string> [N]" },
     { ":app", ":append", &led_fn_impl_append, "Sn", "Append line", ":append <string> [N]" },
     { ":rns", ":range_sel", &led_fn_impl_rangesel, "Nn", "Range select", ":range_sel <start> [count]" },
@@ -122,7 +123,6 @@ int led_init_opt(const char* arg) {
                 break;
             case 'f':
                 led.o_file_in = TRUE;
-                led.argsection = ARGS_SEC_FILES;
                 break;
             case 'F':
                 led.o_file_out = TRUE;
@@ -247,6 +247,7 @@ void led_init_config() {
 
 void led_init(int argc, char* argv[]) {
     led_debug("Init");
+    int arg_section = 0;
 
     memset(&led, 0, sizeof(led));
 
@@ -256,15 +257,25 @@ void led_init(int argc, char* argv[]) {
     for (int argi=1; argi < argc; argi++) {
         const char* arg = argv[argi];
 
-        if (led.argsection == ARGS_SEC_FILES ) {
+        if (arg_section == ARGS_SEC_FILES ) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
         }
-        else if (led.argsection < ARGS_SEC_FILES && led_init_opt(arg) ) ;
-        else if (led.argsection == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) ;
-        else if (led.argsection < ARGS_SEC_FUNCT && led_init_func(arg) ) led.argsection = ARGS_SEC_FUNCT;
-        else if (led.argsection == ARGS_SEC_SELECT && led_init_sel(arg) ) ;
-        else led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s (%s)", arg, LED_SEC_LABEL[led.argsection]);
+        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg) ) {
+            if (led.o_file_in) arg_section = ARGS_SEC_FILES;
+        }
+        else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) {
+
+        }
+        else if (arg_section < ARGS_SEC_FUNCT && led_init_func(arg) ) {
+            arg_section = ARGS_SEC_FUNCT;
+        }
+        else if (arg_section == ARGS_SEC_SELECT && led_init_sel(arg) ) {
+
+        }
+        else {
+            led_assert(FALSE, LED_ERR_ARG, "Unknown or wrong argument: %s (%s section)", arg, LED_SEC_TABLE[arg_section]);
+        }
     }
 
     // if a process function is not defined show only selected
@@ -274,7 +285,6 @@ void led_init(int argc, char* argv[]) {
 
     // pre-configure the processor command
     led_init_config();
-
 }
 
 void led_help() {

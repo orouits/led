@@ -34,7 +34,20 @@ int led_regex_match(pcre2_code* regex, const char* line, int len) {
     pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
     int rc = pcre2_match(regex, (PCRE2_SPTR)line, len, 0, 0, match_data, NULL);
     pcre2_match_data_free(match_data);
-    return rc >= 0;
+    return rc > 0;
+}
+
+int led_regex_match_offset(pcre2_code* regex, const char* line, int len, int* offset, int* length) {
+    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
+    int rc = pcre2_match(regex, (PCRE2_SPTR)line, len, 0, 0, match_data, NULL);
+    if (offset && length && rc > 0) {
+        PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+        int iv = rc > 1 ? 1 : 0;
+        *offset = ovector[iv];
+        *length = ovector[iv + 1];
+    }
+    pcre2_match_data_free(match_data);
+    return rc > 0;
 }
 
 int led_str_match(const char* str, const char* regex) {

@@ -10,15 +10,17 @@ void led_free() {
         led.curfile.file = NULL;
         led.curfile.name = NULL;
     }
-    for (int i = 0; i < 2; i++ ) {
+    for (int i=0; i<2; i++ ) {
         if ( led.sel[i].regex != NULL) {
             pcre2_code_free(led.sel[i].regex);
             led.sel[i].regex = NULL;
         }
     }
-    if (led.func_regex != NULL) {
-        pcre2_code_free(led.func_regex);
-        led.func_regex = NULL;
+    for (int i=0; i<LED_FARG_MAX; i++ ) {
+        if (led.fn_arg[i].regex != NULL) {
+            pcre2_code_free(led.fn_arg[i].regex);
+            led.fn_arg[i].regex = NULL;
+        }
     }
 }
 

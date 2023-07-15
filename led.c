@@ -27,42 +27,53 @@ const char* LED_SEC_LABEL[] = {
 #define LED_FILE_OUT_APPEND 3
 #define LED_FILE_OUT_NEWEXT 4
 
-const void* LED_FN_MAP[] = {
-    ":nn", ":none", &led_fn_none, NULL, "No processing",
-    ":sub", ":substitute", &led_fn_substitute, &led_fncfg_substitute, "Substitute <regex> <replace>",
-    ":exe", ":execute", NULL, NULL, "Execute <regex> <replace=command>",
-    ":rm", ":remove", &led_fn_remove, NULL, "Remove the line",
-    ":ins", ":insert", &led_fn_insert, NULL, "Insert <string> [N]",
-    ":app", ":append", &led_fn_append, NULL, "Append <string> [N]",
-    ":rns", ":rangesel", &led_fn_rangesel, NULL, "Range select <start> [count]",
-    ":rnu", ":rangeunsel", NULL, NULL, "Range unselect <start> [count]",
-    ":tr", ":translate", &led_fn_translate, NULL, "Translate <chars> <chars>",
-    ":csl", ":caselower", &led_fn_caselower, NULL, "Case to lower",
-    ":csu", ":caseupper", &led_fn_caseupper, NULL, "Case to upper",
-    ":csf", ":casefirst", &led_fn_casefirst, NULL, "Case first upper",
-    ":csc", ":casecamel", &led_fn_casecamel, NULL, "Case to camel style",
-    ":qts", ":quotesimple", &led_fn_quotesimple, NULL, "Quote simple",
-    ":qtd", ":quotedouble", &led_fn_quotedouble, NULL, "Quote double",
-    ":qtb", ":quoteback", &led_fn_quoteback, NULL, "Quote back",
-    ":qtr", ":quoteremove", NULL, NULL, "Quote remove",
-    ":tm", ":trim", NULL, NULL, "Trim",
-    ":tml", ":trimleft", NULL, NULL, "Trim left",
-    ":tmr", ":trimright", NULL, NULL, "Trim right",
-    ":sp", ":split", NULL, NULL, "Split",
-    ":rv", ":revert", NULL, NULL, "Revert",
-    ":fl", ":field", NULL, NULL, "Extract fields",
-    ":jn", ":join", NULL, NULL, "Join lines",
-    ":ecrb64", ":encryptbase64", NULL, NULL, "Encrypt base64",
-    ":dcrb64", ":decryptbase64", NULL, NULL, "Decrypt base64",
-    ":urc", ":urlencode", NULL, NULL, "Encode URL",
-    ":urd", ":urldecode", NULL, NULL, "Decode URL",
-    ":phc", ":pathcanonical", NULL, NULL, "Conert to canonical path",
-    ":phd", ":pathdir", NULL, NULL, "Extract last dir of the path",
-    ":phf", ":pathfile", NULL, NULL, "Extract file of the path",
-    ":phr", ":pathrename", NULL, NULL, "Rename file of the path without specific chars",
-    ":rnn", ":randomizenum", NULL, NULL, "Randomize numeric values",
-    ":rna", ":randomizealpha", NULL, NULL, "Randomize alpha values",
-    ":rnan", ":randomizealphaum", NULL, NULL, "Randomize alpha numeric values",
+typedef void (*led_fn_impl)();
+
+typedef struct {
+    const char* short_name;
+    const char* long_name;
+    led_fn_impl impl;
+    const char* args_fmt;
+    const char* help_desc;
+    const char* help_format;
+} led_fn_struct;
+
+led_fn_struct LED_FN_TABLE[] = {
+    { ":nn", ":none", &led_fn_impl_none, "", "No processing", ":none" },
+    { ":sub", ":substitute", &led_fn_impl_substitute, "RS", "Substitute", ":substitute <regex> <replace>" },
+    { ":exe", ":execute", NULL, "RS", "Execute", ":execute <regex> <replace=command>" },
+    { ":rm", ":remove", &led_fn_impl_remove, "", "Remove line", ":remove" },
+    { ":ins", ":insert", &led_fn_impl_insert, "Sn", "Insert line", ":insert <string> [N]" },
+    { ":app", ":append", &led_fn_impl_append, "Sn", "Append line", ":append <string> [N]" },
+    { ":rns", ":range_sel", &led_fn_impl_rangesel, "Nn", "Range select", ":range_sel <start> [count]" },
+    { ":rnu", ":range_unsel", NULL, "Nn", "Range unselect", ":range_unsel <start> [count]" },
+    { ":tr", ":translate", &led_fn_impl_translate, "SS", "Translate", ":translate <chars> <chars>" },
+    { ":csl", ":case_lower", &led_fn_impl_caselower, "r", "Case to lower", ":case_lower [<regex>]" },
+    { ":csu", ":case_upper", &led_fn_impl_caseupper, "r", "Case to upper", ":case_upper [<regex>]" },
+    { ":csf", ":case_first", &led_fn_impl_casefirst, "r", "Case first upper", ":case_first [<regex>]" },
+    { ":csc", ":case_camel", &led_fn_impl_casecamel, "r", "Case to camel style", ":case_camel [<regex>]" },
+    { ":qts", ":quote_simple", &led_fn_impl_quotesimple, "r", "Quote simple", ":quote_simple [<regex>]" },
+    { ":qtd", ":quote_double", &led_fn_impl_quotedouble, "r", "Quote double", ":quote_double [<regex>]" },
+    { ":qtb", ":quote_back", &led_fn_impl_quoteback, "r", "Quote back", ":quote_back [<regex>]" },
+    { ":qtr", ":quote_remove", NULL, "r", "Quote remove", ":quote_remove [<regex>]" },
+    { ":tm", ":trim", NULL, "r", "Trim", ":trim [<regex>]" },
+    { ":tml", ":trim_left", NULL, "r", "Trim left", ":trim_left [<regex>]" },
+    { ":tmr", ":trim_right", NULL, "r", "Trim right", ":trim_right [<regex>]" },
+    { ":sp", ":split", NULL, "S", "Split", ":split <string>" },
+    { ":rv", ":revert", NULL, "r", "Revert", ":revert [<regex>]" },
+    { ":fl", ":field", NULL, "SN", "Extract fields", ":field <sep> <N>" },
+    { ":jn", ":join", NULL, "", "Join lines", ":join" },
+    { ":ecrb64", ":encrypt_base64", NULL, "s", "Encrypt base64", ":encrypt_base64 [<regex>]" },
+    { ":dcrb64", ":decrypt_base64", NULL, "s", "Decrypt base64", ":decrypt_base64 [<regex>]" },
+    { ":urc", ":url_encode", NULL, "s", "Encode URL", ":url_encode [<regex>]" },
+    { ":urd", ":url_decode", NULL, "s", "Decode URL", ":url_decode [<regex>]" },
+    { ":phc", ":path_canonical", NULL, "s", "Conert to canonical path", ":path_canonical [<regex>]" },
+    { ":phd", ":path_dir", NULL, "s", "Extract last dir of the path", ":path_dir [<regex>]" },
+    { ":phf", ":path_file", NULL, "s", "Extract file of the path", ":path_file [<regex>]" },
+    { ":phr", ":path_rename", NULL, "s", "Rename file of the path without specific chars", ":path_rename [<regex>]" },
+    { ":rnn", ":randomize_num", NULL, "s", "Randomize numeric values", ":randomize_num [<regex>]" },
+    { ":rna", ":randomize_alpha", NULL, "s", "Randomize alpha values", ":randomize_alpha [<regex>]" },
+    { ":rnan", ":randomize_alphaum", NULL, "s", "Randomize alpha numeric values", ":randomize_alphaum [<regex>]" },
 };
 
 led_struct led;
@@ -158,14 +169,10 @@ int led_init_opt(const char* arg) {
 
 int led_init_func(const char* arg) {
     int rc = FALSE;
-    int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
-    for (int i = 0; i < map_sz; i+=5) {
-        if ( led_str_equal(arg, (const char*)LED_FN_MAP[i]) || led_str_equal(arg, (const char*)LED_FN_MAP[i + 1]) ) {
-            // match with define constant
-            led.func.id = i/5;
-            led.func.label = (const char*)LED_FN_MAP[i + 1];
-            led.func.ptr = (void (*)(void))LED_FN_MAP[i + 2];
-            led.func.cfgptr = (void (*)(void))LED_FN_MAP[i + 3];
+    int list_sz = sizeof(LED_FN_TABLE)/sizeof(led_fn_struct);
+    for (int i = 0; i < list_sz; i++) {
+        if ( led_str_equal(arg, LED_FN_TABLE[i].short_name) || led_str_equal(arg, LED_FN_TABLE[i].long_name) ) {
+            led.fn_id = i;
             rc = TRUE;
             break;
         }
@@ -174,14 +181,13 @@ int led_init_func(const char* arg) {
 }
 
 int led_init_func_arg(const char* arg) {
-    int rc = !led.func_arg[LED_FARG_MAX - 1].str;
+    int rc = !led.fn_arg[LED_FARG_MAX - 1].str;
     if (rc) {
         for (int i = 0; i < LED_FARG_MAX; i++) {
-            if ( !led.func_arg[i].str ) {
+            if ( !led.fn_arg[i].str ) {
                 char* str;
-                led.func_arg[i].str = arg;
-                led.func_arg[i].len = strlen(arg);
-                led.func_arg[i].val = strtol(arg, &str, 10);
+                led.fn_arg[i].str = arg;
+                led.fn_arg[i].len = strlen(arg);
                 break;
             }
         }
@@ -209,15 +215,40 @@ int led_init_sel(const char* arg) {
     return rc;
 }
 
+void led_init_config() {
+    const char* format = LED_FN_TABLE[led.fn_id].args_fmt;
+    for (int i=0; format[i]; i++) {
+        if (format[i] == 'R') {
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i, LED_FN_TABLE[led.fn_id].help_format);
+            led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
+        }
+        else if (format[i] == 'r') {
+            if (led.fn_arg[i].str)
+                led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
+        }
+        else if (format[i] == 'N') {
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i, LED_FN_TABLE[led.fn_id].help_format);
+            led.fn_arg[i].val = atol(led.fn_arg[i].str);
+        }
+        else if (format[i] == 'n') {
+            led.fn_arg[i].val = atol(led.fn_arg[i].str);
+        }
+        else if (format[i] == 'S') {
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i, LED_FN_TABLE[led.fn_id].help_format);
+        }
+        else if (format[i] == 's') {
+        }
+        else {
+            led_assert(TRUE, LED_ERR_ARG, "arg %d: bad internal format (%s)", i, format);
+        }
+    }
+}
+
+
 void led_init(int argc, char* argv[]) {
     led_debug("Init");
 
     memset(&led, 0, sizeof(led));
-    
-    led.func.id = 0;
-    led.func.label = (const char*)LED_FN_MAP[1];
-    led.func.ptr = (void (*)(void))LED_FN_MAP[2];
-    led.func.cfgptr = (void (*)(void))LED_FN_MAP[3];
 
     led.stdin_ispipe = !isatty(fileno(stdin));
     led.stdout_ispipe = !isatty(fileno(stdout));
@@ -237,26 +268,70 @@ void led_init(int argc, char* argv[]) {
     }
 
     // if a process function is not defined show only selected
-    led.o_output_selected = led.o_output_selected || !led.func.id;
+    led.o_output_selected = led.o_output_selected || !led.fn_id;
 
-    led_debug("Function: %s (%d)", led.func.label, led.func.id);
+    led_debug("Function: %s (%d)", LED_FN_TABLE[led.fn_id].long_name, led.fn_id);
 
     // pre-configure the processor command
-    if (led.func.cfgptr) (*led.func.cfgptr)();
+    led_init_config();
+
 }
 
 void led_help() {
-    fprintf(stderr, "led <selector> [:<processor>] [-options] [files] ...\n\n");
-    fprintf(stderr, "Processor commands:\n");
-    fprintf(stderr, "| %-8s | %-20s | %-50s |\n", "Short", "Long name", "Description");
-    int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
-    for (int i = 0; i < map_sz; i+=5) {
-        fprintf(stderr, "| %-8s | %-20s | %-50s |\n",
-            (const char*)LED_FN_MAP[i],
-            (const char*)LED_FN_MAP[i+1],
-            (const char*)LED_FN_MAP[i+4]
+    fprintf(stderr,
+"\
+led [<selector>] [:<processor>] [-options] [files] ...\n\
+\n\
+Selector:\n\
+    <regex>              => select all lines matching with <regex>\n\
+    <n>                  => select line <n>\n\
+    <regex> <regex_stop> => select group of lines starting matching <regex> (included) until matching <regex_stop> (excluded)\n\
+    <regex> <count>      => select group of lines starting matching <regex> (included) until <count> lines are selected\n\
+    <n>     <regex_stop> => select group of lines starting line <n> (included) until matching <regex_stop> (excluded)\n\
+    <n>     <count>      => select group of lines starting line <n> (included) until <count> lines are selected\n\
+\n\
+Processor:\n\
+    :<function> [arg] ...\n\
+\n\
+Global options\n\
+    -z  end of line is 0\n\
+    -v  verbose to STDERR\n\
+    -r  report to STDERR\n\
+    -q  quiet, do not ouptut anything (exit code only)\n\
+    -e  exit code on value\n\
+\n\
+Selector Options:\n\
+    -n  invert selection\n\
+    -b  selected lines as blocks\n\
+    -s  output only selected\n\
+\n\
+File Options:\n\
+    -f          read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)\n\
+    -F          write filenames to STDOUT instead of content.\n\
+                This option allows advanced massive files chained transformations with pipes.\n\
+    -I          write content to filename inplace\n\
+    -W<path>    write content to a fixed file\n\
+    -A<path>    append content to a fixed file\n\
+    -E<ext>     write content to filename.ext\n\
+    -E<3>       write content to filename.NNN\n\
+    -D<dir>     write files in dir.\n\
+    -U          write unchanged filenames\n\
+\n\
+Processor commands:\n\
+"
+    );
+    fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "Name", "Short", "Description", "Format");
+    fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
+    int list_sz = sizeof(LED_FN_TABLE)/sizeof(led_fn_struct);
+    for (int i=0; i<list_sz; i++) {
+        fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n",
+            LED_FN_TABLE[i].long_name,
+            LED_FN_TABLE[i].short_name,
+            LED_FN_TABLE[i].help_desc,
+            LED_FN_TABLE[i].help_format
         );
     }
+    fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
 }
 
 //-----------------------------------------------
@@ -361,10 +436,11 @@ int led_select() {
 
 void led_process() {
     led_debug("Process line");
-    if (led.func.ptr) 
-        (*led.func.ptr)();
-    else 
-        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", led.func.label);
+    led_fn_impl impl = LED_FN_TABLE[led.fn_id].impl;
+    if (impl)
+        (*impl)();
+    else
+        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FN_TABLE[led.fn_id].long_name);
 }
 
 //-----------------------------------------------
@@ -376,7 +452,7 @@ int main(int argc, char* argv[]) {
 
     if (led.o_help)
         led_help();
-    else 
+    else
         while (led_next_file()) {
             while (led_read_line()) {
                 led_select();
@@ -386,7 +462,7 @@ int main(int argc, char* argv[]) {
                     led_write_line();
             }
         }
-    
+
     led_free();
     return 0;
 }

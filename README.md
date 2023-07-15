@@ -1,6 +1,6 @@
 # LED
 Line Editor (led) is a simple command line utility written in C to edit text files using the well known PCRE2 library by Philip Hazel for modern REGEX synthax and more.
-It aims to cover in one tool common text search/replace functions that can sometimes need multiple tools like sed, grep, tr, awk, perl ... 
+It aims to cover in one tool common text search/replace functions that can sometimes need multiple tools like sed, grep, tr, awk, perl ...
 
 # Command line synthax
 
@@ -20,13 +20,13 @@ The choice is to manage complex multiple tranformation through step by step call
 ### The selector
 
 the selector allows to apply the line processor on selected lines of the input text.
-the selector is optional, it must be declared before a recognized processor function, the default lines selector is set as none (all lines selected)  
+the selector is optional, it must be declared before a recognized processor function, the default lines selector is set as none (all lines selected)
 
-When led is used only with the selector, it is equivalent to grep with a similar addressing feature as sed using PCRE2 as regex engine. 
+When led is used only with the selector, it is equivalent to grep with a similar addressing feature as sed using PCRE2 as regex engine.
 
 #### syntax:
 
-- selector := [address_from] [address_to]  
+- selector := [address_from] [address_to]
 - address := regex|number
 
 addressing examples:
@@ -65,9 +65,9 @@ cat file.txt | led abc def block
 ```
 
 
-### The processor  
+### The processor
 
-- processor := cmd arg arg ...
+- processor := function arg arg ...
 
 #### sb|substitute command
 
@@ -91,29 +91,29 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
 `:exe|:execute <regex> <command>`
 
 - regex = the search regex string
-- command: the replace string to be executed as a command with arguments 
+- command: the replace string to be executed as a command with arguments
 
 #### rm|remove command
 
-Remove line 
+Remove line
 
 `:rm|:remove`
 
 #### in|insert command
 
-Insert line(s) 
+Insert line(s)
 
 `:ins|:insert string [N]`
 
 #### ap|append command
 
-Append line(s) 
+Append line(s)
 
 `:app|:append string [N]`
 
 #### rn|range command
 
-Extract a range of characters in the line 
+Extract a range of characters in the line
 
 `:rn|:range N [C]`
 `:rnn|:rangenot N [C]`
@@ -128,7 +128,7 @@ Translate characters string of a matching regex.
 
 `:tr|:translate <schars> <dchars>`
 
-- schars: a sequence of source characters to be replaced by dest characters 
+- schars: a sequence of source characters to be replaced by dest characters
 - dchars: a sequence of dest characters
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
@@ -179,7 +179,7 @@ Trim a line.
 
 `fl|field [N] [N] ... [<regex>]`
 
-- N: extract the Nth field, by default the first one. 
+- N: extract the Nth field, by default the first one.
 - regex: matching delimiter string, by default blanks and tabs
 
 #### join command
@@ -189,7 +189,7 @@ Trim a line.
 
 `jn|join [N]`
 
-- N: every N line. 
+- N: every N line.
 
 #### crypt commands
 
@@ -224,7 +224,7 @@ Trim a line.
 `phc|pathcanonical [<regex>]`   set canonical path (default)
 `phd|pathdir [<regex>]`         extract directory
 `phf|pathfile [<regex>]`        extract filename
-`phr|pathrename [<regex>]`      rename with magic filename (experimental), make filenames camel case without non-alnum except `.`  
+`phr|pathrename [<regex>]`      rename with magic filename (experimental), make filenames camel case without non-alnum except `.`
 
 - regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
@@ -268,20 +268,20 @@ It tells led to read file names from STDIN.
 
 ### Selector options
 
-_ `-n` invert selection 
-_ `-b` selected lines as blocks. 
-_ `-s` output only selected
+- `-n` invert selection
+- `-b` selected lines as blocks.
+- `-s` output only selected
 
 ### File options
 
-- `-f` read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)  
+- `-f` read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)
 - `-F` write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
 - `-I` write content to filename inplace
 - `-W<path>` write content to a fixed file
 - `-A<path>` append content to a fixed file
 - `-E<ext>` write content to filename.ext
 - `-E<3>` write content to filename.NNN
-- `-D<dir>` write files in dir. 
+- `-D<dir>` write files in dir.
 - `-U` write unchanged filenames
 
 ### Global options
@@ -302,7 +302,7 @@ Standard:
 On value (see -e):
 - 0 = output not empty
 - 1 = no match/change
-- 2 = internal error 
+- 2 = internal error
 
 # Examples
 

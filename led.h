@@ -23,20 +23,22 @@
 #define LED_FNAME_MAX 4096
 #define LED_MSG_MAX 4096
 
-void led_fn_none();
-void led_fn_substitute(); void led_fncfg_substitute();
-void led_fn_remove();
-void led_fn_rangesel();
-void led_fn_translate();
-void led_fn_caselower();
-void led_fn_caseupper();
-void led_fn_casefirst();
-void led_fn_casecamel();
-void led_fn_insert();
-void led_fn_append();
-void led_fn_quotesimple();
-void led_fn_quotedouble();
-void led_fn_quoteback();
+void led_fn_config();
+
+void led_fn_impl_none();
+void led_fn_impl_substitute();
+void led_fn_impl_remove();
+void led_fn_impl_rangesel();
+void led_fn_impl_translate();
+void led_fn_impl_caselower();
+void led_fn_impl_caseupper();
+void led_fn_impl_casefirst();
+void led_fn_impl_casecamel();
+void led_fn_impl_insert();
+void led_fn_impl_append();
+void led_fn_impl_quotesimple();
+void led_fn_impl_quotedouble();
+void led_fn_impl_quoteback();
 
 void led_free();
 void led_assert(int cond, int code, const char* message, ...);
@@ -47,6 +49,7 @@ int led_str_trim(char* line);
 int led_str_equal(const char* str1, const char* str2);
 pcre2_code* led_regex_compile(const char* pattern);
 int led_regex_match(pcre2_code* regex, const char* line, int len);
+int led_regex_match_offset(pcre2_code* regex, const char* line, int len, int* offset, int* length);
 int led_str_match(const char* str, const char* regex);
 
 //-----------------------------------------------
@@ -84,20 +87,15 @@ typedef struct {
         long     val;
     } sel[LED_SEL_MAX];
 
-    // processor function
-    struct {
-        int     id;
-        const char* label;
-        void (*ptr)();
-        void (*cfgptr)();
-    } func;
+    // processor function Id
+    int fn_id;
+
     struct {
         const unsigned char* str;
         int len;
         long val;
-    } func_arg[LED_FARG_MAX];
-    pcre2_code* func_regex;
-
+        pcre2_code* regex;
+    } fn_arg[LED_FARG_MAX];
 
     // files
     char**  file_names;

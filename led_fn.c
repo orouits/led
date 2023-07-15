@@ -7,12 +7,12 @@
 void led_fn_none() {
 }
 
-void led_fn_substitute() {
-    if (led.func_regex == NULL) {
-        led.func_regex = led_regex_compile(led.func_arg[0].str);
-        led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
-    }
+void led_fncfg_substitute() {
+    led.func_regex = led_regex_compile(led.func_arg[0].str);
+    led_assert(led.func_arg[1].str != NULL, LED_ERR_ARG, "substitute: missing replace argument");
+}
 
+void led_fn_substitute() {
     PCRE2_SIZE len = LED_LINE_MAX;
     int rc = pcre2_substitute(
                 led.func_regex,

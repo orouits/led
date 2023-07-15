@@ -24,7 +24,7 @@
 #define LED_MSG_MAX 4096
 
 void led_fn_none();
-void led_fn_substitute();
+void led_fn_substitute(); void led_fncfg_substitute();
 void led_fn_remove();
 void led_fn_rangesel();
 void led_fn_translate();
@@ -89,6 +89,7 @@ typedef struct {
         int     id;
         const char* label;
         void (*ptr)();
+        void (*cfgptr)();
     } func;
     struct {
         const unsigned char* str;

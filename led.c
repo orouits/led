@@ -28,41 +28,41 @@ const char* LED_SEC_LABEL[] = {
 #define LED_FILE_OUT_NEWEXT 4
 
 const void* LED_FN_MAP[] = {
-    ":nn", ":none", &led_fn_none, "No processing",
-    ":sub", ":substitute", &led_fn_substitute, "Substitute <regex> <replace>",
-    ":exe", ":execute", NULL, "Execute <regex> <replace=command>",
-    ":rm", ":remove", &led_fn_remove, "Remove the line",
-    ":ins", ":insert", &led_fn_insert, "Insert <string> [N]",
-    ":app", ":append", &led_fn_append, "Append <string> [N]",
-    ":rns", ":rangesel", &led_fn_rangesel, "Range select <start> [count]",
-    ":rnu", ":rangeunsel", NULL, "Range unselect <start> [count]",
-    ":tr", ":translate", &led_fn_translate, "Translate <chars> <chars>",
-    ":csl", ":caselower", &led_fn_caselower, "Case to lower",
-    ":csu", ":caseupper", &led_fn_caseupper, "Case to upper",
-    ":csf", ":casefirst", &led_fn_casefirst, "Case first upper",
-    ":csc", ":casecamel", &led_fn_casecamel, "Case to camel style",
-    ":qts", ":quotesimple", &led_fn_quotesimple, "Quote simple",
-    ":qtd", ":quotedouble", &led_fn_quotedouble, "Quote double",
-    ":qtb", ":quoteback", &led_fn_quoteback, "Quote back",
-    ":qtr", ":quoteremove", NULL, "Quote remove",
-    ":tm", ":trim", NULL, "Trim",
-    ":tml", ":trimleft", NULL, "Trim left",
-    ":tmr", ":trimright", NULL, "Trim right",
-    ":sp", ":split", NULL, "Split",
-    ":rv", ":revert", NULL, "Revert",
-    ":fl", ":field", NULL, "Extract fields",
-    ":jn", ":join", NULL, "Join lines",
-    ":ecrb64", ":encryptbase64", NULL, "Encrypt base64",
-    ":dcrb64", ":decryptbase64", NULL, "Decrypt base64",
-    ":urc", ":urlencode", NULL, "Encode URL",
-    ":urd", ":urldecode", NULL, "Decode URL",
-    ":phc", ":pathcanonical", NULL, "Conert to canonical path",
-    ":phd", ":pathdir", NULL, "Extract last dir of the path",
-    ":phf", ":pathfile", NULL, "Extract file of the path",
-    ":phr", ":pathrename", NULL, "Rename file of the path without specific chars",
-    ":rnn", ":randomizenum", NULL, "Randomize numeric values",
-    ":rna", ":randomizealpha", NULL, "Randomize alpha values",
-    ":rnan", ":randomizealphaum", NULL, "Randomize alpha numeric values",
+    ":nn", ":none", &led_fn_none, NULL, "No processing",
+    ":sub", ":substitute", &led_fn_substitute, &led_fncfg_substitute, "Substitute <regex> <replace>",
+    ":exe", ":execute", NULL, NULL, "Execute <regex> <replace=command>",
+    ":rm", ":remove", &led_fn_remove, NULL, "Remove the line",
+    ":ins", ":insert", &led_fn_insert, NULL, "Insert <string> [N]",
+    ":app", ":append", &led_fn_append, NULL, "Append <string> [N]",
+    ":rns", ":rangesel", &led_fn_rangesel, NULL, "Range select <start> [count]",
+    ":rnu", ":rangeunsel", NULL, NULL, "Range unselect <start> [count]",
+    ":tr", ":translate", &led_fn_translate, NULL, "Translate <chars> <chars>",
+    ":csl", ":caselower", &led_fn_caselower, NULL, "Case to lower",
+    ":csu", ":caseupper", &led_fn_caseupper, NULL, "Case to upper",
+    ":csf", ":casefirst", &led_fn_casefirst, NULL, "Case first upper",
+    ":csc", ":casecamel", &led_fn_casecamel, NULL, "Case to camel style",
+    ":qts", ":quotesimple", &led_fn_quotesimple, NULL, "Quote simple",
+    ":qtd", ":quotedouble", &led_fn_quotedouble, NULL, "Quote double",
+    ":qtb", ":quoteback", &led_fn_quoteback, NULL, "Quote back",
+    ":qtr", ":quoteremove", NULL, NULL, "Quote remove",
+    ":tm", ":trim", NULL, NULL, "Trim",
+    ":tml", ":trimleft", NULL, NULL, "Trim left",
+    ":tmr", ":trimright", NULL, NULL, "Trim right",
+    ":sp", ":split", NULL, NULL, "Split",
+    ":rv", ":revert", NULL, NULL, "Revert",
+    ":fl", ":field", NULL, NULL, "Extract fields",
+    ":jn", ":join", NULL, NULL, "Join lines",
+    ":ecrb64", ":encryptbase64", NULL, NULL, "Encrypt base64",
+    ":dcrb64", ":decryptbase64", NULL, NULL, "Decrypt base64",
+    ":urc", ":urlencode", NULL, NULL, "Encode URL",
+    ":urd", ":urldecode", NULL, NULL, "Decode URL",
+    ":phc", ":pathcanonical", NULL, NULL, "Conert to canonical path",
+    ":phd", ":pathdir", NULL, NULL, "Extract last dir of the path",
+    ":phf", ":pathfile", NULL, NULL, "Extract file of the path",
+    ":phr", ":pathrename", NULL, NULL, "Rename file of the path without specific chars",
+    ":rnn", ":randomizenum", NULL, NULL, "Randomize numeric values",
+    ":rna", ":randomizealpha", NULL, NULL, "Randomize alpha values",
+    ":rnan", ":randomizealphaum", NULL, NULL, "Randomize alpha numeric values",
 };
 
 led_struct led;
@@ -159,12 +159,13 @@ int led_init_opt(const char* arg) {
 int led_init_func(const char* arg) {
     int rc = FALSE;
     int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
-    for (int i = 0; i < map_sz; i+=4) {
+    for (int i = 0; i < map_sz; i+=5) {
         if ( led_str_equal(arg, (const char*)LED_FN_MAP[i]) || led_str_equal(arg, (const char*)LED_FN_MAP[i + 1]) ) {
             // match with define constant
-            led.func.id = i/4;
+            led.func.id = i/5;
             led.func.label = (const char*)LED_FN_MAP[i + 1];
             led.func.ptr = (void (*)(void))LED_FN_MAP[i + 2];
+            led.func.cfgptr = (void (*)(void))LED_FN_MAP[i + 3];
             rc = TRUE;
             break;
         }
@@ -216,6 +217,7 @@ void led_init(int argc, char* argv[]) {
     led.func.id = 0;
     led.func.label = (const char*)LED_FN_MAP[1];
     led.func.ptr = (void (*)(void))LED_FN_MAP[2];
+    led.func.cfgptr = (void (*)(void))LED_FN_MAP[3];
 
     led.stdin_ispipe = !isatty(fileno(stdin));
     led.stdout_ispipe = !isatty(fileno(stdout));
@@ -234,10 +236,13 @@ void led_init(int argc, char* argv[]) {
         else led_assert(FALSE, LED_ERR_ARG, "Unknown argument: %s (%s)", arg, LED_SEC_LABEL[led.argsection]);
     }
 
-    // if a process function is not defined filter unselected
+    // if a process function is not defined show only selected
     led.o_output_selected = led.o_output_selected || !led.func.id;
 
     led_debug("Function: %s (%d)", led.func.label, led.func.id);
+
+    // pre-configure the processor command
+    if (led.func.cfgptr) (*led.func.cfgptr)();
 }
 
 void led_help() {
@@ -245,11 +250,11 @@ void led_help() {
     fprintf(stderr, "Processor commands:\n");
     fprintf(stderr, "| %-8s | %-20s | %-50s |\n", "Short", "Long name", "Description");
     int map_sz = sizeof(LED_FN_MAP)/sizeof(void*);
-    for (int i = 0; i < map_sz; i+=4) {
+    for (int i = 0; i < map_sz; i+=5) {
         fprintf(stderr, "| %-8s | %-20s | %-50s |\n",
             (const char*)LED_FN_MAP[i],
             (const char*)LED_FN_MAP[i+1],
-            (const char*)LED_FN_MAP[i+3]
+            (const char*)LED_FN_MAP[i+4]
         );
     }
 }

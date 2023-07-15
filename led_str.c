@@ -19,6 +19,10 @@ int led_str_equal(const char* str1, const char* str2) {
     return str1 && str2 && strcmp(str1, str2) == 0;
 }
 
+int led_str_equal_len(const char* str1, const char* str2, int len) {
+    return str1 && str2 && strncmp(str1, str2, len) == 0;
+}
+
 pcre2_code* led_regex_compile(const char* pattern) {
     int pcre_err;
     PCRE2_SIZE pcre_erroff;

@@ -47,6 +47,7 @@ void led_debug(const char* message, ...);
 
 int led_str_trim(char* line);
 int led_str_equal(const char* str1, const char* str2);
+int led_str_equal_len(const char* str1, const char* str2, int len);
 pcre2_code* led_regex_compile(const char* pattern);
 int led_regex_match(pcre2_code* regex, const char* line, int len);
 int led_regex_match_offset(pcre2_code* regex, const char* line, int len, int* offset, int* length);

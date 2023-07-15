@@ -15,9 +15,6 @@ const char* LED_SEC_TABLE[] = {
 #define SEL_TYPE_COUNT 2
 #define SEL_COUNT 2
 
-// #define SEL_FN_LINE 0
-// #define SEL_FN_BLOCK 1
-
 #define LED_EXIT_STD 0
 #define LED_EXIT_VAL 1
 
@@ -39,43 +36,45 @@ typedef struct {
 } led_fn_struct;
 
 led_fn_struct LED_FN_TABLE[] = {
-    { ":nn", ":none", &led_fn_impl_none, "", "No processing", ":none" },
-    { ":sub", ":substitute", &led_fn_impl_substitute, "RS", "Substitute", ":substitute <regex> <replace>" },
-    { ":exe", ":execute", NULL, "RS", "Execute", ":execute <regex> <replace=command>" },
-    { ":rm", ":remove", &led_fn_impl_remove, "s", "Remove line", ":remove [<regex>]" },
-    { ":rmb", ":remove_blank", NULL, "", "Remove blank/empty lines", ":remove_blank" },
-    { ":ins", ":insert", &led_fn_impl_insert, "Sn", "Insert line", ":insert <string> [N]" },
-    { ":app", ":append", &led_fn_impl_append, "Sn", "Append line", ":append <string> [N]" },
-    { ":rns", ":range_sel", &led_fn_impl_rangesel, "Nn", "Range select", ":range_sel <start> [count]" },
-    { ":rnu", ":range_unsel", NULL, "Nn", "Range unselect", ":range_unsel <start> [count]" },
-    { ":tr", ":translate", &led_fn_impl_translate, "SS", "Translate", ":translate <chars> <chars>" },
-    { ":csl", ":case_lower", &led_fn_impl_caselower, "r", "Case to lower", ":case_lower [<regex>]" },
-    { ":csu", ":case_upper", &led_fn_impl_caseupper, "r", "Case to upper", ":case_upper [<regex>]" },
-    { ":csf", ":case_first", &led_fn_impl_casefirst, "r", "Case first upper", ":case_first [<regex>]" },
-    { ":csc", ":case_camel", &led_fn_impl_casecamel, "r", "Case to camel style", ":case_camel [<regex>]" },
-    { ":qts", ":quote_simple", &led_fn_impl_quotesimple, "r", "Quote simple", ":quote_simple [<regex>]" },
-    { ":qtd", ":quote_double", &led_fn_impl_quotedouble, "r", "Quote double", ":quote_double [<regex>]" },
-    { ":qtb", ":quote_back", &led_fn_impl_quoteback, "r", "Quote back", ":quote_back [<regex>]" },
-    { ":qtr", ":quote_remove", NULL, "r", "Quote remove", ":quote_remove [<regex>]" },
-    { ":tm", ":trim", NULL, "r", "Trim", ":trim [<regex>]" },
-    { ":tml", ":trim_left", NULL, "r", "Trim left", ":trim_left [<regex>]" },
-    { ":tmr", ":trim_right", NULL, "r", "Trim right", ":trim_right [<regex>]" },
-    { ":sp", ":split", NULL, "S", "Split", ":split <string>" },
-    { ":rv", ":revert", NULL, "r", "Revert", ":revert [<regex>]" },
-    { ":fl", ":field", NULL, "SN", "Extract fields", ":field <sep> <N>" },
-    { ":jn", ":join", NULL, "", "Join lines", ":join" },
-    { ":ecrb64", ":encrypt_base64", NULL, "s", "Encrypt base64", ":encrypt_base64 [<regex>]" },
-    { ":dcrb64", ":decrypt_base64", NULL, "s", "Decrypt base64", ":decrypt_base64 [<regex>]" },
-    { ":urc", ":url_encode", NULL, "s", "Encode URL", ":url_encode [<regex>]" },
-    { ":urd", ":url_decode", NULL, "s", "Decode URL", ":url_decode [<regex>]" },
-    { ":phc", ":path_canonical", NULL, "s", "Conert to canonical path", ":path_canonical [<regex>]" },
-    { ":phd", ":path_dir", NULL, "s", "Extract last dir of the path", ":path_dir [<regex>]" },
-    { ":phf", ":path_file", NULL, "s", "Extract file of the path", ":path_file [<regex>]" },
-    { ":phr", ":path_rename", NULL, "s", "Rename file of the path without specific chars", ":path_rename [<regex>]" },
-    { ":rnn", ":randomize_num", NULL, "s", "Randomize numeric values", ":randomize_num [<regex>]" },
-    { ":rna", ":randomize_alpha", NULL, "s", "Randomize alpha values", ":randomize_alpha [<regex>]" },
-    { ":rnan", ":randomize_alphaum", NULL, "s", "Randomize alpha numeric values", ":randomize_alphaum [<regex>]" },
+    { "nn", "none", &led_fn_impl_none, "", "No processing", "none:" },
+    { "sub", "substitute", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
+    { "exe", "execute", NULL, "RS", "Execute", "execute: <regex> <replace=command>" },
+    { "rm", "remove", &led_fn_impl_remove, "s", "Remove line", "remove: [<regex>]" },
+    { "rmb", "remove_blank", NULL, "", "Remove blank/empty lines", "remove_blank:" },
+    { "ins", "insert", &led_fn_impl_insert, "Sn", "Insert line", "insert: <string> [N]" },
+    { "app", "append", &led_fn_impl_append, "Sn", "Append line", "append: <string> [N]" },
+    { "rns", "range_sel", &led_fn_impl_rangesel, "Nn", "Range select", "range_sel: <start> [count]" },
+    { "rnu", "range_unsel", NULL, "Nn", "Range unselect", "range_unsel: <start> [count]" },
+    { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "translate: <chars> <chars>" },
+    { "csl", "case_lower", &led_fn_impl_caselower, "r", "Case to lower", "case_lower: [<regex>]" },
+    { "csu", "case_upper", &led_fn_impl_caseupper, "r", "Case to upper", "case_upper: [<regex>]" },
+    { "csf", "case_first", &led_fn_impl_casefirst, "r", "Case first upper", "case_first: [<regex>]" },
+    { "csc", "case_camel", &led_fn_impl_casecamel, "r", "Case to camel style", "case_camel: [<regex>]" },
+    { "qts", "quote_simple", &led_fn_impl_quotesimple, "r", "Quote simple", "quote_simple: [<regex>]" },
+    { "qtd", "quote_double", &led_fn_impl_quotedouble, "r", "Quote double", "quote_double: [<regex>]" },
+    { "qtb", "quote_back", &led_fn_impl_quoteback, "r", "Quote back", "quote_back: [<regex>]" },
+    { "qtr", "quote_remove", NULL, "r", "Quote remove", "quote_remove: [<regex>]" },
+    { "tm", "trim", NULL, "r", "Trim", "trim: [<regex>]" },
+    { "tml", "trim_left", NULL, "r", "Trim left", "trim_left: [<regex>]" },
+    { "tmr", "trim_right", NULL, "r", "Trim right", "trim_right: [<regex>]" },
+    { "sp", "split", NULL, "S", "Split", "split: <string>" },
+    { "rv", "revert", NULL, "r", "Revert", "revert: [<regex>]" },
+    { "fl", "field", NULL, "SN", "Extract fields", "field: <sep> <N>" },
+    { "jn", "join", NULL, "", "Join lines", "join:" },
+    { "ecrb64", "encrypt_base64", NULL, "s", "Encrypt base64", "encrypt_base64: [<regex>]" },
+    { "dcrb64", "decrypt_base64", NULL, "s", "Decrypt base64", "decrypt_base64: [<regex>]" },
+    { "urc", "url_encode", NULL, "s", "Encode URL", "url_encode: [<regex>]" },
+    { "urd", "url_decode", NULL, "s", "Decode URL", "url_decode: [<regex>]" },
+    { "phc", "path_canonical", NULL, "s", "Conert to canonical path", "path_canonical: [<regex>]" },
+    { "phd", "path_dir", NULL, "s", "Extract last dir of the path", "path_dir: [<regex>]" },
+    { "phf", "path_file", NULL, "s", "Extract file of the path", "path_file: [<regex>]" },
+    { "phr", "path_rename", NULL, "s", "Rename file of the path without specific chars", "path_rename: [<regex>]" },
+    { "rnn", "randomize_num", NULL, "s", "Randomize numeric values", "randomize_num: [<regex>]" },
+    { "rna", "randomize_alpha", NULL, "s", "Randomize alpha values", "randomize_alpha: [<regex>]" },
+    { "rnan", "randomize_alphaum", NULL, "s", "Randomize alpha numeric values", "randomize_alphaum: [<regex>]" },
 };
+
+#define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)
 
 led_struct led;
 
@@ -84,7 +83,7 @@ led_struct led;
 //-----------------------------------------------
 
 int led_init_opt(const char* arg) {
-    int rc = led_str_match(arg, "-\\D");
+    int rc = led_str_match(arg, "^-[a-zA-Z]+$");
     if ( rc ) {
         int opti = 1;
         int optl = strlen(arg);
@@ -159,7 +158,7 @@ int led_init_opt(const char* arg) {
                 led.o_file_out_unchanged = TRUE;
                 break;
             default:
-                led_assert(FALSE, LED_ERR_ARG, "Unknown option: %c", arg[opti]);
+                led_assert(FALSE, LED_ERR_ARG, "Unknown option: -%c", arg[opti]);
             }
             opti++;
         }
@@ -168,14 +167,18 @@ int led_init_opt(const char* arg) {
 }
 
 int led_init_func(const char* arg) {
-    int rc = FALSE;
-    int list_sz = sizeof(LED_FN_TABLE)/sizeof(led_fn_struct);
-    for (int i = 0; i < list_sz; i++) {
-        if ( led_str_equal(arg, LED_FN_TABLE[i].short_name) || led_str_equal(arg, LED_FN_TABLE[i].long_name) ) {
-            led.fn_id = i;
-            rc = TRUE;
-            break;
+    int rc = led_str_match(arg, "^[a-z]+:$");
+    if (rc) {
+        int argl = strlen(arg) - 1;
+        led.fn_id = -1;
+        led_debug("Funcion table max: %d", LED_FN_TABLE_MAX);
+        for (int i = 0; i < LED_FN_TABLE_MAX; i++) {
+            if ( led_str_equal_len(arg, LED_FN_TABLE[i].short_name, argl) || led_str_equal_len(arg, LED_FN_TABLE[i].long_name, argl) ) {
+                led.fn_id = i;
+                break;
+            }
         }
+        led_assert(led.fn_id >= 0, LED_ERR_ARG, "Unknown function: %s", arg);
     }
     return rc;
 }
@@ -219,7 +222,7 @@ void led_init_config() {
     const char* format = LED_FN_TABLE[led.fn_id].args_fmt;
     for (int i=0; format[i]; i++) {
         if (format[i] == 'R') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i, LED_FN_TABLE[led.fn_id].help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
             led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
         }
         else if (format[i] == 'r') {
@@ -227,14 +230,14 @@ void led_init_config() {
                 led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
         }
         else if (format[i] == 'N') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i, LED_FN_TABLE[led.fn_id].help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
             led.fn_arg[i].val = atol(led.fn_arg[i].str);
         }
         else if (format[i] == 'n') {
             led.fn_arg[i].val = atol(led.fn_arg[i].str);
         }
         else if (format[i] == 'S') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i, LED_FN_TABLE[led.fn_id].help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
         }
         else if (format[i] == 's') {
         }
@@ -290,7 +293,7 @@ void led_init(int argc, char* argv[]) {
 void led_help() {
     fprintf(stderr,
 "\
-led [<selector>] [:<processor>] [-options] [files] ...\n\
+led [<selector>] [<processor>] [-options] [files] ...\n\
 \n\
 Selector:\n\
     <regex>              => select all lines matching with <regex>\n\
@@ -301,7 +304,7 @@ Selector:\n\
     <n>     <count>      => select group of lines starting line <n> (included) until <count> lines are selected\n\
 \n\
 Processor:\n\
-    :<function> [arg] ...\n\
+    <function>: [arg] ...\n\
 \n\
 Global options\n\
     -z  end of line is 0\n\
@@ -332,8 +335,7 @@ Processor commands:\n\
     );
     fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "Name", "Short", "Description", "Format");
     fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
-    int list_sz = sizeof(LED_FN_TABLE)/sizeof(led_fn_struct);
-    for (int i=0; i<list_sz; i++) {
+    for (int i=0; i < LED_FN_TABLE_MAX; i++) {
         fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n",
             LED_FN_TABLE[i].long_name,
             LED_FN_TABLE[i].short_name,

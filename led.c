@@ -336,12 +336,14 @@ Processor commands:\n\
     fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "Name", "Short", "Description", "Format");
     fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
     for (int i=0; i < LED_FN_TABLE_MAX; i++) {
+        if (!LED_FN_TABLE[i].impl) fprintf(stderr, "\e[90m");
         fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n",
             LED_FN_TABLE[i].long_name,
             LED_FN_TABLE[i].short_name,
             LED_FN_TABLE[i].help_desc,
             LED_FN_TABLE[i].help_format
         );
+        if (!LED_FN_TABLE[i].impl) fprintf(stderr, "\e[0m");
     }
     fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
 }

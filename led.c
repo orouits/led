@@ -39,7 +39,7 @@ led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
     { "exe:", "execute:", NULL, "RS", "Execute", "execute: <regex> <replace=command>" },
-    { "rm:", "remove:", &led_fn_impl_remove, "s", "Remove line", "remove: [<regex>]" },
+    { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<regex>]" },
     { "rmb:", "remove_blank:", NULL, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sn", "Insert line", "insert: <string> [N]" },
     { "app:", "append:", &led_fn_impl_append, "Sn", "Append line", "append: <string> [N]" },
@@ -174,6 +174,7 @@ int led_init_func(const char* arg) {
         for (int i = 0; i < LED_FN_TABLE_MAX; i++) {
             if ( led_str_equal(arg, LED_FN_TABLE[i].short_name) || led_str_equal(arg, LED_FN_TABLE[i].long_name) ) {
                 led.fn_id = i;
+                led_debug("Funcion found: %d", led.fn_id);
                 break;
             }
         }
@@ -220,26 +221,38 @@ int led_init_sel(const char* arg) {
 
 void led_init_config() {
     const char* format = LED_FN_TABLE[led.fn_id].args_fmt;
-    for (int i=0; format[i]; i++) {
+    for (int i=0; i < LED_FARG_MAX && format[i]; i++) {
         if (format[i] == 'R') {
+            // TODO: ?regexname search operator
             led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
             led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
+            led_debug("Arg regex found: %d", i);
         }
         else if (format[i] == 'r') {
-            if (led.fn_arg[i].str)
+            if (led.fn_arg[i].str) {
                 led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
+                led_debug("Arg regex found: %d", i);
+            }
         }
         else if (format[i] == 'N') {
             led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
             led.fn_arg[i].val = atol(led.fn_arg[i].str);
+            led_debug("Arg numerical found: %d", i);
         }
         else if (format[i] == 'n') {
-            led.fn_arg[i].val = atol(led.fn_arg[i].str);
+            if (led.fn_arg[i].str) {
+                led.fn_arg[i].val = atol(led.fn_arg[i].str);
+                led_debug("Arg numerical found: %d", i);
+            }
         }
         else if (format[i] == 'S') {
             led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
+            led_debug("Arg string found: %d", i);
         }
         else if (format[i] == 's') {
+            if (led.fn_arg[i].str) {
+                led_debug("Arg string found: %d", i);
+            }
         }
         else {
             led_assert(TRUE, LED_ERR_ARG, "arg %d: bad internal format (%s)", i, format);

@@ -27,8 +27,10 @@ void led_fn_impl_substitute() {
 }
 
 void led_fn_impl_remove() {
-    led.curline.str = NULL;
-    led.curline.len = 0;
+    if (!led.fn_arg[0].regex || led_regex_match(led.fn_arg[0].regex, led.curline.str, led.curline.len)) {
+        led.curline.str = NULL;
+        led.curline.len = 0;
+    }
 }
 
 void led_fn_impl_rangesel() {

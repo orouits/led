@@ -24,58 +24,6 @@ const char* LED_SEC_TABLE[] = {
 #define LED_FILE_OUT_APPEND 3
 #define LED_FILE_OUT_NEWEXT 4
 
-typedef void (*led_fn_impl)();
-
-typedef struct {
-    const char* short_name;
-    const char* long_name;
-    led_fn_impl impl;
-    const char* args_fmt;
-    const char* help_desc;
-    const char* help_format;
-} led_fn_struct;
-
-led_fn_struct LED_FN_TABLE[] = {
-    { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
-    { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
-    { "exe:", "execute:", NULL, "RS", "Execute", "execute: <regex> <replace=command>" },
-    { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<regex>]" },
-    { "rmb:", "remove_blank:", NULL, "", "Remove blank/empty lines", "remove_blank:" },
-    { "ins:", "insert:", &led_fn_impl_insert, "Sn", "Insert line", "insert: <string> [N]" },
-    { "app:", "append:", &led_fn_impl_append, "Sn", "Append line", "append: <string> [N]" },
-    { "rns:", "range_sel:", &led_fn_impl_rangesel, "Nn", "Range select", "range_sel: <start> [count]" },
-    { "rnu:", "range_unsel:", NULL, "Nn", "Range unselect", "range_unsel: <start> [count]" },
-    { "tr:", "translate:", &led_fn_impl_translate, "SS", "Translate", "translate: <chars> <chars>" },
-    { "csl:", "case_lower:", &led_fn_impl_caselower, "r", "Case to lower", "case_lower: [<regex>]" },
-    { "csu:", "case_upper:", &led_fn_impl_caseupper, "r", "Case to upper", "case_upper: [<regex>]" },
-    { "csf:", "case_first:", &led_fn_impl_casefirst, "r", "Case first upper", "case_first: [<regex>]" },
-    { "csc:", "case_camel:", &led_fn_impl_casecamel, "r", "Case to camel style", "case_camel: [<regex>]" },
-    { "qts:", "quote_simple:", &led_fn_impl_quotesimple, "r", "Quote simple", "quote_simple: [<regex>]" },
-    { "qtd:", "quote_double:", &led_fn_impl_quotedouble, "r", "Quote double", "quote_double: [<regex>]" },
-    { "qtb:", "quote_back:", &led_fn_impl_quoteback, "r", "Quote back", "quote_back: [<regex>]" },
-    { "qtr:", "quote_remove:", NULL, "r", "Quote remove", "quote_remove: [<regex>]" },
-    { "tm:", "trim:", NULL, "r", "Trim", "trim: [<regex>]" },
-    { "tml:", "trim_left:", NULL, "r", "Trim left", "trim_left: [<regex>]" },
-    { "tmr:", "trim_right:", NULL, "r", "Trim right", "trim_right: [<regex>]" },
-    { "sp:", "split:", NULL, "S", "Split", "split: <string>" },
-    { "rv:", "revert:", NULL, "r", "Revert", "revert: [<regex>]" },
-    { "fl:", "field:", NULL, "SN", "Extract fields", "field: <sep> <N>" },
-    { "jn:", "join:", NULL, "", "Join lines", "join:" },
-    { "ecrb64:", "encrypt_base64:", NULL, "s", "Encrypt base64", "encrypt_base64: [<regex>]" },
-    { "dcrb64:", "decrypt_base64:", NULL, "s", "Decrypt base64", "decrypt_base64: [<regex>]" },
-    { "urc:", "url_encode:", NULL, "s", "Encode URL", "url_encode: [<regex>]" },
-    { "urd:", "url_decode:", NULL, "s", "Decode URL", "url_decode: [<regex>]" },
-    { "phc:", "path_canonical:", NULL, "s", "Conert to canonical path", "path_canonical: [<regex>]" },
-    { "phd:", "path_dir:", NULL, "s", "Extract last dir of the path", "path_dir: [<regex>]" },
-    { "phf:", "path_file:", NULL, "s", "Extract file of the path", "path_file: [<regex>]" },
-    { "phr:", "path_rename:", NULL, "s", "Rename file of the path without specific chars", "path_rename: [<regex>]" },
-    { "rnn:", "randomize_num:", NULL, "s", "Randomize numeric values", "randomize_num: [<regex>]" },
-    { "rna:", "randomize_alpha:", NULL, "s", "Randomize alpha values", "randomize_alpha: [<regex>]" },
-    { "rnan:", "randomize_alphaum:", NULL, "s", "Randomize alpha numeric values", "randomize_alphaum: [<regex>]" },
-};
-
-#define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)
-
 led_struct led;
 
 //-----------------------------------------------
@@ -170,16 +118,16 @@ int led_init_func(const char* arg) {
     int rc = led_str_match(arg, "^[a-z]+:$");
     if (rc) {
         led.fn_id = -1;
-        led_debug("Funcion table max: %d", LED_FN_TABLE_MAX);
-        for (int i = 0; i < LED_FN_TABLE_MAX; i++) {
-            if ( led_str_equal(arg, LED_FN_TABLE[i].short_name) || led_str_equal(arg, LED_FN_TABLE[i].long_name) ) {
+        led_debug("Funcion table max: %d", led_fn_table_size());
+        for (int i = 0; i < led_fn_table_size(); i++) {
+            if ( led_str_equal(arg, led_fn_table_descriptor(i)->short_name) || led_str_equal(arg, led_fn_table_descriptor(i)->long_name) ) {
                 led.fn_id = i;
-                led_debug("Funcion found: %d", led.fn_id);
+                led_debug("Function found: %d", led.fn_id);
                 break;
             }
         }
         led_assert(led.fn_id >= 0, LED_ERR_ARG, "Unknown function: %s", arg);
-        led_assert(LED_FN_TABLE[led.fn_id].impl, LED_ERR_ARG, "Function not yet implemented: %s", LED_FN_TABLE[led.fn_id].long_name);
+        led_assert(led_fn_table_descriptor(led.fn_id)->impl, LED_ERR_ARG, "Function not yet implemented: %s", led_fn_table_descriptor(led.fn_id)->long_name);
     }
     return rc;
 }
@@ -220,11 +168,14 @@ int led_init_sel(const char* arg) {
 }
 
 void led_init_config() {
-    const char* format = LED_FN_TABLE[led.fn_id].args_fmt;
+    led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
+    led_debug("Configure function: %s (%d)", fn_desc->long_name, led.fn_id);
+
+    const char* format = fn_desc->args_fmt;
     for (int i=0; i < LED_FARG_MAX && format[i]; i++) {
         if (format[i] == 'R') {
             // TODO: ?regexname search operator
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i+1, fn_desc->help_format);
             led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
             led_debug("Arg regex found: %d", i);
         }
@@ -235,7 +186,7 @@ void led_init_config() {
             }
         }
         else if (format[i] == 'N') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i+1, fn_desc->help_format);
             led.fn_arg[i].val = atol(led.fn_arg[i].str);
             led_debug("Arg numerical found: %d", i);
         }
@@ -246,7 +197,7 @@ void led_init_config() {
             }
         }
         else if (format[i] == 'S') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i+1, LED_FN_TABLE[led.fn_id].help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i+1, fn_desc->help_format);
             led_debug("Arg string found: %d", i);
         }
         else if (format[i] == 's') {
@@ -297,8 +248,6 @@ void led_init(int argc, char* argv[]) {
     // if a process function is not defined show only selected
     led.o_output_selected = led.o_output_selected || !led.fn_id;
 
-    led_debug("Function: %s (%d)", LED_FN_TABLE[led.fn_id].long_name, led.fn_id);
-
     // pre-configure the processor command
     led_init_config();
 }
@@ -343,22 +292,24 @@ File Options:\n\
     -D<dir>     write files in dir.\n\
     -U          write unchanged filenames\n\
 \n\
-Processor commands:\n\
+Processor commands:\n\n\
 "
     );
-    fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "Name", "Short", "Description", "Format");
-    fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
-    for (int i=0; i < LED_FN_TABLE_MAX; i++) {
-        if (!LED_FN_TABLE[i].impl) fprintf(stderr, "\e[90m");
-        fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n",
-            LED_FN_TABLE[i].long_name,
-            LED_FN_TABLE[i].short_name,
-            LED_FN_TABLE[i].help_desc,
-            LED_FN_TABLE[i].help_format
+    fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "Id", "Name", "Short", "Description", "Format");
+    fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "---", "-----", "-----", "-----", "-----");
+    for (int i=0; i < led_fn_table_size(); i++) {
+        led_fn_struct* fn_desc = led_fn_table_descriptor(i);
+        if (!fn_desc->impl) fprintf(stderr, "\e[90m");
+        fprintf(stderr, "| %-3d | %-20s | %-8s | %-50s | %-40s |\n",
+            i,
+            fn_desc->long_name,
+            fn_desc->short_name,
+            fn_desc->help_desc,
+            fn_desc->help_format
         );
-        if (!LED_FN_TABLE[i].impl) fprintf(stderr, "\e[0m");
+        if (!fn_desc->impl) fprintf(stderr, "\e[0m");
     }
-    fprintf(stderr, "| %-20s | %-8s | %-50s | %-40s |\n", "-----", "-----", "-----", "-----");
+    fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "---", "-----", "-----", "-----", "-----");
 }
 
 //-----------------------------------------------
@@ -463,11 +414,11 @@ int led_select() {
 
 void led_process() {
     led_debug("Process line");
-    led_fn_impl impl = LED_FN_TABLE[led.fn_id].impl;
-    if (impl)
-        (*impl)();
+    led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
+    if (fn_desc->impl)
+        (fn_desc->impl)();
     else
-        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", LED_FN_TABLE[led.fn_id].long_name);
+        led_assert(FALSE, LED_ERR_ARG, "Function not implemented: %s", fn_desc->long_name);
 }
 
 //-----------------------------------------------

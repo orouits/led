@@ -64,9 +64,11 @@ void led_fn_impl_rangesel() {
 }
 
 void led_fn_impl_translate() {
-    // to be optimized, basic search currently, UTF8 not supported
-    // with UTF8 it should be better to build an associative array or have a quicksearch.
-    for (int i=0; i<led.curline.len; i++) {
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[2].regex) led_regex_match_offset(led.fn_arg[2].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
+    for (int i=zone_start; i<zone_stop; i++) {
         char c = led.curline.str[i];
         led.buf_line_trans[i] = c;
         for (int j=0; j<led.fn_arg[0].len; j++) {
@@ -81,8 +83,12 @@ void led_fn_impl_translate() {
 }
 
 void led_fn_impl_caselower() {
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
-    for (int i=0; i<led.curline.len; i++) {
+    for (int i=zone_start; i<zone_stop; i++) {
         led.buf_line_trans[i] = tolower(led.buf_line_trans[i]);
     }
     led.buf_line_trans[led.curline.len] = '\0';
@@ -90,8 +96,12 @@ void led_fn_impl_caselower() {
 }
 
 void led_fn_impl_caseupper() {
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
-    for (int i=0; i<led.curline.len; i++) {
+    for (int i=zone_start; i<zone_stop; i++) {
         led.buf_line_trans[i] = toupper(led.buf_line_trans[i]);
     }
     led.buf_line_trans[led.curline.len] = '\0';
@@ -99,19 +109,28 @@ void led_fn_impl_caseupper() {
 }
 
 void led_fn_impl_casefirst() {
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
-    led.buf_line_trans[0] = toupper(led.buf_line_trans[0]);
-    for (int i=1; i<led.curline.len; i++) {
+    if (zone_start < led.curline.len)
+        led.buf_line_trans[zone_start] = toupper(led.buf_line_trans[zone_start]);
+    for (int i=zone_start+1; i<zone_stop; i++)
         led.buf_line_trans[i] = tolower(led.buf_line_trans[i]);
-    }
     led.buf_line_trans[led.curline.len] = '\0';
     led.curline.str = led.buf_line_trans;
 }
 
 void led_fn_impl_casecamel() {
+    // buggy
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
     int wasword = FALSE;
     int j=0;
-    for (int i=0; i<led.curline.len; i++) {
+    for (int i=zone_start; i<zone_stop; i++) {
         int c = led.curline.str[i];
         int isword = isalnum(c) || c == '_';
         if (isword) {
@@ -145,6 +164,7 @@ void led_fn_impl_append() {
 }
 
 void led_fn_impl_quote(char q) {
+    // implement regex zone
     if (! (led.curline.str[0] == q && led.curline.str[led.curline.len - 1] == q) ) {
         led_debug("quote active");
         led_assert(led.curline.len <= LED_LINE_MAX - 2, LED_ERR_MAXLINE, "Line too long to be quoted");

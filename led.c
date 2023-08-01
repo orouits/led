@@ -253,11 +253,18 @@ void led_init(int argc, char* argv[]) {
 }
 
 void led_help() {
+    const char* DASHS = "----------------------------------------------------------------------------------------------------";
     fprintf(stderr,
 "\
-led [<selector>] [<processor>] [-options] [files] ...\n\
+Led (line editor) aims to be a tool that can replace grep/sed and others text utilities often chained,\n\
+for simple automatic word processing based on PCRE2 modern regular expressions.\n\
 \n\
-Selector:\n\
+## Synopsis\n\
+    Files content processing:    led [<selector>] [<processor>] [-options] -f [files] ...\n\
+    Piped content processing:    cat <file> | led [<selector>] [<processor>] [-options] | led ...\n\
+    Massive files processing:    ls -1 <dir> | led [<selector>] [<processor>] [-options] -F -I -f | led ...\n\
+\n\
+## Selector:\n\
     <regex>              => select all lines matching with <regex>\n\
     <n>                  => select line <n>\n\
     <regex> <regex_stop> => select group of lines starting matching <regex> (included) until matching <regex_stop> (excluded)\n\
@@ -265,38 +272,40 @@ Selector:\n\
     <n>     <regex_stop> => select group of lines starting line <n> (included) until matching <regex_stop> (excluded)\n\
     <n>     <count>      => select group of lines starting line <n> (included) until <count> lines are selected\n\
 \n\
-Processor:\n\
+## Processor:\n\
     <function>: [arg] ...\n\
 \n\
-Global options\n\
+## Global options\n\
     -z  end of line is 0\n\
     -v  verbose to STDERR\n\
     -r  report to STDERR\n\
     -q  quiet, do not ouptut anything (exit code only)\n\
     -e  exit code on value\n\
 \n\
-Selector Options:\n\
+## Selector Options:\n\
     -n  invert selection\n\
-    -b  selected lines as blocks\n\
+    -b  group selection as blocks of contiguous lines before function process\n\
     -s  output only selected\n\
 \n\
-File Options:\n\
-    -f          read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)\n\
+## File Options:\n\
+    -f          read filenames from STDIN instead of content or from command line if followed file names (file section)\n\
     -F          write filenames to STDOUT instead of content.\n\
-                This option allows advanced massive files chained transformations with pipes.\n\
-    -I          write content to filename inplace\n\
+                    Combined with -f -I, this option allows advanced massive files transformations through pipes.\n\
+    -I          modify files inplace\n\
     -W<path>    write content to a fixed file\n\
     -A<path>    append content to a fixed file\n\
-    -E<ext>     write content to filename.ext\n\
-    -E<3>       write content to filename.NNN\n\
-    -D<dir>     write files in dir.\n\
+    -E<ext>     write content to <current filename>.<ext>\n\
+    -E          write content to <current filename>.<NNN>\n\
+                    The ext number is computed regarding existing files.\n\
+    -D<dir>     write files in <dir>.\n\
     -U          write unchanged filenames\n\
 \n\
-Processor commands:\n\n\
+## Processor commands:\n\n\
 "
     );
+    fprintf(stderr, "| %.3s | %.20s | %.8s | %.50s | %.40s |\n", DASHS, DASHS, DASHS, DASHS, DASHS);
     fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "Id", "Name", "Short", "Description", "Format");
-    fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "---", "-----", "-----", "-----", "-----");
+    fprintf(stderr, "| %.3s | %.20s | %.8s | %.50s | %.40s |\n", DASHS, DASHS, DASHS, DASHS, DASHS);
     for (int i=0; i < led_fn_table_size(); i++) {
         led_fn_struct* fn_desc = led_fn_table_descriptor(i);
         if (!fn_desc->impl) fprintf(stderr, "\e[90m");
@@ -309,7 +318,7 @@ Processor commands:\n\n\
         );
         if (!fn_desc->impl) fprintf(stderr, "\e[0m");
     }
-    fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "---", "-----", "-----", "-----", "-----");
+    fprintf(stderr, "| %.3s | %.20s | %.8s | %.50s | %.40s |\n", DASHS, DASHS, DASHS, DASHS, DASHS);
 }
 
 //-----------------------------------------------

@@ -115,8 +115,8 @@ int led_init_opt(const char* arg) {
 }
 
 int led_init_func(const char* arg) {
-    int rc = led_str_match(arg, "^[a-z_]+:$");
-    if (rc) {
+    int is_func = led_str_match(arg, "^[a-z_]+:$");
+    if (is_func) {
         led.fn_id = -1;
         led_debug("Funcion table max: %d", led_fn_table_size());
         for (int i = 0; i < led_fn_table_size(); i++) {
@@ -130,7 +130,7 @@ int led_init_func(const char* arg) {
         led_assert(led.fn_id >= 0, LED_ERR_ARG, "Unknown function: %s", arg);
         led_assert(led_fn_table_descriptor(led.fn_id)->impl, LED_ERR_ARG, "Function not yet implemented: %s", led_fn_table_descriptor(led.fn_id)->long_name);
     }
-    return rc;
+    return is_func;
 }
 
 int led_init_func_arg(const char* arg) {

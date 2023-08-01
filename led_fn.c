@@ -33,7 +33,7 @@ void led_fn_impl_remove() {
     }
 }
 
-void led_fn_impl_rangesel() {
+void led_fn_impl_range_sel() {
     int start = 0;
     int count = led.curline.len;
 
@@ -68,10 +68,10 @@ void led_fn_impl_translate() {
     int zone_stop = led.curline.len;
     if (led.fn_arg[2].regex) led_regex_match_offset(led.fn_arg[2].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
-    for (int i=zone_start; i<zone_stop; i++) {
+    for (size_t i=zone_start; i<zone_stop; i++) {
         char c = led.curline.str[i];
         led.buf_line_trans[i] = c;
-        for (int j=0; j<led.fn_arg[0].len; j++) {
+        for (size_t j=0; j<led.fn_arg[0].len; j++) {
             if (led.fn_arg[0].str[j] == c) {
                 if (j < led.fn_arg[1].len) led.buf_line_trans[i] = led.fn_arg[1].str[j];
                 break;
@@ -82,33 +82,33 @@ void led_fn_impl_translate() {
     led.curline.str = led.buf_line_trans;
 }
 
-void led_fn_impl_caselower() {
+void led_fn_impl_case_lower() {
     int zone_start = 0;
     int zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
-    for (int i=zone_start; i<zone_stop; i++) {
+    for (size_t i=zone_start; i<zone_stop; i++) {
         led.buf_line_trans[i] = tolower(led.buf_line_trans[i]);
     }
     led.buf_line_trans[led.curline.len] = '\0';
     led.curline.str = led.buf_line_trans;
 }
 
-void led_fn_impl_caseupper() {
+void led_fn_impl_case_upper() {
     int zone_start = 0;
     int zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
-    for (int i=zone_start; i<zone_stop; i++) {
+    for (size_t i=zone_start; i<zone_stop; i++) {
         led.buf_line_trans[i] = toupper(led.buf_line_trans[i]);
     }
     led.buf_line_trans[led.curline.len] = '\0';
     led.curline.str = led.buf_line_trans;
 }
 
-void led_fn_impl_casefirst() {
+void led_fn_impl_case_first() {
     int zone_start = 0;
     int zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
@@ -116,13 +116,13 @@ void led_fn_impl_casefirst() {
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
     if (zone_start < led.curline.len)
         led.buf_line_trans[zone_start] = toupper(led.buf_line_trans[zone_start]);
-    for (int i=zone_start+1; i<zone_stop; i++)
+    for (size_t i=zone_start+1; i<zone_stop; i++)
         led.buf_line_trans[i] = tolower(led.buf_line_trans[i]);
     led.buf_line_trans[led.curline.len] = '\0';
     led.curline.str = led.buf_line_trans;
 }
 
-void led_fn_impl_casecamel() {
+void led_fn_impl_case_camel() {
     // buggy
     int zone_start = 0;
     int zone_stop = led.curline.len;
@@ -130,7 +130,7 @@ void led_fn_impl_casecamel() {
 
     int wasword = FALSE;
     int j=0;
-    for (int i=zone_start; i<zone_stop; i++) {
+    for (size_t i=zone_start; i<zone_stop; i++) {
         int c = led.curline.str[i];
         int isword = isalnum(c) || c == '_';
         if (isword) {
@@ -164,21 +164,49 @@ void led_fn_impl_append() {
 }
 
 void led_fn_impl_quote(char q) {
-    // implement regex zone
-    if (! (led.curline.str[0] == q && led.curline.str[led.curline.len - 1] == q) ) {
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
+    if (! (led.curline.str[zone_start] == q && led.curline.str[zone_stop - 1] == q) ) {
         led_debug("quote active");
         led_assert(led.curline.len <= LED_LINE_MAX - 2, LED_ERR_MAXLINE, "Line too long to be quoted");
-        led.buf_line_trans[0] = q;
-        memcpy(led.buf_line_trans + 1, led.curline.str, led.curline.len++);
-        led.buf_line_trans[led.curline.len++] = q;
-        led.buf_line_trans[led.curline.len++] = 0;
+        memcpy(led.buf_line_trans, led.curline.str, zone_start);
+        led.buf_line_trans[zone_start] = q;
+        memcpy(led.buf_line_trans + zone_start + 1, led.curline.str + zone_start, zone_stop - zone_start);
+        led.buf_line_trans[zone_stop + 1] = q;
+        memcpy(led.buf_line_trans + zone_stop + 2, led.curline.str + zone_stop, led.curline.len - zone_stop);
+        led.curline.len += 2;
+        led.buf_line_trans[led.curline.len] = 0;
         led.curline.str = led.buf_line_trans;
     }
 }
 
-void led_fn_impl_quotesimple() { led_fn_impl_quote('\''); }
-void led_fn_impl_quotedouble() { led_fn_impl_quote('"'); }
-void led_fn_impl_quoteback() { led_fn_impl_quote('`'); }
+void led_fn_impl_quote_simple() { led_fn_impl_quote('\''); }
+void led_fn_impl_quote_double() { led_fn_impl_quote('"'); }
+void led_fn_impl_quote_back() { led_fn_impl_quote('`'); }
+
+const char* QUOTES="'\"`";
+
+void led_fn_impl_quote_remove() {
+    int zone_start = 0;
+    int zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
+    char q = QUOTES[0];
+    for(size_t i = 0; q != '\0'; i++, q = QUOTES[i]) {
+        if (led.curline.str[zone_start] == q && led.curline.str[zone_stop - 1] == q) break;
+    }
+
+    if (q) {
+        led_debug("quotes found: %c", q);
+        memcpy(led.buf_line_trans, led.curline.str, zone_start);
+        memcpy(led.buf_line_trans + zone_start, led.curline.str + zone_start + 1, zone_stop - zone_start - 2);
+        memcpy(led.buf_line_trans + zone_stop - 2, led.curline.str + zone_stop, led.curline.len - zone_stop);
+        led.curline.len -= 2;
+        led.curline.str = led.buf_line_trans;
+    }
+}
 
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
@@ -188,17 +216,17 @@ led_fn_struct LED_FN_TABLE[] = {
     { "rmb:", "remove_blank:", NULL, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sn", "Insert line", "insert: <string> [N]" },
     { "app:", "append:", &led_fn_impl_append, "Sn", "Append line", "append: <string> [N]" },
-    { "rns:", "range_sel:", &led_fn_impl_rangesel, "Nn", "Range select", "range_sel: <start> [count]" },
+    { "rns:", "range_sel:", &led_fn_impl_range_sel, "Nn", "Range select", "range_sel: <start> [count]" },
     { "rnu:", "range_unsel:", NULL, "Nn", "Range unselect", "range_unsel: <start> [count]" },
     { "tr:", "translate:", &led_fn_impl_translate, "SS", "Translate", "translate: <chars> <chars>" },
-    { "csl:", "case_lower:", &led_fn_impl_caselower, "r", "Case to lower", "case_lower: [<regex>]" },
-    { "csu:", "case_upper:", &led_fn_impl_caseupper, "r", "Case to upper", "case_upper: [<regex>]" },
-    { "csf:", "case_first:", &led_fn_impl_casefirst, "r", "Case first upper", "case_first: [<regex>]" },
-    { "csc:", "case_camel:", &led_fn_impl_casecamel, "r", "Case to camel style", "case_camel: [<regex>]" },
-    { "qts:", "quote_simple:", &led_fn_impl_quotesimple, "r", "Quote simple", "quote_simple: [<regex>]" },
-    { "qtd:", "quote_double:", &led_fn_impl_quotedouble, "r", "Quote double", "quote_double: [<regex>]" },
-    { "qtb:", "quote_back:", &led_fn_impl_quoteback, "r", "Quote back", "quote_back: [<regex>]" },
-    { "qtr:", "quote_remove:", NULL, "r", "Quote remove", "quote_remove: [<regex>]" },
+    { "csl:", "case_lower:", &led_fn_impl_case_lower, "r", "Case to lower", "case_lower: [<regex>]" },
+    { "csu:", "case_upper:", &led_fn_impl_case_upper, "r", "Case to upper", "case_upper: [<regex>]" },
+    { "csf:", "case_first:", &led_fn_impl_case_first, "r", "Case first upper", "case_first: [<regex>]" },
+    { "csc:", "case_camel:", &led_fn_impl_case_camel, "r", "Case to camel style", "case_camel: [<regex>]" },
+    { "qts:", "quote_simple:", &led_fn_impl_quote_simple, "r", "Quote simple", "quote_simple: [<regex>]" },
+    { "qtd:", "quote_double:", &led_fn_impl_quote_double, "r", "Quote double", "quote_double: [<regex>]" },
+    { "qtb:", "quote_back:", &led_fn_impl_quote_back, "r", "Quote back", "quote_back: [<regex>]" },
+    { "qtr:", "quote_remove:", &led_fn_impl_quote_remove, "r", "Quote remove", "quote_remove: [<regex>]" },
     { "tm:", "trim:", NULL, "r", "Trim", "trim: [<regex>]" },
     { "tml:", "trim_left:", NULL, "r", "Trim left", "trim_left: [<regex>]" },
     { "tmr:", "trim_right:", NULL, "r", "Trim right", "trim_right: [<regex>]" },

@@ -115,12 +115,13 @@ int led_init_opt(const char* arg) {
 }
 
 int led_init_func(const char* arg) {
-    int rc = led_str_match(arg, "^[a-z]+:$");
+    int rc = led_str_match(arg, "^[a-z_]+:$");
     if (rc) {
         led.fn_id = -1;
         led_debug("Funcion table max: %d", led_fn_table_size());
         for (int i = 0; i < led_fn_table_size(); i++) {
-            if ( led_str_equal(arg, led_fn_table_descriptor(i)->short_name) || led_str_equal(arg, led_fn_table_descriptor(i)->long_name) ) {
+            led_fn_struct* fn_desc = led_fn_table_descriptor(i);
+            if ( led_str_equal(arg, fn_desc->short_name) || led_str_equal(arg, fn_desc->long_name) ) {
                 led.fn_id = i;
                 led_debug("Function found: %d", led.fn_id);
                 break;
@@ -303,13 +304,13 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 ## Processor commands:\n\n\
 "
     );
-    fprintf(stderr, "| %.3s | %.20s | %.8s | %.50s | %.40s |\n", DASHS, DASHS, DASHS, DASHS, DASHS);
-    fprintf(stderr, "| %-3s | %-20s | %-8s | %-50s | %-40s |\n", "Id", "Name", "Short", "Description", "Format");
-    fprintf(stderr, "| %.3s | %.20s | %.8s | %.50s | %.40s |\n", DASHS, DASHS, DASHS, DASHS, DASHS);
+    fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
+    fprintf(stderr, "| %-4s| %-19s| %-9s| %-49s| %-39s|\n", "Id", "Name", "Short", "Description", "Format");
+    fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
     for (int i=0; i < led_fn_table_size(); i++) {
         led_fn_struct* fn_desc = led_fn_table_descriptor(i);
         if (!fn_desc->impl) fprintf(stderr, "\e[90m");
-        fprintf(stderr, "| %-3d | %-20s | %-8s | %-50s | %-40s |\n",
+        fprintf(stderr, "| %-4d| %-19s| %-9s| %-49s| %-39s|\n",
             i,
             fn_desc->long_name,
             fn_desc->short_name,
@@ -318,7 +319,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
         );
         if (!fn_desc->impl) fprintf(stderr, "\e[0m");
     }
-    fprintf(stderr, "| %.3s | %.20s | %.8s | %.50s | %.40s |\n", DASHS, DASHS, DASHS, DASHS, DASHS);
+    fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
 }
 
 //-----------------------------------------------

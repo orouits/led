@@ -200,8 +200,8 @@ void led_fn_impl_quote(char q) {
         led.buf_line_trans[zone_stop + 1] = q;
         memcpy(led.buf_line_trans + zone_stop + 2, led.curline.str + zone_stop, led.curline.len - zone_stop);
         led.curline.len += 2;
-        led.buf_line_trans[led.curline.len] = 0;
         led.curline.str = led.buf_line_trans;
+        led.curline.str[led.curline.len] = '\0';
     }
 }
 
@@ -228,8 +228,68 @@ void led_fn_impl_quote_remove() {
         memcpy(led.buf_line_trans + zone_stop - 2, led.curline.str + zone_stop, led.curline.len - zone_stop);
         led.curline.len -= 2;
         led.curline.str = led.buf_line_trans;
+        led.curline.str[led.curline.len] = '\0';
     }
 }
+
+void led_fn_impl_trim() {
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
+    size_t str_start = zone_start;
+    size_t str_stop = zone_stop;
+    for (; str_start < zone_stop; str_start++) {
+        if (!isspace(led.curline.str[str_start])) break;
+    }
+    for (; str_stop > str_start; str_stop--) {
+        if (!isspace(led.curline.str[str_stop - 1])) break;
+    }
+
+    memcpy(led.buf_line_trans, led.curline.str, zone_start);
+    memcpy(led.buf_line_trans + zone_start, led.curline.str + str_start, str_stop - str_start);
+    memcpy(led.buf_line_trans + zone_start + (str_stop - str_start), led.curline.str + zone_stop, led.curline.len - zone_stop);
+    led.curline.len = zone_start + (str_stop - str_start) + (led.curline.len - zone_stop);
+    led.curline.str = led.buf_line_trans;
+    led.curline.str[led.curline.len] = '\0';
+}
+
+void led_fn_impl_trim_left() {
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
+    size_t str_start = zone_start;
+    for (; str_start < zone_stop; str_start++) {
+        if (!isspace(led.curline.str[str_start])) break;
+    }
+
+    memcpy(led.buf_line_trans, led.curline.str, zone_start);
+    memcpy(led.buf_line_trans + zone_start, led.curline.str + str_start, zone_stop - str_start);
+    memcpy(led.buf_line_trans + zone_start + (zone_stop - str_start), led.curline.str + zone_stop, led.curline.len - zone_stop);
+    led.curline.len = zone_start + (zone_stop - str_start) + (led.curline.len - zone_stop);
+    led.curline.str = led.buf_line_trans;
+    led.curline.str[led.curline.len] = '\0';
+}
+
+void led_fn_impl_trim_right() {
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
+    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
+
+    size_t str_stop = zone_stop;
+    for (; str_stop > zone_start; str_stop--) {
+        if (!isspace(led.curline.str[str_stop - 1])) break;
+    }
+
+    memcpy(led.buf_line_trans, led.curline.str, zone_start);
+    memcpy(led.buf_line_trans + zone_start, led.curline.str + zone_start, str_stop - zone_start);
+    memcpy(led.buf_line_trans + zone_start + (str_stop - zone_start), led.curline.str + zone_stop, led.curline.len - zone_stop);
+    led.curline.len = zone_start + (str_stop - zone_start) + (led.curline.len - zone_stop);
+    led.curline.str = led.buf_line_trans;
+    led.curline.str[led.curline.len] = '\0';
+}
+
 
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
@@ -250,9 +310,9 @@ led_fn_struct LED_FN_TABLE[] = {
     { "qtd:", "quote_double:", &led_fn_impl_quote_double, "r", "Quote double", "quote_double: [<regex>]" },
     { "qtb:", "quote_back:", &led_fn_impl_quote_back, "r", "Quote back", "quote_back: [<regex>]" },
     { "qtr:", "quote_remove:", &led_fn_impl_quote_remove, "r", "Quote remove", "quote_remove: [<regex>]" },
-    { "tm:", "trim:", NULL, "r", "Trim", "trim: [<regex>]" },
-    { "tml:", "trim_left:", NULL, "r", "Trim left", "trim_left: [<regex>]" },
-    { "tmr:", "trim_right:", NULL, "r", "Trim right", "trim_right: [<regex>]" },
+    { "tm:", "trim:", &led_fn_impl_trim, "r", "Trim", "trim: [<regex>]" },
+    { "tml:", "trim_left:", &led_fn_impl_trim_left, "r", "Trim left", "trim_left: [<regex>]" },
+    { "tmr:", "trim_right:", &led_fn_impl_trim_right, "r", "Trim right", "trim_right: [<regex>]" },
     { "sp:", "split:", NULL, "S", "Split", "split: <string>" },
     { "rv:", "revert:", NULL, "r", "Revert", "revert: [<regex>]" },
     { "fl:", "field:", NULL, "SP", "Extract fields", "field: <sep> <N>" },

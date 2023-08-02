@@ -11,15 +11,15 @@ void led_fn_impl_substitute() {
     PCRE2_SIZE len = LED_LINE_MAX;
     int rc = pcre2_substitute(
                 led.fn_arg[0].regex,
-                led.curline.str,
+                (PCRE2_UCHAR8*)led.curline.str,
                 led.curline.len,
                 0,
                 PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
                 NULL,
                 NULL,
-                led.fn_arg[1].str,
+                (PCRE2_UCHAR8*)led.fn_arg[1].str,
                 led.fn_arg[1].len,
-                led.buf_line_trans,
+                (PCRE2_UCHAR8*)led.buf_line_trans,
                 &len);
     led_assert_pcre(rc);
     led.curline.str = led.buf_line_trans;
@@ -34,38 +34,61 @@ void led_fn_impl_remove() {
 }
 
 void led_fn_impl_range_sel() {
-    int start = 0;
-    int count = led.curline.len;
+    size_t start = 0;
+    size_t count = led.curline.len;
 
     if (led.fn_arg[0].len) {
-        start = led.fn_arg[0].val;
-        if (start > led.curline.len) start = led.curline.len;
-        else if (start < -led.curline.len) start = -led.curline.len;
-        if (start < 0) start += led.curline.len;
+        long val = led.fn_arg[0].val;
+        size_t uval = led.fn_arg[0].uval;
+        if (val > 0)
+            start = uval > led.curline.len ? led.curline.len : uval;
+        else
+            start = uval > led.curline.len ? 0 : led.curline.len - uval;
     }
     if (led.fn_arg[1].len) {
-        count = led.fn_arg[1].val;
-        if (count < 0) count = 0;
+        size_t uval = led.fn_arg[1].uval;
+        count = uval + start > led.curline.len ? led.curline.len - start : uval;
     }
-    if (count + start > led.curline.len) count = led.curline.len - start;
+    else
+        count = led.curline.len - start;
 
-    if (led_str_equal(led.fn_arg[2].str, "n")) {
-        memcpy(led.buf_line_trans,led.curline.str, start);
-        memcpy(led.buf_line_trans + start,led.curline.str + start + count, led.curline.len - start - count);
-        led.buf_line_trans[led.curline.len - count] = '\0';
-        led.curline.len = led.curline.len - count;
+    memcpy(led.buf_line_trans, led.curline.str + start, count);
+    led.buf_line_trans[count] = '\0';
+    led.curline.len = count;
+    led.curline.str = led.buf_line_trans;
+}
+
+void led_fn_impl_range_unsel() {
+    size_t start = 0;
+    size_t count = led.curline.len;
+
+    if (led.fn_arg[0].len) {
+        long val = led.fn_arg[0].val;
+        size_t uval = led.fn_arg[0].uval;
+        if (val > 0) {
+            start = uval > led.curline.len ? led.curline.len : uval;
+        }
+        else {
+            start = uval > led.curline.len ? 0 : led.curline.len - uval;
+        }
     }
-    else {
-        memcpy(led.buf_line_trans,led.curline.str + start, count);
-        led.buf_line_trans[count] = '\0';
-        led.curline.len = count;
+    if (led.fn_arg[1].len) {
+        size_t uval = (size_t)led.fn_arg[1].val;
+        count = uval + start > led.curline.len ? led.curline.len - start : uval;
     }
+    else
+        count = led.curline.len - start;
+
+    memcpy(led.buf_line_trans, led.curline.str, start);
+    memcpy(led.buf_line_trans + start, led.curline.str + start + count, led.curline.len - start - count);
+    led.buf_line_trans[led.curline.len - count] = '\0';
+    led.curline.len = led.curline.len - count;
     led.curline.str = led.buf_line_trans;
 }
 
 void led_fn_impl_translate() {
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[2].regex) led_regex_match_offset(led.fn_arg[2].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     for (size_t i=zone_start; i<zone_stop; i++) {
@@ -83,8 +106,8 @@ void led_fn_impl_translate() {
 }
 
 void led_fn_impl_case_lower() {
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
@@ -96,8 +119,8 @@ void led_fn_impl_case_lower() {
 }
 
 void led_fn_impl_case_upper() {
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
@@ -109,8 +132,8 @@ void led_fn_impl_case_upper() {
 }
 
 void led_fn_impl_case_first() {
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     memcpy(led.buf_line_trans, led.curline.str, led.curline.len);
@@ -124,8 +147,8 @@ void led_fn_impl_case_first() {
 
 void led_fn_impl_case_camel() {
     // buggy
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     int wasword = FALSE;
@@ -164,8 +187,8 @@ void led_fn_impl_append() {
 }
 
 void led_fn_impl_quote(char q) {
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     if (! (led.curline.str[zone_start] == q && led.curline.str[zone_stop - 1] == q) ) {
@@ -189,8 +212,8 @@ void led_fn_impl_quote_back() { led_fn_impl_quote('`'); }
 const char* QUOTES="'\"`";
 
 void led_fn_impl_quote_remove() {
-    int zone_start = 0;
-    int zone_stop = led.curline.len;
+    size_t zone_start = 0;
+    size_t zone_stop = led.curline.len;
     if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.curline.str, led.curline.len, &zone_start, &zone_stop);
 
     char q = QUOTES[0];
@@ -214,10 +237,10 @@ led_fn_struct LED_FN_TABLE[] = {
     { "exe:", "execute:", NULL, "RS", "Execute", "execute: <regex> <replace=command>" },
     { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<regex>]" },
     { "rmb:", "remove_blank:", NULL, "", "Remove blank/empty lines", "remove_blank:" },
-    { "ins:", "insert:", &led_fn_impl_insert, "Sn", "Insert line", "insert: <string> [N]" },
-    { "app:", "append:", &led_fn_impl_append, "Sn", "Append line", "append: <string> [N]" },
-    { "rns:", "range_sel:", &led_fn_impl_range_sel, "Nn", "Range select", "range_sel: <start> [count]" },
-    { "rnu:", "range_unsel:", NULL, "Nn", "Range unselect", "range_unsel: <start> [count]" },
+    { "ins:", "insert:", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },
+    { "app:", "append:", &led_fn_impl_append, "Sp", "Append line", "append: <string> [N]" },
+    { "rns:", "range_sel:", &led_fn_impl_range_sel, "Np", "Range select", "range_sel: <start> [count]" },
+    { "rnu:", "range_unsel:", &led_fn_impl_range_unsel, "Np", "Range unselect", "range_unsel: <start> [count]" },
     { "tr:", "translate:", &led_fn_impl_translate, "SS", "Translate", "translate: <chars> <chars>" },
     { "csl:", "case_lower:", &led_fn_impl_case_lower, "r", "Case to lower", "case_lower: [<regex>]" },
     { "csu:", "case_upper:", &led_fn_impl_case_upper, "r", "Case to upper", "case_upper: [<regex>]" },
@@ -232,7 +255,7 @@ led_fn_struct LED_FN_TABLE[] = {
     { "tmr:", "trim_right:", NULL, "r", "Trim right", "trim_right: [<regex>]" },
     { "sp:", "split:", NULL, "S", "Split", "split: <string>" },
     { "rv:", "revert:", NULL, "r", "Revert", "revert: [<regex>]" },
-    { "fl:", "field:", NULL, "SN", "Extract fields", "field: <sep> <N>" },
+    { "fl:", "field:", NULL, "SP", "Extract fields", "field: <sep> <N>" },
     { "jn:", "join:", NULL, "", "Join lines", "join:" },
     { "ecrb64:", "encrypt_base64:", NULL, "s", "Encrypt base64", "encrypt_base64: [<regex>]" },
     { "dcrb64:", "decrypt_base64:", NULL, "s", "Decrypt base64", "decrypt_base64: [<regex>]" },
@@ -249,11 +272,11 @@ led_fn_struct LED_FN_TABLE[] = {
 
 #define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)
 
-led_fn_struct* led_fn_table_descriptor(int fn_id) {
-    led_assert(fn_id >= 0 && fn_id < LED_FN_TABLE_MAX, LED_ERR_INTERNAL, "Function index out of table");
+led_fn_struct* led_fn_table_descriptor(size_t fn_id) {
+    led_assert(fn_id < LED_FN_TABLE_MAX, LED_ERR_INTERNAL, "Function index out of table");
     return LED_FN_TABLE + fn_id;
 }
 
-int led_fn_table_size() {
+size_t led_fn_table_size() {
     return LED_FN_TABLE_MAX;
 }

@@ -117,18 +117,16 @@ int led_init_opt(const char* arg) {
 int led_init_func(const char* arg) {
     int is_func = led_str_match(arg, "^[a-z_]+:$");
     if (is_func) {
-        led.fn_id = -1;
         led_debug("Funcion table max: %d", led_fn_table_size());
-        for (int i = 0; i < led_fn_table_size(); i++) {
-            led_fn_struct* fn_desc = led_fn_table_descriptor(i);
+        for (led.fn_id = 0; led.fn_id < led_fn_table_size(); led.fn_id++) {
+            led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
             if ( led_str_equal(arg, fn_desc->short_name) || led_str_equal(arg, fn_desc->long_name) ) {
-                led.fn_id = i;
                 led_debug("Function found: %d", led.fn_id);
                 break;
             }
         }
-        led_assert(led.fn_id >= 0, LED_ERR_ARG, "Unknown function: %s", arg);
-        led_assert(led_fn_table_descriptor(led.fn_id)->impl, LED_ERR_ARG, "Function not yet implemented: %s", led_fn_table_descriptor(led.fn_id)->long_name);
+        led_assert(led.fn_id < led_fn_table_size(), LED_ERR_ARG, "Unknown function: %s", arg);
+        led_assert(led_fn_table_descriptor(led.fn_id)->impl != NULL, LED_ERR_ARG, "Function not yet implemented: %s", led_fn_table_descriptor(led.fn_id)->long_name);
     }
     return is_func;
 }
@@ -136,9 +134,8 @@ int led_init_func(const char* arg) {
 int led_init_func_arg(const char* arg) {
     int rc = !led.fn_arg[LED_FARG_MAX - 1].str;
     if (rc) {
-        for (int i = 0; i < LED_FARG_MAX; i++) {
+        for (size_t i = 0; i < LED_FARG_MAX; i++) {
             if ( !led.fn_arg[i].str ) {
-                char* str;
                 led.fn_arg[i].str = arg;
                 led.fn_arg[i].len = strlen(arg);
                 break;
@@ -176,38 +173,57 @@ void led_init_config() {
     for (int i=0; i < LED_FARG_MAX && format[i]; i++) {
         if (format[i] == 'R') {
             // TODO: ?regexname search operator
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing regex\n%s", i+1, fn_desc->help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing regex\n%s", i+1, fn_desc->help_format);
             led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
-            led_debug("Arg regex found: %d", i);
+            led_debug("function arg %i: regex found", i+1);
         }
         else if (format[i] == 'r') {
             if (led.fn_arg[i].str) {
                 led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
-                led_debug("Arg regex found: %d", i);
+                led_debug("function arg %i: regex found", i+1);
             }
         }
         else if (format[i] == 'N') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing number\n%s", i+1, fn_desc->help_format);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing number\n%s", i+1, fn_desc->help_format);
             led.fn_arg[i].val = atol(led.fn_arg[i].str);
-            led_debug("Arg numerical found: %d", i);
+            led_debug("function arg %i: numeric found: %li", i+1, led.fn_arg[i].val);
+            // additionally compute the positive unsigned value to help
+            led.fn_arg[i].uval = led.fn_arg[i].val < 0 ? (size_t)(-led.fn_arg[i].val) : (size_t)led.fn_arg[i].val;
         }
         else if (format[i] == 'n') {
             if (led.fn_arg[i].str) {
                 led.fn_arg[i].val = atol(led.fn_arg[i].str);
-                led_debug("Arg numerical found: %d", i);
+                led_debug("function arg %i: numeric found: %li", i+1, led.fn_arg[i].val);
+                // additionally compute the positive unsigned value to help
+                led.fn_arg[i].uval = led.fn_arg[i].val < 0 ? (size_t)(-led.fn_arg[i].val) : (size_t)led.fn_arg[i].val;
+            }
+        }
+        else if (format[i] == 'P') {
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing number\n%s", i+1, fn_desc->help_format);
+            led.fn_arg[i].val = atol(led.fn_arg[i].str);
+            led_assert(led.fn_arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive number\n%s", i+1, fn_desc->help_format);
+            led.fn_arg[i].uval = (size_t)led.fn_arg[i].val;
+            led_debug("function arg %i: positive numeric found: %lu", i+1, led.fn_arg[i].uval);
+        }
+        else if (format[i] == 'p') {
+            if (led.fn_arg[i].str) {
+                led.fn_arg[i].val = atol(led.fn_arg[i].str);
+                led_assert(led.fn_arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive number\n%s", i+1, fn_desc->help_format);
+                led.fn_arg[i].uval = (size_t)led.fn_arg[i].val;
+                led_debug("function arg %i: positive numeric found: %lu", i+1, led.fn_arg[i].uval);
             }
         }
         else if (format[i] == 'S') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %d: missing string\n%s", i+1, fn_desc->help_format);
-            led_debug("Arg string found: %d", i);
+            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing string\n%s", i+1, fn_desc->help_format);
+            led_debug("function arg %i: string found: %s", i+1, led.fn_arg[i].str);
         }
         else if (format[i] == 's') {
             if (led.fn_arg[i].str) {
-                led_debug("Arg string found: %d", i);
+                led_debug("function arg %i: string found: %s", i+1, led.fn_arg[i].str);
             }
         }
         else {
-            led_assert(TRUE, LED_ERR_ARG, "arg %d: bad internal format (%s)", i, format);
+            led_assert(TRUE, LED_ERR_ARG, "function arg %i: bad internal format (%s)", i+1, format);
         }
     }
 }
@@ -307,10 +323,10 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
     fprintf(stderr, "| %-4s| %-19s| %-9s| %-49s| %-39s|\n", "Id", "Name", "Short", "Description", "Format");
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
-    for (int i=0; i < led_fn_table_size(); i++) {
+    for (size_t i = 0; i < led_fn_table_size(); i++) {
         led_fn_struct* fn_desc = led_fn_table_descriptor(i);
         if (!fn_desc->impl) fprintf(stderr, "\e[90m");
-        fprintf(stderr, "| %-4d| %-19s| %-9s| %-49s| %-39s|\n",
+        fprintf(stderr, "| %-4lu| %-19s| %-9s| %-49s| %-39s|\n",
             i,
             fn_desc->long_name,
             fn_desc->short_name,
@@ -373,7 +389,7 @@ int led_read_line() {
 
     led.curline.str = fgets(led.buf_line, LED_LINE_MAX, led.curfile.file);
     if (led.curline.str == NULL) return FALSE;
-    led.curline.len = strlen(led.curline.str);
+    led.curline.len = strlen((char*)led.curline.str);
     while (led.curline.len > 0 && led.curline.str[led.curline.len - 1] == '\n') {
         // no trailing \n for processing
         led.curline.len--;
@@ -386,13 +402,12 @@ int led_read_line() {
 
 void led_write_line() {
     led_debug("Write line: (%d) %d", led.curline.count, led.curline.len);
-    int nb = 0;
 
     // if no filter empty empty strings are output
     if (led.curline.str && (led.curline.len || !led.o_filter_empty) ) {
         led.curline.str[led.curline.len++] = '\n';
         led.curline.str[led.curline.len] = '\0';
-        nb = fwrite(led.curline.str, sizeof(char), led.curline.len, stdout);
+        fwrite(led.curline.str, sizeof(char), led.curline.len, stdout);
         fflush(stdout);
     }
 }

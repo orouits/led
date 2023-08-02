@@ -53,22 +53,23 @@ typedef struct {
     struct {
         int     type;
         pcre2_code* regex;
-        long     val;
+        size_t     val;
     } sel[LED_SEL_MAX];
 
     // processor function Id
-    int fn_id;
+    size_t fn_id;
 
     struct {
-        const unsigned char* str;
-        int len;
+        const char* str;
+        size_t len;
         long val;
+        size_t uval;
         pcre2_code* regex;
     } fn_arg[LED_FARG_MAX];
 
     // files
     char**  file_names;
-    int     file_count;
+    size_t  file_count;
 
     int     stdin_ispipe;
     int     stdout_ispipe;
@@ -80,18 +81,18 @@ typedef struct {
     } curfile;
 
     struct {
-        unsigned char* str;
-        int len;
-        long count;
-        long count_sel;
+        char *str;
+        size_t len;
+        size_t count;
+        size_t count_sel;
         int selected;
     } curline;
 
     // runtime buffers
-    unsigned char buf_fname[LED_FNAME_MAX];
-    unsigned char buf_line[LED_LINE_MAX];
-    unsigned char buf_line_trans[LED_LINE_MAX];
-    unsigned char buf_message[LED_MSG_MAX];
+    char buf_fname[LED_FNAME_MAX];
+    char buf_line[LED_LINE_MAX];
+    char buf_line_trans[LED_LINE_MAX];
+    PCRE2_UCHAR8 buf_message[LED_MSG_MAX];
 
 } led_struct;
 
@@ -114,8 +115,8 @@ typedef struct {
 
 void led_fn_config();
 
-led_fn_struct* led_fn_table_descriptor(int fn_id);
-int led_fn_table_size();
+led_fn_struct* led_fn_table_descriptor(size_t fn_id);
+size_t led_fn_table_size();
 
 //-----------------------------------------------
 // LED trace, error and assertions
@@ -135,5 +136,5 @@ int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);
 pcre2_code* led_regex_compile(const char* pattern);
 int led_regex_match(pcre2_code* regex, const char* line, int len);
-int led_regex_match_offset(pcre2_code* regex, const char* line, int len, int* offset, int* length);
+int led_regex_match_offset(pcre2_code* regex, const char* line, int len, size_t* offset, size_t* length);
 int led_str_match(const char* str, const char* regex);

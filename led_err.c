@@ -29,7 +29,7 @@ void led_assert(int cond, int code, const char* message, ...) {
         if (message) {
             va_list args;
             va_start(args, message);
-            vsnprintf(led.buf_message, sizeof(led.buf_message), message, args);
+            vsnprintf((char*)led.buf_message, sizeof(led.buf_message), message, args);
             va_end(args);
             fprintf(stderr, "\e[31m[LED_ERROR] %s\e[0m\n", led.buf_message);
         }
@@ -51,7 +51,7 @@ void led_debug(const char* message, ...) {
     if (led.o_verbose) {
         va_list args;
         va_start(args, message);
-        vsnprintf(led.buf_message, LED_MSG_MAX, message, args);
+        vsnprintf((char*)led.buf_message, LED_MSG_MAX, message, args);
         va_end(args);
         fprintf(stderr, "\e[34m[LED_DEBUG] %s\e[0m\n", led.buf_message);
     }

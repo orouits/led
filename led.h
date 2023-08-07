@@ -20,13 +20,19 @@
 
 #define LED_SEL_MAX 2
 #define LED_FARG_MAX 3
-#define LED_LINE_MAX 4096
-#define LED_FNAME_MAX 4096
-#define LED_MSG_MAX 4096
+#define LED_LINE_MAX 4095
+#define LED_FNAME_MAX 4095
+#define LED_MSG_MAX 4095
 
 //-----------------------------------------------
 // LED runtime data structure
 //-----------------------------------------------
+
+typedef struct {
+    char* str;
+    char buf[LED_LINE_MAX+1];
+    size_t len;
+} led_line_struct;
 
 typedef struct {
     // options
@@ -81,22 +87,29 @@ typedef struct {
     } curfile;
 
     struct {
-        char *str;
-        size_t len;
         size_t count;
         size_t count_sel;
         int selected;
     } curline;
 
+    led_line_struct line_src;
+    led_line_struct line_dst;
+
     // runtime buffers
-    char buf_fname[LED_FNAME_MAX];
-    char buf_line[LED_LINE_MAX];
-    char buf_line_trans[LED_LINE_MAX];
-    PCRE2_UCHAR8 buf_message[LED_MSG_MAX];
+    char buf_fname[LED_FNAME_MAX+1];
+    PCRE2_UCHAR8 buf_message[LED_MSG_MAX+1];
 
 } led_struct;
 
 extern led_struct led;
+
+int led_line_reset();
+int led_line_copy();
+int led_line_append_str(const char* str);
+int led_line_append_str_len(const char* str, size_t len);
+int led_line_append_char(const char c);
+int led_line_append_str_start_len(const char* str, size_t start, size_t len);
+int led_line_append_str_start_stop(const char* str, size_t start, size_t stop);
 
 //-----------------------------------------------
 // LED function management
@@ -128,7 +141,7 @@ void led_assert_pcre(int rc);
 void led_debug(const char* message, ...);
 
 //-----------------------------------------------
-// LED string utilities
+// LED utilities
 //-----------------------------------------------
 
 int led_str_trim(char* line);

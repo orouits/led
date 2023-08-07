@@ -1,5 +1,5 @@
 CC            = gcc
-DEFINES       = 
+DEFINES       =
 CFLAGS        = -pipe -O2 -Wall -Wextra -fPIC $(DEFINES)
 INCPATH       = -I.
 LINK          = g++
@@ -8,9 +8,9 @@ LFLAGS        = -Wl,-O1
 ####### Output directory
 
 
-SOURCES       = *.c 
+SOURCES       = *.c
 OBJECTS       = led.o led_fn.o led_err.o led_str.o
-LIBS          = -lpcre2-8   
+LIBS          = -lpcre2-8 -lb64
 DESTDIR       = .
 TARGET        = led
 DISTNAME      = led-1.0.0
@@ -18,7 +18,7 @@ DISTDIR       = /home/ol/src/led/$(DISTNAME)
 
 ####### Build rules
 
-led:  $(OBJECTS)  
+led:  $(OBJECTS)
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 all: led
@@ -33,7 +33,7 @@ distclean: clean
 test: FORCE
 	test/test.sh
 
-FORCE: 
+FORCE:
 
 ####### Compile
 

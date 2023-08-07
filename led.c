@@ -115,7 +115,7 @@ int led_init_opt(const char* arg) {
 }
 
 int led_init_func(const char* arg) {
-    int is_func = led_str_match(arg, "^[a-z_]+:$");
+    int is_func = led_str_match(arg, "^[a-z0-9_]+:$");
     if (is_func) {
         led_debug("Funcion table max: %d", led_fn_table_size());
         for (led.fn_id = 0; led.fn_id < led_fn_table_size(); led.fn_id++) {
@@ -382,43 +382,82 @@ int led_next_file() {
     return led.curfile.file != NULL;
 }
 
-int led_read_line() {
+int led_line_read() {
 
     if (feof(led.curfile.file)) return 0;
-    //memset(led.buf_line, 0, sizeof(led.buf_line));
+    //memset(led.line_src, 0, sizeof(led.line_src));
 
-    led.curline.str = fgets(led.buf_line, LED_LINE_MAX, led.curfile.file);
-    if (led.curline.str == NULL) return FALSE;
-    led.curline.len = strlen((char*)led.curline.str);
-    while (led.curline.len > 0 && led.curline.str[led.curline.len - 1] == '\n') {
+    led.line_src.str = fgets(led.line_src.buf, LED_LINE_MAX+1, led.curfile.file);
+    if (led.line_src.str == NULL) return FALSE;
+
+    led.line_src.len = strlen((char*)led.line_src.str);
+    while (led.line_src.len > 0 && led.line_src.str[led.line_src.len - 1] == '\n') {
         // no trailing \n for processing
-        led.curline.len--;
-        led.buf_line[led.curline.len] = '\0';
+        led.line_src.len--;
+        led.line_src.str[led.line_src.len] = '\0';
     }
     led.curline.count++;
-    led_debug("New line: (%d) %s", led.curline.count, led.curline.str);
+    led_debug("New line: (%d) %s", led.curline.count, led.line_src.str);
     return TRUE;
 }
 
-void led_write_line() {
-    led_debug("Write line: (%d) %d", led.curline.count, led.curline.len);
+void led_line_write() {
+    led_debug("Write line: (%d) %d", led.curline.count, led.line_dst.len);
 
-    // if no filter empty empty strings are output
-    if (led.curline.str && (led.curline.len || !led.o_filter_empty) ) {
-        led.curline.str[led.curline.len++] = '\n';
-        led.curline.str[led.curline.len] = '\0';
-        fwrite(led.curline.str, sizeof(char), led.curline.len, stdout);
+    // if no filter empty strings are output
+    if (led.line_dst.str != NULL && (led.line_dst.len || !led.o_filter_empty)) {
+        led_line_append_char('\n');
+        fwrite(led.line_dst.str, sizeof(char), led.line_dst.len, stdout);
         fflush(stdout);
+        led_line_reset();
     }
 }
 
+int led_line_reset() {
+    memset(&led.line_dst, 0, sizeof(led.line_dst));
+    return led.line_dst.len;
+}
+int led_line_copy() {
+    led.line_dst.str = led.line_dst.buf;
+    memcpy(led.line_dst.buf, led.line_src.buf, led.line_src.len);
+    led.line_dst.len = led.line_src.len;
+    return led.line_dst.len;
+}
+int led_line_append_char(const char c) {
+    led.line_dst.str = led.line_dst.buf;
+    led.line_dst.str[led.line_dst.len++] = c;
+    led.line_dst.str[led.line_dst.len] = '\0';
+    return led.line_dst.len;
+}
+int led_line_append_str(const char* str) {
+    led.line_dst.str = led.line_dst.buf;
+    for (size_t i = 0; led.line_dst.len < LED_LINE_MAX && str[i]; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
+    led.line_dst.str[led.line_dst.len] = '\0';
+    return led.line_dst.len;
+}
+int led_line_append_str_len(const char* str, size_t len) {
+    return led_line_append_str_start_len(str, 0, len);
+}
+int led_line_append_str_start_len(const char* str, size_t start, size_t len) {
+    led.line_dst.str = led.line_dst.buf;
+    str += start;
+    for (size_t i = 0; led.line_dst.len < LED_LINE_MAX && str[i] && i < len; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
+    led.line_dst.str[led.line_dst.len] = '\0';
+    return led.line_dst.len;
+}
+int led_line_append_str_start_stop(const char* str, size_t start, size_t stop) {
+    led.line_dst.str = led.line_dst.buf;
+    for (size_t i = start; led.line_dst.len < LED_LINE_MAX && str[i] && i < stop; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
+    led.line_dst.str[led.line_dst.len] = '\0';
+    return led.line_dst.len;
+}
 int led_select() {
     // led.o_sel_invert option is not handled here but by main process.
 
     // stop selection on second boundary
     if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE)
         || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.count_sel >= led.sel[1].val)
-        || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.curline.str, led.curline.len)) ) {
+        || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.line_src.str, led.line_src.len)) ) {
         led.curline.selected = FALSE;
         led.curline.count_sel = 0;
     }
@@ -426,7 +465,7 @@ int led_select() {
     // start selection on first boundary
     if (led.sel[0].type == SEL_TYPE_NONE
         || (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
-        || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.curline.str, led.curline.len)) ) {
+        || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.line_src.str, led.line_src.len)) ) {
         led.curline.selected = TRUE;
         led.curline.count_sel = 0;
     }
@@ -457,12 +496,12 @@ int main(int argc, char* argv[]) {
         led_help();
     else
         while (led_next_file()) {
-            while (led_read_line()) {
+            while (led_line_read()) {
                 led_select();
                 if (led.curline.selected == !led.o_sel_invert)
                     led_process();
                 if (led.curline.selected == !led.o_sel_invert || !led.o_output_selected)
-                    led_write_line();
+                    led_line_write();
             }
         }
 

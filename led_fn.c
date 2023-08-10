@@ -1,4 +1,5 @@
 #include "led.h"
+
 #include <b64/cencode.h>
 #include <b64/cdecode.h>
 
@@ -7,6 +8,17 @@
 //-----------------------------------------------
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
+
+void led_zone_trim(const char* str, size_t zone_start, size_t zone_stop, size_t* pstr_start, size_t* pstr_stop) {
+    for (; zone_start < zone_stop; zone_start++) {
+        if (!isspace(str[zone_start])) break;
+    }
+    for (; zone_stop > zone_start; zone_stop--) {
+        if (!isspace(str[zone_stop - 1])) break;
+    }
+    *pstr_start = zone_start;
+    *pstr_stop = zone_stop;
+}
 
 //-----------------------------------------------
 // LED functions
@@ -17,7 +29,7 @@ void led_fn_impl_none() {
 }
 
 void led_fn_impl_substitute() {
-    PCRE2_SIZE len = LED_LINE_MAX;
+    PCRE2_SIZE len = LED_BUF_MAX;
     int rc = pcre2_substitute(
                 led.fn_arg[0].regex,
                 (PCRE2_UCHAR8*)led.line_src.str,
@@ -37,6 +49,16 @@ void led_fn_impl_substitute() {
 
 void led_fn_impl_remove() {
     if (!led.fn_arg[0].regex || led_regex_match(led.fn_arg[0].regex, led.line_src.str, led.line_src.len))
+        led_line_reset();
+    else
+        led_line_copy();
+}
+
+void led_fn_impl_remove_blank() {
+    static pcre2_code* regex = NULL;
+    if (regex == NULL) regex = led_regex_compile("^\\s+$"); // no explicit free, will be done by the kernel at process end.
+
+    if (led.line_src.str[0] == '\0' || led_regex_match(regex, led.line_src.str, led.line_src.len))
         led_line_reset();
     else
         led_line_copy();
@@ -183,7 +205,7 @@ void led_fn_impl_quote(char q) {
 
     if (! (led.line_src.str[zone_start] == q && led.line_src.str[zone_stop - 1] == q) ) {
         led_debug("quote active");
-        led_assert(led.line_src.len <= LED_LINE_MAX - 2, LED_ERR_MAXLINE, "Line too long to be quoted");
+        led_assert(led.line_src.len <= LED_BUF_MAX - 2, LED_ERR_MAXLINE, "Line too long to be quoted");
         led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
         led_line_append_char(q);
         led_line_append_str_start_stop(led.line_src.str, zone_start, zone_stop);
@@ -218,7 +240,6 @@ void led_fn_impl_quote_remove() {
     }
     else
         led_line_copy();
-
 }
 
 void led_fn_impl_trim() {
@@ -288,12 +309,43 @@ void led_fn_impl_decrypt_base64() {
     led.line_dst.str[led.line_dst.len] = '\0';
 }
 
+void led_path_canonical() {
+    size_t zone_start = 0;
+    size_t zone_stop = led.line_src.len;
+    led_regex_match_offset(led.fn_arg[0].regex, led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+
+    size_t str_start = zone_start;
+    size_t str_stop = zone_stop;
+    led_zone_trim(led.line_src.str, zone_start, zone_stop, &str_start, &str_stop);
+
+    if (led.o_output_match)
+        led_line_append_str("");
+    else
+        led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
+
+    char c = led.line_src.buf[zone_stop]; // temporary save this char for realpath function
+    led.line_src.buf[str_stop] = '\0';
+    if (realpath(led.line_src.str + str_start, led.line_dst.buf + led.line_dst.len) != NULL ) {
+        led.line_src.buf[str_stop] = c;
+        led.line_dst.len = strlen(led.line_dst.str);
+    }
+    else {
+        led.line_src.buf[str_stop] = c;
+        led_line_append_str_start_stop(led.line_src.str, zone_start, zone_stop);
+    }
+
+    if (led.o_output_match)
+        led_line_append_str("");
+    else
+        led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+}
+
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
     { "exe:", "execute:", NULL, "RS", "Execute", "execute: <regex> <replace=command>" },
     { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<regex>]" },
-    { "rmb:", "remove_blank:", NULL, "", "Remove blank/empty lines", "remove_blank:" },
+    { "rmb:", "remove_blank:", &led_fn_impl_remove_blank, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },
     { "app:", "append:", &led_fn_impl_append, "Sp", "Append line", "append: <string> [N]" },
     { "rns:", "range_sel:", &led_fn_impl_range_sel, "Np", "Range select", "range_sel: <start> [count]" },
@@ -318,7 +370,7 @@ led_fn_struct LED_FN_TABLE[] = {
     { "dcrb64:", "decrypt_base64:", &led_fn_impl_decrypt_base64, "r", "Decrypt base64", "decrypt_base64: [<regex>]" },
     { "urc:", "url_encode:", NULL, "r", "Encode URL", "url_encode: [<regex>]" },
     { "urd:", "url_decode:", NULL, "r", "Decode URL", "url_decode: [<regex>]" },
-    { "phc:", "path_canonical:", NULL, "r", "Conert to canonical path", "path_canonical: [<regex>]" },
+    { "phc:", "path_canonical:", &led_path_canonical, "r", "Conert to canonical path", "path_canonical: [<regex>]" },
     { "phd:", "path_dir:", NULL, "r", "Extract last dir of the path", "path_dir: [<regex>]" },
     { "phf:", "path_file:", NULL, "r", "Extract file of the path", "path_file: [<regex>]" },
     { "phr:", "path_rename:", NULL, "r", "Rename file of the path without specific chars", "path_rename: [<regex>]" },

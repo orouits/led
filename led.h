@@ -1,9 +1,10 @@
+#include <limits.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
@@ -20,9 +21,13 @@
 
 #define LED_SEL_MAX 2
 #define LED_FARG_MAX 3
-#define LED_LINE_MAX 4095
-#define LED_FNAME_MAX 4095
-#define LED_MSG_MAX 4095
+#define LED_BUF_MAX 0x8000
+#define LED_FNAME_MAX 0x1000
+#define LED_MSG_MAX 0x1000
+
+#define LED_RGX_NO_MATCH 0
+#define LED_RGX_STR_MATCH 1
+#define LED_RGX_GROUP_MATCH 2
 
 //-----------------------------------------------
 // LED runtime data structure
@@ -30,7 +35,7 @@
 
 typedef struct {
     char* str;
-    char buf[LED_LINE_MAX+1];
+    char buf[LED_BUF_MAX];
     size_t len;
 } led_line_struct;
 
@@ -45,6 +50,7 @@ typedef struct {
     int     o_sel_invert;
     int     o_sel_block;
     int     o_output_selected;
+    int     o_output_match;
     int     o_filter_empty;
     int     o_file_in;
     int     o_file_out;

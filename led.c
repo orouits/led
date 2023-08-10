@@ -27,6 +27,63 @@ const char* LED_SEC_TABLE[] = {
 led_struct led;
 
 //-----------------------------------------------
+// LED tech trace and error functions
+//-----------------------------------------------
+
+void led_free() {
+    if ( led.curfile.file ) {
+        fclose(led.curfile.file);
+        led.curfile.file = NULL;
+        led.curfile.name = NULL;
+    }
+    for (int i=0; i<2; i++ ) {
+        if ( led.sel[i].regex != NULL) {
+            pcre2_code_free(led.sel[i].regex);
+            led.sel[i].regex = NULL;
+        }
+    }
+    for (int i=0; i<LED_FARG_MAX; i++ ) {
+        if (led.fn_arg[i].regex != NULL) {
+            pcre2_code_free(led.fn_arg[i].regex);
+            led.fn_arg[i].regex = NULL;
+        }
+    }
+}
+
+void led_assert(int cond, int code, const char* message, ...) {
+    if (!cond) {
+        if (message) {
+            va_list args;
+            va_start(args, message);
+            vsnprintf((char*)led.buf_message, sizeof(led.buf_message), message, args);
+            va_end(args);
+            fprintf(stderr, "\e[31m[LED_ERROR] %s\e[0m\n", led.buf_message);
+        }
+        led_free();
+        exit(code);
+    }
+}
+
+void led_assert_pcre(int rc) {
+    if (rc < 0) {
+        pcre2_get_error_message(rc, led.buf_message, LED_MSG_MAX);
+        fprintf(stderr, "\e[31m[LED_ERROR_PCRE] %s\e[0m\n", led.buf_message);
+        led_free();
+        exit(LED_ERR_PCRE);
+    }
+}
+
+void led_debug(const char* message, ...) {
+    if (led.o_verbose) {
+        va_list args;
+        va_start(args, message);
+        vsnprintf((char*)led.buf_message, LED_MSG_MAX, message, args);
+        va_end(args);
+        fprintf(stderr, "\e[34m[LED_DEBUG] %s\e[0m\n", led.buf_message);
+    }
+}
+
+//-----------------------------------------------
 // LED init functions
 //-----------------------------------------------
 
@@ -58,6 +115,9 @@ int led_init_opt(const char* arg) {
                 break;
             case 'n':
                 led.o_sel_invert = TRUE;
+                break;
+            case 'm':
+                led.o_output_match = TRUE;
                 break;
             case 'b':
                 led.o_sel_block = TRUE;
@@ -317,6 +377,9 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     -D<dir>     write files in <dir>.\n\
     -U          write unchanged filenames\n\
 \n\
+## Processor options\n\
+    -m          output only processed maching zone when regex is used\n\
+\n\
 ## Processor commands:\n\n\
 "
     );
@@ -387,7 +450,7 @@ int led_line_read() {
     if (feof(led.curfile.file)) return 0;
     //memset(led.line_src, 0, sizeof(led.line_src));
 
-    led.line_src.str = fgets(led.line_src.buf, LED_LINE_MAX+1, led.curfile.file);
+    led.line_src.str = fgets(led.line_src.buf, LED_BUF_MAX, led.curfile.file);
     if (led.line_src.str == NULL) return FALSE;
 
     led.line_src.len = strlen((char*)led.line_src.str);
@@ -425,13 +488,15 @@ int led_line_copy() {
 }
 int led_line_append_char(const char c) {
     led.line_dst.str = led.line_dst.buf;
-    led.line_dst.str[led.line_dst.len++] = c;
-    led.line_dst.str[led.line_dst.len] = '\0';
+    if (led.line_dst.len < LED_BUF_MAX-1) {
+        led.line_dst.str[led.line_dst.len++] = c;
+        led.line_dst.str[led.line_dst.len] = '\0';
+    }
     return led.line_dst.len;
 }
 int led_line_append_str(const char* str) {
     led.line_dst.str = led.line_dst.buf;
-    for (size_t i = 0; led.line_dst.len < LED_LINE_MAX && str[i]; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
+    for (size_t i = 0; led.line_dst.len < LED_BUF_MAX-1 && str[i]; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
     led.line_dst.str[led.line_dst.len] = '\0';
     return led.line_dst.len;
 }
@@ -441,13 +506,13 @@ int led_line_append_str_len(const char* str, size_t len) {
 int led_line_append_str_start_len(const char* str, size_t start, size_t len) {
     led.line_dst.str = led.line_dst.buf;
     str += start;
-    for (size_t i = 0; led.line_dst.len < LED_LINE_MAX && str[i] && i < len; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
+    for (size_t i = 0; led.line_dst.len < LED_BUF_MAX-1 && str[i] && i < len; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
     led.line_dst.str[led.line_dst.len] = '\0';
     return led.line_dst.len;
 }
 int led_line_append_str_start_stop(const char* str, size_t start, size_t stop) {
     led.line_dst.str = led.line_dst.buf;
-    for (size_t i = start; led.line_dst.len < LED_LINE_MAX && str[i] && i < stop; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
+    for (size_t i = start; led.line_dst.len < LED_BUF_MAX-1 && str[i] && i < stop; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
     led.line_dst.str[led.line_dst.len] = '\0';
     return led.line_dst.len;
 }

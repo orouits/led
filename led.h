@@ -37,26 +37,28 @@ typedef struct {
     char* str;
     char buf[LED_BUF_MAX];
     size_t len;
+    size_t zone_start;
+    size_t zone_stop;
 } led_line_struct;
 
 typedef struct {
     // options
-    int     o_help;
-    int     o_verbose;
-    int     o_report;
-    int     o_quiet;
-    int     o_zero;
-    int     o_exit_mode;
-    int     o_sel_invert;
-    int     o_sel_block;
-    int     o_output_selected;
-    int     o_output_match;
-    int     o_filter_empty;
-    int     o_file_in;
-    int     o_file_out;
-    int     o_file_out_unchanged;
-    int     o_file_out_mode;
-    int     o_file_out_extn;
+    int o_help;
+    int o_verbose;
+    int o_report;
+    int o_quiet;
+    int o_zero;
+    int o_exit_mode;
+    int o_sel_invert;
+    int o_sel_block;
+    int o_output_selected;
+    int o_output_match;
+    int o_filter_empty;
+    int o_file_in;
+    int o_file_out;
+    int o_file_out_unchanged;
+    int o_file_out_mode;
+    int o_file_out_extn;
     const char* o_file_out_ext;
     const char* o_file_out_dir;
     const char* o_file_out_path;
@@ -110,7 +112,12 @@ typedef struct {
 extern led_struct led;
 
 int led_line_reset();
+int led_line_init();
 int led_line_copy();
+int led_line_append();
+int led_line_append_zone();
+int led_line_append_before_zone();
+int led_line_append_after_zone();
 int led_line_append_str(const char* str);
 int led_line_append_str_len(const char* str, size_t len);
 int led_line_append_char(const char c);

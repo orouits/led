@@ -2,6 +2,7 @@
 
 #include <b64/cencode.h>
 #include <b64/cdecode.h>
+#include <libgen.h>
 
 //-----------------------------------------------
 // LED functions utilities
@@ -9,15 +10,18 @@
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
 
-void led_zone_trim(const char* str, size_t zone_start, size_t zone_stop, size_t* pstr_start, size_t* pstr_stop) {
-    for (; zone_start < zone_stop; zone_start++) {
-        if (!isspace(str[zone_start])) break;
-    }
-    for (; zone_stop > zone_start; zone_stop--) {
-        if (!isspace(str[zone_stop - 1])) break;
-    }
-    *pstr_start = zone_start;
-    *pstr_stop = zone_stop;
+void led_zone_pre_process(pcre2_code* regex) {
+    led_line_init();
+
+    led.line_src.zone_start = 0;
+    led.line_src.zone_stop = led.line_src.len;
+    led_regex_match_offset(regex, led.line_src.str, led.line_src.len, &led.line_src.zone_start, &led.line_src.zone_stop);
+
+    if (!led.o_output_match) led_line_append_before_zone();
+}
+
+void led_zone_post_process() {
+    if (!led.o_output_match) led_line_append_after_zone();
 }
 
 //-----------------------------------------------
@@ -25,7 +29,7 @@ void led_zone_trim(const char* str, size_t zone_start, size_t zone_stop, size_t*
 //-----------------------------------------------
 
 void led_fn_impl_none() {
-    led_line_append_str_len(led.line_src.str, led.line_src.len);
+    led_line_copy();
 }
 
 void led_fn_impl_substitute() {
@@ -56,7 +60,7 @@ void led_fn_impl_remove() {
 
 void led_fn_impl_remove_blank() {
     static pcre2_code* regex = NULL;
-    if (regex == NULL) regex = led_regex_compile("^\\s+$"); // no explicit free, will be done by the kernel at process end.
+    if (regex == NULL) regex = led_regex_compile("^\\s+$"); // no explicit memory free, will be done by the kernel at exit.
 
     if (led.line_src.str[0] == '\0' || led_regex_match(regex, led.line_src.str, led.line_src.len))
         led_line_reset();
@@ -65,115 +69,97 @@ void led_fn_impl_remove_blank() {
 }
 
 void led_fn_impl_range_sel() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
+    led_line_init();
 
     if (led.fn_arg[0].len) {
         long val = led.fn_arg[0].val;
         size_t uval = led.fn_arg[0].uval;
         if (val > 0)
-            zone_start = uval > led.line_src.len ? led.line_src.len : uval;
+            led.line_src.zone_start = uval > led.line_src.len ? led.line_src.len : uval;
         else
-            zone_start = uval > led.line_src.len ? 0 : led.line_src.len - uval;
+            led.line_src.zone_start = uval > led.line_src.len ? 0 : led.line_src.len - uval;
     }
     if (led.fn_arg[1].len) {
         size_t uval = led.fn_arg[1].uval;
-        zone_stop = zone_start + uval > led.line_src.len ? led.line_src.len : zone_start + uval;
+        led.line_src.zone_stop = led.line_src.zone_start + uval > led.line_src.len ? led.line_src.len : led.line_src.zone_start + uval;
     }
     else
-        zone_stop = led.line_src.len;
+        led.line_src.zone_stop = led.line_src.len;
 
-    led_line_append_str_start_stop(led.line_src.str, zone_start, zone_stop);
+    led_line_append_zone();
 }
 
 void led_fn_impl_range_unsel() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-
     if (led.fn_arg[0].len) {
         long val = led.fn_arg[0].val;
         size_t uval = led.fn_arg[0].uval;
         if (val > 0) {
-            zone_start = uval > led.line_src.len ? led.line_src.len : uval;
+            led.line_src.zone_start = uval > led.line_src.len ? led.line_src.len : uval;
         }
         else {
-            zone_start = uval > led.line_src.len ? 0 : led.line_src.len - uval;
+            led.line_src.zone_start = uval > led.line_src.len ? 0 : led.line_src.len - uval;
         }
     }
     if (led.fn_arg[1].len) {
         size_t uval = (size_t)led.fn_arg[1].val;
-        zone_stop = zone_start + uval > led.line_src.len ? led.line_src.len : zone_start + uval;
+        led.line_src.zone_stop = led.line_src.zone_start + uval > led.line_src.len ? led.line_src.len : led.line_src.zone_start + uval;
     }
     else
-        zone_stop = led.line_src.len;
+        led.line_src.zone_stop = led.line_src.len;
 
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+    led_line_append_before_zone();
+    led_line_append_after_zone();
 }
 
 void led_fn_impl_translate() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[2].regex) led_regex_match_offset(led.fn_arg[2].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[1].regex);
 
-    led_line_copy();
-    for (size_t i=zone_start; i<zone_stop; i++) {
+    for (size_t i=led.line_src.zone_start; i<led.line_src.zone_stop; i++) {
         char c = led.line_src.str[i];
         for (size_t j=0; j<led.fn_arg[0].len; j++) {
             if (led.fn_arg[0].str[j] == c) {
                 if (j < led.fn_arg[1].len)
-                    led.line_dst.str[i] = led.fn_arg[1].str[j];
+                    led_line_append_char(led.fn_arg[0].str[j]);
                 break;
             }
         }
     }
+    led_zone_post_process();
 }
 
 void led_fn_impl_case_lower() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[1].regex);
 
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-    for (size_t i=zone_start; i<zone_stop; i++)
-        led_line_append_char(tolower(led.line_dst.str[i]));
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+    for (size_t i=led.line_src.zone_start; i<led.line_src.zone_stop; i++)
+        led_line_append_char(tolower(led.line_src.str[i]));
 
+    led_zone_post_process();
 }
 
 void led_fn_impl_case_upper() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-    for (size_t i=zone_start; i<zone_stop; i++)
-        led_line_append_char(toupper(led.line_dst.str[i]));
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+    for (size_t i=led.line_src.zone_start; i<led.line_src.zone_stop; i++)
+        led_line_append_char(toupper(led.line_src.str[i]));
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_case_first() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-    if (zone_start < led.line_dst.len)
-        led_line_append_char(toupper(led.line_dst.str[zone_start]));
-    for (size_t i=zone_start+1; i<zone_stop; i++)
-        led_line_append_char(tolower(led.line_dst.str[i]));
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+    led_line_append_char(toupper(led.line_src.str[led.line_src.zone_start]));
+    for (size_t i=led.line_src.zone_start+1; i<led.line_src.zone_stop; i++)
+        led_line_append_char(tolower(led.line_src.str[i]));
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_case_camel() {
-    // buggy
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
     int wasword = FALSE;
-    for (size_t i=zone_start; i<zone_stop; i++) {
+    for (size_t i=led.line_src.zone_start; i<led.line_src.zone_stop; i++) {
         int c = led.line_src.str[i];
         int isword = isalnum(c) || c == '_';
         if (isword) {
@@ -182,162 +168,163 @@ void led_fn_impl_case_camel() {
         }
         wasword = isword;
     }
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
-}
 
+    led_zone_post_process();
+}
 
 void led_fn_impl_insert() {
     led_line_append_str_len(led.fn_arg[0].str, led.fn_arg[0].len);
     led_line_append_char('\n');
-    led_line_append_str_len(led.line_src.str, led.line_src.len);
+    led_line_append();
 }
 
 void led_fn_impl_append() {
-    led_line_append_str_len(led.line_src.str, led.line_src.len);
+    led_line_append();
     led_line_append_char('\n');
     led_line_append_str_len(led.fn_arg[0].str, led.fn_arg[0].len);
 }
 
 void led_fn_impl_quote(char q) {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    if (! (led.line_src.str[zone_start] == q && led.line_src.str[zone_stop - 1] == q) ) {
+    if (! (led.line_src.str[led.line_src.zone_start] == q && led.line_src.str[led.line_src.zone_stop - 1] == q) ) {
         led_debug("quote active");
-        led_assert(led.line_src.len <= LED_BUF_MAX - 2, LED_ERR_MAXLINE, "Line too long to be quoted");
-        led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
         led_line_append_char(q);
-        led_line_append_str_start_stop(led.line_src.str, zone_start, zone_stop);
+        led_line_append_zone();
         led_line_append_char(q);
-        led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
     }
     else
-        led_line_copy();
+        led_line_append_zone();
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_quote_simple() { led_fn_impl_quote('\''); }
 void led_fn_impl_quote_double() { led_fn_impl_quote('"'); }
 void led_fn_impl_quote_back() { led_fn_impl_quote('`'); }
 
-const char* QUOTES="'\"`";
-
 void led_fn_impl_quote_remove() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    const char* QUOTES="'\"`";
+    led_zone_pre_process(led.fn_arg[0].regex);
 
     char q = QUOTES[0];
     for(size_t i = 0; q != '\0'; i++, q = QUOTES[i]) {
-        if (led.line_src.str[zone_start] == q && led.line_src.str[zone_stop - 1] == q) break;
+        if (led.line_src.str[led.line_src.zone_start] == q && led.line_src.str[led.line_src.zone_stop - 1] == q) break;
     }
 
     if (q) {
         led_debug("quotes found: %c", q);
-        led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-        led_line_append_str_start_stop(led.line_src.str, zone_start+1, zone_stop-1);
-        led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+        led_line_append_str_start_stop(led.line_src.str, led.line_src.zone_start+1, led.line_src.zone_stop-1);
     }
     else
-        led_line_copy();
+        led_line_append_zone();
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_trim() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    size_t str_start = zone_start;
-    size_t str_stop = zone_stop;
-    for (; str_start < zone_stop; str_start++) {
+    size_t str_start = led.line_src.zone_start;
+    size_t str_stop = led.line_src.zone_stop;
+    for (; str_start < led.line_src.zone_stop; str_start++) {
         if (!isspace(led.line_src.str[str_start])) break;
     }
     for (; str_stop > str_start; str_stop--) {
         if (!isspace(led.line_src.str[str_stop - 1])) break;
     }
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
     led_line_append_str_start_stop(led.line_src.str, str_start, str_stop);
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_trim_left() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    size_t str_start = zone_start;
-    for (; str_start < zone_stop; str_start++) {
+    size_t str_start = led.line_src.zone_start;
+    for (; str_start < led.line_src.zone_stop; str_start++) {
         if (!isspace(led.line_src.str[str_start])) break;
     }
-    led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-    led_line_append_str_start_stop(led.line_src.str, str_start, led.line_src.len);
+    led_line_append_str_start_stop(led.line_src.str, str_start, led.line_src.zone_stop);
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_trim_right() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    if (led.fn_arg[0].regex) led_regex_match_offset(led.fn_arg[0].regex,led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    size_t str_stop = zone_stop;
-    for (; str_stop > zone_start; str_stop--)
+    size_t str_stop = led.line_src.zone_stop;
+    for (; str_stop > led.line_src.zone_start; str_stop--)
         if (!isspace(led.line_src.str[str_stop - 1])) break;
-    led_line_append_str_start_stop(led.line_src.str, 0, str_stop);
-    led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+    led_line_append_str_start_stop(led.line_src.str, led.line_src.zone_start, str_stop);
+
+    led_zone_post_process();
 }
 
-
 void led_fn_impl_encrypt_base64() {
+    led_zone_pre_process(led.fn_arg[0].regex);
+
     base64_encodestate base64_state;
 	size_t count = 0;
 
 	base64_init_encodestate(&base64_state);
-	count = base64_encode_block(led.line_src.str, led.line_src.len, led.line_dst.buf, &base64_state);
-	count += base64_encode_blockend(led.line_dst.buf + count, &base64_state);
-	led.line_dst.str = led.line_dst.buf;
-    led.line_dst.len = count;
+	count = base64_encode_block(led.line_src.str + led.line_src.zone_start, led.line_src.zone_stop - led.line_src.zone_start, led.line_dst.buf + led.line_dst.len, &base64_state);
+	count += base64_encode_blockend(led.line_dst.buf + led.line_dst.len + count, &base64_state);
+    led.line_dst.len += count;
     led.line_dst.str[led.line_dst.len] = '\0';
+
+    led_zone_post_process();
 }
 
 void led_fn_impl_decrypt_base64() {
+    led_zone_pre_process(led.fn_arg[0].regex);
+
 	base64_decodestate base64_state;
 	size_t count = 0;
 
 	base64_init_decodestate(&base64_state);
-	count = base64_decode_block(led.line_src.str, led.line_src.len, led.line_dst.buf, &base64_state);
-	led.line_dst.str = led.line_dst.buf;
-    led.line_dst.len = count;
+	count = base64_decode_block(led.line_src.str + led.line_src.zone_start, led.line_src.zone_stop - led.line_src.zone_start, led.line_dst.buf + led.line_dst.len, &base64_state);
+    led.line_dst.len += count;
     led.line_dst.str[led.line_dst.len] = '\0';
+
+    led_zone_post_process();
 }
 
 void led_path_canonical() {
-    size_t zone_start = 0;
-    size_t zone_stop = led.line_src.len;
-    led_regex_match_offset(led.fn_arg[0].regex, led.line_src.str, led.line_src.len, &zone_start, &zone_stop);
+    led_zone_pre_process(led.fn_arg[0].regex);
 
-    size_t str_start = zone_start;
-    size_t str_stop = zone_stop;
-    led_zone_trim(led.line_src.str, zone_start, zone_stop, &str_start, &str_stop);
-
-    if (led.o_output_match)
-        led_line_append_str("");
-    else
-        led_line_append_str_start_stop(led.line_src.str, 0, zone_start);
-
-    char c = led.line_src.buf[zone_stop]; // temporary save this char for realpath function
-    led.line_src.buf[str_stop] = '\0';
-    if (realpath(led.line_src.str + str_start, led.line_dst.buf + led.line_dst.len) != NULL ) {
-        led.line_src.buf[str_stop] = c;
+    char c = led.line_src.buf[led.line_src.zone_stop]; // temporary save this char for realpath function
+    led.line_src.buf[led.line_src.zone_stop] = '\0';
+    if (realpath(led.line_src.str + led.line_src.zone_start, led.line_dst.buf + led.line_dst.len) != NULL ) {
+        led.line_src.buf[led.line_src.zone_stop] = c;
         led.line_dst.len = strlen(led.line_dst.str);
     }
     else {
-        led.line_src.buf[str_stop] = c;
-        led_line_append_str_start_stop(led.line_src.str, zone_start, zone_stop);
+        led.line_src.buf[led.line_src.zone_stop] = c;
+        led_line_append_zone();
     }
 
-    if (led.o_output_match)
-        led_line_append_str("");
-    else
-        led_line_append_str_start_stop(led.line_src.str, zone_stop, led.line_src.len);
+    led_zone_post_process();
+}
+
+void led_path_dir() {
+    led_zone_pre_process(led.fn_arg[0].regex);
+
+    const char* dir = dirname(led.line_src.str + led.line_src.zone_start);
+    if (dir != NULL) led_line_append_str(dir);
+    else led_line_append_zone();
+
+    led_zone_post_process();
+}
+
+void led_path_file() {
+    led_zone_pre_process(led.fn_arg[0].regex);
+
+    const char* fname = basename(led.line_src.str + led.line_src.zone_start);
+    if (fname != NULL) led_line_append_str(fname);
+    else led_line_append_zone();
+
+    led_zone_post_process();
 }
 
 led_fn_struct LED_FN_TABLE[] = {
@@ -371,8 +358,8 @@ led_fn_struct LED_FN_TABLE[] = {
     { "urc:", "url_encode:", NULL, "r", "Encode URL", "url_encode: [<regex>]" },
     { "urd:", "url_decode:", NULL, "r", "Decode URL", "url_decode: [<regex>]" },
     { "phc:", "path_canonical:", &led_path_canonical, "r", "Conert to canonical path", "path_canonical: [<regex>]" },
-    { "phd:", "path_dir:", NULL, "r", "Extract last dir of the path", "path_dir: [<regex>]" },
-    { "phf:", "path_file:", NULL, "r", "Extract file of the path", "path_file: [<regex>]" },
+    { "phd:", "path_dir:", &led_path_dir, "r", "Extract last dir of the path", "path_dir: [<regex>]" },
+    { "phf:", "path_file:", &led_path_file, "r", "Extract file of the path", "path_file: [<regex>]" },
     { "phr:", "path_rename:", NULL, "r", "Rename file of the path without specific chars", "path_rename: [<regex>]" },
     { "rnn:", "randomize_num:", NULL, "r", "Randomize numeric values", "randomize_num: [<regex>]" },
     { "rna:", "randomize_alpha:", NULL, "r", "Randomize alpha values", "randomize_alpha: [<regex>]" },

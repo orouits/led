@@ -448,7 +448,7 @@ int led_next_file() {
 int led_line_read() {
 
     if (feof(led.curfile.file)) return 0;
-    //memset(led.line_src, 0, sizeof(led.line_src));
+    // memset(led.line_src, 0, sizeof(led.line_src));
 
     led.line_src.str = fgets(led.line_src.buf, LED_BUF_MAX, led.curfile.file);
     if (led.line_src.str == NULL) return FALSE;
@@ -459,6 +459,8 @@ int led_line_read() {
         led.line_src.len--;
         led.line_src.str[led.line_src.len] = '\0';
     }
+    led.line_src.zone_start = 0;
+    led.line_src.zone_stop = led.line_src.len;
     led.curline.count++;
     led_debug("New line: (%d) %s", led.curline.count, led.line_src.str);
     return TRUE;
@@ -480,11 +482,29 @@ int led_line_reset() {
     memset(&led.line_dst, 0, sizeof(led.line_dst));
     return led.line_dst.len;
 }
+int led_line_init() {
+    led_line_reset();
+    led.line_dst.str = led.line_dst.buf;
+    return led.line_dst.len;
+}
 int led_line_copy() {
     led.line_dst.str = led.line_dst.buf;
     memcpy(led.line_dst.buf, led.line_src.buf, led.line_src.len);
     led.line_dst.len = led.line_src.len;
     return led.line_dst.len;
+}
+int led_line_append() {
+    led_line_append_str_len(led.line_src.str, led.line_src.len);
+    return led.line_dst.len;
+}
+int led_line_append_zone() {
+    return led_line_append_str_start_stop(led.line_src.str, led.line_src.zone_start, led.line_src.zone_stop);
+}
+int led_line_append_before_zone() {
+    return led_line_append_str_start_stop(led.line_src.str, 0, led.line_src.zone_start);
+}
+int led_line_append_after_zone() {
+    return led_line_append_str_start_stop(led.line_src.str, led.line_src.zone_stop, led.line_src.len);
 }
 int led_line_append_char(const char c) {
     led.line_dst.str = led.line_dst.buf;

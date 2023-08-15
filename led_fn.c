@@ -10,14 +10,23 @@
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
 
-void led_zone_pre_process(pcre2_code* regex) {
+int led_zone_pre_process(pcre2_code* regex) {
+    int rc;
     led_line_init();
 
-    led.line_src.zone_start = 0;
-    led.line_src.zone_stop = led.line_src.len;
-    led_regex_match_offset(regex, led.line_src.str, led.line_src.len, &led.line_src.zone_start, &led.line_src.zone_stop);
+    if (regex != NULL) {
+        led.line_src.zone_start = led.line_src.len;
+        led.line_src.zone_stop = led.line_src.len;
+        rc = led_regex_match_offset(regex, led.line_src.str, led.line_src.len, &led.line_src.zone_start, &led.line_src.zone_stop);
+    }
+    else {
+        led.line_src.zone_start = 0;
+        led.line_src.zone_stop = led.line_src.len;
+        rc = LED_RGX_STR_MATCH;
+    }
 
     if (!led.o_output_match) led_line_append_before_zone();
+    return rc;
 }
 
 void led_zone_post_process() {
@@ -52,10 +61,14 @@ void led_fn_impl_substitute() {
 }
 
 void led_fn_impl_remove() {
-    if (!led.fn_arg[0].regex || led_regex_match(led.fn_arg[0].regex, led.line_src.str, led.line_src.len))
+    led_zone_pre_process(led.fn_arg[0].regex);
+
+    if (led.line_src.zone_start == 0 && led.line_src.zone_stop == led.line_src.len)
+        // delete all the line if it all match
         led_line_reset();
     else
-        led_line_copy();
+        // only remove matching zone
+        led_zone_post_process();
 }
 
 void led_fn_impl_remove_blank() {
@@ -307,7 +320,7 @@ void led_fn_impl_url_encode() {
     led_zone_post_process();
 }
 
-void led_path_canonical() {
+void led_fn_impl_path_canonical() {
     led_zone_pre_process(led.fn_arg[0].regex);
 
     char c = led.line_src.buf[led.line_src.zone_stop]; // temporary save this char for realpath function
@@ -324,7 +337,7 @@ void led_path_canonical() {
     led_zone_post_process();
 }
 
-void led_path_dir() {
+void led_fn_impl_path_dir() {
     led_zone_pre_process(led.fn_arg[0].regex);
 
     const char* dir = dirname(led.line_src.str + led.line_src.zone_start);
@@ -334,12 +347,21 @@ void led_path_dir() {
     led_zone_post_process();
 }
 
-void led_path_file() {
+void led_fn_impl_path_file() {
     led_zone_pre_process(led.fn_arg[0].regex);
 
     const char* fname = basename(led.line_src.str + led.line_src.zone_start);
     if (fname != NULL) led_line_append_str(fname);
     else led_line_append_zone();
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_revert() {
+    led_zone_pre_process(led.fn_arg[0].regex);
+
+    for (size_t i = led.line_src.zone_stop; i > led.line_src.zone_start; i--)
+        led_line_append_char(led.line_src.buf[i - 1]);
 
     led_zone_post_process();
 }
@@ -367,15 +389,15 @@ led_fn_struct LED_FN_TABLE[] = {
     { "tml:", "trim_left:", &led_fn_impl_trim_left, "r", "Trim left", "trim_left: [<regex>]" },
     { "tmr:", "trim_right:", &led_fn_impl_trim_right, "r", "Trim right", "trim_right: [<regex>]" },
     { "sp:", "split:", NULL, "s", "Split", "split: [chars]" },
-    { "rv:", "revert:", NULL, "r", "Revert", "revert: [<regex>]" },
+    { "rv:", "revert:", &led_fn_impl_revert, "r", "Revert", "revert: [<regex>]" },
     { "fl:", "field:", NULL, "sp", "Extract fields", "field: [<sep>] [<N>]" },
     { "jn:", "join:", NULL, "", "Join lines", "join:" },
     { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encrypt base64", "encrypt_base64: [<regex>]" },
     { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decrypt base64", "decrypt_base64: [<regex>]" },
     { "urle:", "url_encode:", &led_fn_impl_url_encode, "r", "Encode URL", "url_encode: [<regex>]" },
-    { "phc:", "path_canonical:", &led_path_canonical, "r", "Conert to canonical path", "path_canonical: [<regex>]" },
-    { "phd:", "path_dir:", &led_path_dir, "r", "Extract last dir of the path", "path_dir: [<regex>]" },
-    { "phf:", "path_file:", &led_path_file, "r", "Extract file of the path", "path_file: [<regex>]" },
+    { "phc:", "path_canonical:", &led_fn_impl_path_canonical, "r", "Conert to canonical path", "path_canonical: [<regex>]" },
+    { "phd:", "path_dir:", &led_fn_impl_path_dir, "r", "Extract last dir of the path", "path_dir: [<regex>]" },
+    { "phf:", "path_file:", &led_fn_impl_path_file, "r", "Extract file of the path", "path_file: [<regex>]" },
     { "phr:", "path_rename:", NULL, "r", "Rename file of the path without specific chars", "path_rename: [<regex>]" },
     { "rnn:", "randomize_num:", NULL, "r", "Randomize numeric values", "randomize_num: [<regex>]" },
     { "rna:", "randomize_alpha:", NULL, "r", "Randomize alpha values", "randomize_alpha: [<regex>]" },

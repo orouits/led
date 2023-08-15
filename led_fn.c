@@ -59,10 +59,7 @@ void led_fn_impl_remove() {
 }
 
 void led_fn_impl_remove_blank() {
-    static pcre2_code* regex = NULL;
-    if (regex == NULL) regex = led_regex_compile("^\\s+$"); // no explicit memory free, will be done by the kernel at exit.
-
-    if (led.line_src.str[0] == '\0' || led_regex_match(regex, led.line_src.str, led.line_src.len))
+    if (led.line_src.str[0] == '\0' || led_regex_match(LED_REGEX_BLANK_LINE, led.line_src.str, led.line_src.len))
         led_line_reset();
     else
         led_line_copy();
@@ -261,7 +258,7 @@ void led_fn_impl_trim_right() {
     led_zone_post_process();
 }
 
-void led_fn_impl_encrypt_base64() {
+void led_fn_impl_base64_encode() {
     led_zone_pre_process(led.fn_arg[0].regex);
 
     base64_encodestate base64_state;
@@ -276,7 +273,7 @@ void led_fn_impl_encrypt_base64() {
     led_zone_post_process();
 }
 
-void led_fn_impl_decrypt_base64() {
+void led_fn_impl_base64_decode() {
     led_zone_pre_process(led.fn_arg[0].regex);
 
 	base64_decodestate base64_state;
@@ -286,6 +283,26 @@ void led_fn_impl_decrypt_base64() {
 	count = base64_decode_block(led.line_src.str + led.line_src.zone_start, led.line_src.zone_stop - led.line_src.zone_start, led.line_dst.buf + led.line_dst.len, &base64_state);
     led.line_dst.len += count;
     led.line_dst.str[led.line_dst.len] = '\0';
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_url_encode() {
+    led_zone_pre_process(led.fn_arg[0].regex);
+
+    const char *HEX = "0123456789ABCDEF";
+    char pcbuf[4] = "%00";
+
+    for (size_t i = led.line_src.zone_start; i < led.line_src.zone_stop; i++) {
+        char c = led.line_src.str[i];
+        if (isalnum(c))
+            led_line_append_char(c);
+        else {
+            pcbuf[1] = HEX[(c >> 4) & 0x0F];
+            pcbuf[2] = HEX[c & 0x0F];
+            led_line_append_str(pcbuf);
+        }
+    }
 
     led_zone_post_process();
 }
@@ -353,17 +370,17 @@ led_fn_struct LED_FN_TABLE[] = {
     { "rv:", "revert:", NULL, "r", "Revert", "revert: [<regex>]" },
     { "fl:", "field:", NULL, "sp", "Extract fields", "field: [<sep>] [<N>]" },
     { "jn:", "join:", NULL, "", "Join lines", "join:" },
-    { "ecrb64:", "encrypt_base64:", &led_fn_impl_encrypt_base64, "r", "Encrypt base64", "encrypt_base64: [<regex>]" },
-    { "dcrb64:", "decrypt_base64:", &led_fn_impl_decrypt_base64, "r", "Decrypt base64", "decrypt_base64: [<regex>]" },
-    { "urc:", "url_encode:", NULL, "r", "Encode URL", "url_encode: [<regex>]" },
-    { "urd:", "url_decode:", NULL, "r", "Decode URL", "url_decode: [<regex>]" },
+    { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encrypt base64", "encrypt_base64: [<regex>]" },
+    { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decrypt base64", "decrypt_base64: [<regex>]" },
+    { "urle:", "url_encode:", &led_fn_impl_url_encode, "r", "Encode URL", "url_encode: [<regex>]" },
     { "phc:", "path_canonical:", &led_path_canonical, "r", "Conert to canonical path", "path_canonical: [<regex>]" },
     { "phd:", "path_dir:", &led_path_dir, "r", "Extract last dir of the path", "path_dir: [<regex>]" },
     { "phf:", "path_file:", &led_path_file, "r", "Extract file of the path", "path_file: [<regex>]" },
     { "phr:", "path_rename:", NULL, "r", "Rename file of the path without specific chars", "path_rename: [<regex>]" },
     { "rnn:", "randomize_num:", NULL, "r", "Randomize numeric values", "randomize_num: [<regex>]" },
     { "rna:", "randomize_alpha:", NULL, "r", "Randomize alpha values", "randomize_alpha: [<regex>]" },
-    { "rnan:", "randomize_alphaum:", NULL, "r", "Randomize alpha numeric values", "randomize_alphaum: [<regex>]" },
+    { "rnan:", "randomize_alnum:", NULL, "r", "Randomize alpha numeric values", "randomize_alnum: [<regex>]" },
+    { "rnh:", "randomize_hexa:", NULL, "r", "Randomize alpha numeric values", "randomize_hexa: [<regex>]" },
 };
 
 #define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)

@@ -65,9 +65,9 @@ typedef struct {
 
     // selector
     struct {
-        int     type;
+        int type;
         pcre2_code* regex;
-        size_t     val;
+        size_t val;
     } sel[LED_SEL_MAX];
 
     // processor function Id
@@ -96,8 +96,10 @@ typedef struct {
 
     struct {
         size_t count;
-        size_t count_sel;
         int selected;
+        int sel_switch;
+        size_t sel_count;
+        size_t sel_shift;
     } curline;
 
     led_line_struct line_src;
@@ -157,10 +159,14 @@ void led_debug(const char* message, ...);
 // LED utilities
 //-----------------------------------------------
 
+extern pcre2_code* LED_REGEX_BLANK_LINE;
+
 int led_str_trim(char* line);
 int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);
+void led_regex_init();
+void led_regex_free();
 pcre2_code* led_regex_compile(const char* pattern);
 int led_regex_match(pcre2_code* regex, const char* line, int len);
 int led_regex_match_offset(pcre2_code* regex, const char* line, int len, size_t* offset, size_t* length);
-int led_str_match(const char* str, const char* regex);
+int led_str_match(const char* str_regex, const char* str);

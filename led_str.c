@@ -23,6 +23,16 @@ int led_str_equal_len(const char* str1, const char* str2, int len) {
     return str1 && str2 && strncmp(str1, str2, len) == 0;
 }
 
+pcre2_code* LED_REGEX_BLANK_LINE = NULL;
+
+void led_regex_init() {
+    if (LED_REGEX_BLANK_LINE == NULL) LED_REGEX_BLANK_LINE = led_regex_compile("^\\s+$");
+}
+
+void led_regex_free() {
+    if (LED_REGEX_BLANK_LINE != NULL) pcre2_code_free(LED_REGEX_BLANK_LINE);
+}
+
 pcre2_code* led_regex_compile(const char* pattern) {
     int pcre_err;
     PCRE2_SIZE pcre_erroff;
@@ -57,6 +67,6 @@ int led_regex_match_offset(pcre2_code* regex, const char* line, int len, size_t*
     return rc > LED_RGX_GROUP_MATCH ? LED_RGX_GROUP_MATCH: rc;
 }
 
-int led_str_match(const char* str, const char* regex) {
-    return led_regex_match(led_regex_compile(regex), str, strlen(str));
+int led_str_match(const char* str_regex, const char* str) {
+    return led_regex_match(led_regex_compile(str_regex), str, strlen(str));
 }

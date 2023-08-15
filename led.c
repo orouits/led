@@ -48,6 +48,8 @@ void led_free() {
             led.fn_arg[i].regex = NULL;
         }
     }
+    led_regex_free();
+
 }
 
 void led_assert(int cond, int code, const char* message, ...) {
@@ -88,11 +90,10 @@ void led_debug(const char* message, ...) {
 //-----------------------------------------------
 
 int led_init_opt(const char* arg) {
-    int rc = led_str_match(arg, "^-[a-zA-Z]+$");
+    int rc = led_str_match("^-[a-zA-Z]+", arg);
     if ( rc ) {
-        int opti = 1;
-        int optl = strlen(arg);
-        while (opti < optl) {
+        int argl = strlen(arg);
+        for(int opti = 1; opti < argl; opti++) {
             led_debug("options: %c", arg[opti]);
             switch (arg[opti]) {
             case 'h':
@@ -142,13 +143,13 @@ int led_init_opt(const char* arg) {
                 led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
                 led.o_file_out_mode = LED_FILE_OUT_WRITE;
                 led.o_file_out_path = arg + opti + 1;
-                opti = optl;
+                opti = argl;
                 break;
             case 'A':
                 led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
                 led.o_file_out_mode = LED_FILE_OUT_APPEND;
                 led.o_file_out_path = arg + opti + 1;
-                opti = optl;
+                opti = argl;
                 break;
             case 'E':
                 led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
@@ -156,11 +157,11 @@ int led_init_opt(const char* arg) {
                 led.o_file_out_extn = atoi(arg + opti + 1);
                 if ( led.o_file_out_extn <= 0 )
                     led.o_file_out_ext = arg + opti + 1;
-                opti = optl;
+                opti = argl;
                 break;
             case 'D':
                 led.o_file_out_dir = arg + opti + 1;
-                opti = optl;
+                opti = argl;
                 break;
             case 'U':
                 led.o_file_out_unchanged = TRUE;
@@ -168,14 +169,13 @@ int led_init_opt(const char* arg) {
             default:
                 led_assert(FALSE, LED_ERR_ARG, "Unknown option: -%c", arg[opti]);
             }
-            opti++;
         }
     }
     return rc;
 }
 
 int led_init_func(const char* arg) {
-    int is_func = led_str_match(arg, "^[a-z0-9_]+:$");
+    int is_func = led_str_match("^[a-z0-9_]+:$", arg);
     if (is_func) {
         led_debug("Funcion table max: %d", led_fn_table_size());
         for (led.fn_id = 0; led.fn_id < led_fn_table_size(); led.fn_id++) {
@@ -206,18 +206,26 @@ int led_init_func_arg(const char* arg) {
 }
 
 int led_init_sel(const char* arg) {
-    int rc = !led.sel[LED_SEL_MAX-1].type;
-    if ( rc ) {
+    int rc = FALSE;
+    if (led_str_match("^\\+[0-9]+$", arg) && led.sel[0].type == SEL_TYPE_REGEX) {
+        led.sel[0].val = strtol(arg, NULL, 10);
+        rc = TRUE;
+        led_debug("Selector: shift after regex (%d)", led.sel[0].val);
+    }
+    else {
         for (int i = 0; i < LED_SEL_MAX; i++) {
             if ( !led.sel[i].type ) {
-                char* str;
-                led.sel[i].type = SEL_TYPE_COUNT;
-                led.sel[i].val = strtol(arg, &str, 10);
-                if (led.sel[i].val == 0 && str == arg) {
+                if (led_str_match("^[0-9]+$", arg)) {
+                    led.sel[i].type = SEL_TYPE_COUNT;
+                    led.sel[i].val = strtol(arg, NULL, 10);
+                    led_debug("Selector: %d, type number (%d)", i, led.sel[i].val);
+                }
+                else {
                     led.sel[i].type = SEL_TYPE_REGEX;
                     led.sel[i].regex = led_regex_compile(arg);
+                    led_debug("Selector: %d, type regex (%s)", i, arg);
                 }
-                led_debug("Selector: %d, %d", i, led.sel[i].type);
+                rc = TRUE;
                 break;
             }
         }
@@ -232,7 +240,6 @@ void led_init_config() {
     const char* format = fn_desc->args_fmt;
     for (int i=0; i < LED_FARG_MAX && format[i]; i++) {
         if (format[i] == 'R') {
-            // TODO: ?regexname search operator
             led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing regex\n%s", i+1, fn_desc->help_format);
             led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
             led_debug("function arg %i: regex found", i+1);
@@ -268,7 +275,7 @@ void led_init_config() {
         else if (format[i] == 'p') {
             if (led.fn_arg[i].str) {
                 led.fn_arg[i].val = atol(led.fn_arg[i].str);
-                led_assert(led.fn_arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive number\n%s", i+1, fn_desc->help_format);
+                led_assert(led.fn_arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive numboptioptier\n%s", i+1, fn_desc->help_format);
                 led.fn_arg[i].uval = (size_t)led.fn_arg[i].val;
                 led_debug("function arg %i: positive numeric found: %lu", i+1, led.fn_arg[i].uval);
             }
@@ -288,16 +295,17 @@ void led_init_config() {
     }
 }
 
-
 void led_init(int argc, char* argv[]) {
     led_debug("Init");
-    int arg_section = 0;
+
+    led_regex_init();
 
     memset(&led, 0, sizeof(led));
 
     led.stdin_ispipe = !isatty(fileno(stdin));
     led.stdout_ispipe = !isatty(fileno(stdout));
 
+    int arg_section = 0;
     for (int argi=1; argi < argc; argi++) {
         const char* arg = argv[argi];
 
@@ -440,7 +448,7 @@ int led_next_file() {
         }
     }
     led.curline.count = 0;
-    led.curline.count_sel = 0;
+    led.curline.sel_count = 0;
     led.curline.selected = FALSE;
     return led.curfile.file != NULL;
 }
@@ -540,24 +548,30 @@ int led_select() {
     // led.o_sel_invert option is not handled here but by main process.
 
     // stop selection on second boundary
-    if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE)
-        || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.count_sel >= led.sel[1].val)
+    if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE && led.curline.sel_shift == 0)
+        || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.sel_count >= led.sel[1].val)
         || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.line_src.str, led.line_src.len)) ) {
-        led.curline.selected = FALSE;
-        led.curline.count_sel = 0;
+        led.curline.sel_switch = FALSE;
+        led.curline.sel_count = 0;
     }
+
+    if (led.curline.sel_shift > 0) led.curline.sel_shift--;
 
     // start selection on first boundary
     if (led.sel[0].type == SEL_TYPE_NONE
         || (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
         || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.line_src.str, led.line_src.len)) ) {
-        led.curline.selected = TRUE;
-        led.curline.count_sel = 0;
+
+        led.curline.sel_switch = TRUE;
+        led.curline.sel_shift = led.sel[0].val;
+        led.curline.sel_count = 0;
     }
 
-    if (led.curline.selected) led.curline.count_sel++;
+    led.curline.selected = led.curline.sel_switch && led.curline.sel_shift == 0;
+    led_debug("Select: %d, %d => %d", led.curline.sel_switch, led.curline.sel_shift, led.curline.selected);
 
-    led_debug("Select: %d", led.curline.selected);
+    if (led.curline.selected) led.curline.sel_count++;
+
     return led.curline.selected;
 }
 

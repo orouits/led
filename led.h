@@ -43,25 +43,27 @@ typedef struct {
 
 typedef struct {
     // options
-    int o_help;
-    int o_verbose;
-    int o_report;
-    int o_quiet;
-    int o_zero;
-    int o_exit_mode;
-    int o_sel_invert;
-    int o_sel_block;
-    int o_output_selected;
-    int o_output_match;
-    int o_filter_empty;
-    int o_file_in;
-    int o_file_out;
-    int o_file_out_unchanged;
-    int o_file_out_mode;
-    int o_file_out_extn;
-    const char* o_file_out_ext;
-    const char* o_file_out_dir;
-    const char* o_file_out_path;
+    struct {
+        int help;
+        int verbose;
+        int report;
+        int quiet;
+        int zero;
+        int exit_mode;
+        int sel_invert;
+        int sel_block;
+        int output_selected;
+        int output_match;
+        int filter_empty;
+        int file_in;
+        int file_out;
+        int file_out_unchanged;
+        int file_out_mode;
+        int file_out_extn;
+        const char* file_out_ext;
+        const char* file_out_dir;
+        const char* file_out_path;
+    } opt;
 
     // selector
     struct {
@@ -84,7 +86,7 @@ typedef struct {
     // files
     char**  file_names;
     size_t  file_count;
-
+    char    buf_fname[LED_FNAME_MAX+1];
     int     stdin_ispipe;
     int     stdout_ispipe;
 
@@ -105,8 +107,6 @@ typedef struct {
     led_line_struct line_src;
     led_line_struct line_dst;
 
-    // runtime buffers
-    char buf_fname[LED_FNAME_MAX+1];
     PCRE2_UCHAR8 buf_message[LED_MSG_MAX+1];
 
 } led_struct;
@@ -161,12 +161,12 @@ void led_debug(const char* message, ...);
 
 extern pcre2_code* LED_REGEX_BLANK_LINE;
 
-int led_str_trim(char* line);
+int led_str_trim(char* str);
 int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);
 void led_regex_init();
 void led_regex_free();
 pcre2_code* led_regex_compile(const char* pattern);
-int led_regex_match(pcre2_code* regex, const char* line, int len);
-int led_regex_match_offset(pcre2_code* regex, const char* line, int len, size_t* offset, size_t* length);
+int led_regex_match(pcre2_code* regex, const char* str, int len);
+int led_regex_match_offset(pcre2_code* regex, const char* str, int len, size_t* offset, size_t* length);
 int led_str_match(const char* str_regex, const char* str);

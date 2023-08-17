@@ -76,7 +76,7 @@ void led_assert_pcre(int rc) {
 }
 
 void led_debug(const char* message, ...) {
-    if (led.o_verbose) {
+    if (led.opt.verbose) {
         va_list args;
         va_start(args, message);
         vsnprintf((char*)led.buf_message, LED_MSG_MAX, message, args);
@@ -97,74 +97,74 @@ int led_init_opt(const char* arg) {
             led_debug("options: %c", arg[opti]);
             switch (arg[opti]) {
             case 'h':
-                led.o_help = TRUE;
+                led.opt.help = TRUE;
                 break;
             case 'z':
-                led.o_zero = TRUE;
+                led.opt.zero = TRUE;
                 break;
             case 'v':
-                led.o_verbose = TRUE;
+                led.opt.verbose = TRUE;
                 break;
             case 'q':
-                led.o_quiet = TRUE;
+                led.opt.quiet = TRUE;
                 break;
             case 'r':
-                led.o_report = TRUE;
+                led.opt.report = TRUE;
                 break;
             case 'x':
-                led.o_exit_mode = LED_EXIT_VAL;
+                led.opt.exit_mode = LED_EXIT_VAL;
                 break;
             case 'n':
-                led.o_sel_invert = TRUE;
+                led.opt.sel_invert = TRUE;
                 break;
             case 'm':
-                led.o_output_match = TRUE;
+                led.opt.output_match = TRUE;
                 break;
             case 'b':
-                led.o_sel_block = TRUE;
+                led.opt.sel_block = TRUE;
                 break;
             case 's':
-                led.o_output_selected = TRUE;
+                led.opt.output_selected = TRUE;
                 break;
             case 'e':
-                led.o_filter_empty = TRUE;
+                led.opt.filter_empty = TRUE;
                 break;
             case 'f':
-                led.o_file_in = TRUE;
+                led.opt.file_in = TRUE;
                 break;
             case 'F':
-                led.o_file_out = TRUE;
+                led.opt.file_out = TRUE;
                 break;
             case 'I':
-                led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
-                led.o_file_out_mode = LED_FILE_OUT_INPLACE;
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led.opt.file_out_mode = LED_FILE_OUT_INPLACE;
                 break;
             case 'W':
-                led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
-                led.o_file_out_mode = LED_FILE_OUT_WRITE;
-                led.o_file_out_path = arg + opti + 1;
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led.opt.file_out_mode = LED_FILE_OUT_WRITE;
+                led.opt.file_out_path = arg + opti + 1;
                 opti = argl;
                 break;
             case 'A':
-                led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
-                led.o_file_out_mode = LED_FILE_OUT_APPEND;
-                led.o_file_out_path = arg + opti + 1;
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led.opt.file_out_mode = LED_FILE_OUT_APPEND;
+                led.opt.file_out_path = arg + opti + 1;
                 opti = argl;
                 break;
             case 'E':
-                led_assert(!led.o_file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
-                led.o_file_out_mode = LED_FILE_OUT_NEWEXT;
-                led.o_file_out_extn = atoi(arg + opti + 1);
-                if ( led.o_file_out_extn <= 0 )
-                    led.o_file_out_ext = arg + opti + 1;
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led.opt.file_out_mode = LED_FILE_OUT_NEWEXT;
+                led.opt.file_out_extn = atoi(arg + opti + 1);
+                if ( led.opt.file_out_extn <= 0 )
+                    led.opt.file_out_ext = arg + opti + 1;
                 opti = argl;
                 break;
             case 'D':
-                led.o_file_out_dir = arg + opti + 1;
+                led.opt.file_out_dir = arg + opti + 1;
                 opti = argl;
                 break;
             case 'U':
-                led.o_file_out_unchanged = TRUE;
+                led.opt.file_out_unchanged = TRUE;
                 break;
             default:
                 led_assert(FALSE, LED_ERR_ARG, "Unknown option: -%c", arg[opti]);
@@ -314,7 +314,7 @@ void led_init(int argc, char* argv[]) {
             led.file_count = argc - argi;
         }
         else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg) ) {
-            if (led.o_file_in) arg_section = ARGS_SEC_FILES;
+            if (led.opt.file_in) arg_section = ARGS_SEC_FILES;
         }
         else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) {
 
@@ -331,7 +331,7 @@ void led_init(int argc, char* argv[]) {
     }
 
     // if a process function is not defined show only selected
-    led.o_output_selected = led.o_output_selected || !led.fn_id;
+    led.opt.output_selected = led.opt.output_selected || !led.fn_id;
 
     // pre-configure the processor command
     led_init_config();
@@ -416,7 +416,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 int led_next_file() {
     led_debug("Next file");
 
-    if ( led.o_file_in ) {
+    if ( led.opt.file_in ) {
         if ( led.curfile.file ) {
             fclose(led.curfile.file);
             led.curfile.file = NULL;
@@ -478,7 +478,7 @@ void led_line_write() {
     led_debug("Write line: (%d) %d", led.curline.count, led.line_dst.len);
 
     // if no filter empty strings are output
-    if (led.line_dst.str != NULL && (led.line_dst.len || !led.o_filter_empty)) {
+    if (led.line_dst.str != NULL && (led.line_dst.len || !led.opt.filter_empty)) {
         led_line_append_char('\n');
         fwrite(led.line_dst.str, sizeof(char), led.line_dst.len, stdout);
         fflush(stdout);
@@ -545,9 +545,7 @@ int led_line_append_str_start_stop(const char* str, size_t start, size_t stop) {
     return led.line_dst.len;
 }
 int led_select() {
-    // led.o_sel_invert option is not handled here but by main process.
-
-    // stop selection on second boundary
+    // stop selection on stop boundary
     if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE && led.curline.sel_shift == 0)
         || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.sel_count >= led.sel[1].val)
         || (led.sel[1].type == SEL_TYPE_REGEX && led_regex_match(led.sel[1].regex, led.line_src.str, led.line_src.len)) ) {
@@ -557,7 +555,7 @@ int led_select() {
 
     if (led.curline.sel_shift > 0) led.curline.sel_shift--;
 
-    // start selection on first boundary
+    // start selection on start boundary
     if (led.sel[0].type == SEL_TYPE_NONE
         || (led.sel[0].type == SEL_TYPE_COUNT && led.curline.count == led.sel[0].val)
         || (led.sel[0].type == SEL_TYPE_REGEX && led_regex_match(led.sel[0].regex, led.line_src.str, led.line_src.len)) ) {
@@ -591,15 +589,15 @@ void led_process() {
 int main(int argc, char* argv[]) {
     led_init(argc, argv);
 
-    if (led.o_help)
+    if (led.opt.help)
         led_help();
     else
         while (led_next_file()) {
             while (led_line_read()) {
                 led_select();
-                if (led.curline.selected == !led.o_sel_invert)
+                if (led.curline.selected == !led.opt.sel_invert)
                     led_process();
-                if (led.curline.selected == !led.o_sel_invert || !led.o_output_selected)
+                if (led.curline.selected == !led.opt.sel_invert || !led.opt.output_selected)
                     led_line_write();
             }
         }

@@ -25,12 +25,12 @@ int led_zone_pre_process(pcre2_code* regex) {
         rc = LED_RGX_STR_MATCH;
     }
 
-    if (!led.o_output_match) led_line_append_before_zone();
+    if (!led.opt.output_match) led_line_append_before_zone();
     return rc;
 }
 
 void led_zone_post_process() {
-    if (!led.o_output_match) led_line_append_after_zone();
+    if (!led.opt.output_match) led_line_append_after_zone();
 }
 
 //-----------------------------------------------

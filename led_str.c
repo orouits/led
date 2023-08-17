@@ -4,14 +4,10 @@
 // LED str functions
 //-----------------------------------------------
 
-int led_str_trim(char* line) {
-    int len = strlen(line);
-    int last = len - 1;
-    while (last >= 0 && isspace(led.curfile.name[last])) {
-        last--;
-    }
-    len = last +1;
-    line[len] = '\0';
+int led_str_trim(char* str) {
+    size_t len = strlen(str);
+    while (len > 0 && isspace(str[len-1])) len--;
+    str[len] = '\0';
     return len;
 }
 
@@ -44,23 +40,23 @@ pcre2_code* led_regex_compile(const char* pattern) {
     return regex;
 }
 
-int led_regex_match(pcre2_code* regex, const char* line, int len) {
+int led_regex_match(pcre2_code* regex, const char* str, int len) {
     pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
-    int rc = pcre2_match(regex, (PCRE2_SPTR)line, len, 0, 0, match_data, NULL);
+    int rc = pcre2_match(regex, (PCRE2_SPTR)str, len, 0, 0, match_data, NULL);
     pcre2_match_data_free(match_data);
     return rc > 0;
 }
 
-int led_regex_match_offset(pcre2_code* regex, const char* line, int len, size_t* pzone_start, size_t* pzone_stop) {
+int led_regex_match_offset(pcre2_code* regex, const char* str, int len, size_t* pzone_start, size_t* pzone_stop) {
     pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
-    int rc = pcre2_match(regex, (PCRE2_SPTR)line, len, 0, 0, match_data, NULL);
+    int rc = pcre2_match(regex, (PCRE2_SPTR)str, len, 0, 0, match_data, NULL);
     led_debug("match_offset %d ", rc);
     if( rc > 0) {
         PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
         int iv = (rc - 1) * 2;
         *pzone_start = ovector[iv];
         *pzone_stop = ovector[iv + 1];
-        led_debug("match_offset values %d (%c) - %d (%c)", *pzone_start, *pzone_stop, line[*pzone_start], line[*pzone_stop]);
+        led_debug("match_offset values %d (%c) - %d (%c)", *pzone_start, *pzone_stop, str[*pzone_start], str[*pzone_stop]);
     }
     pcre2_match_data_free(match_data);
     return rc > LED_RGX_GROUP_MATCH ? LED_RGX_GROUP_MATCH: rc;

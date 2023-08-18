@@ -51,7 +51,7 @@ typedef struct {
         int zero;
         int exit_mode;
         int sel_invert;
-        int sel_block;
+        int sel_pack;
         int output_selected;
         int output_match;
         int filter_empty;
@@ -99,12 +99,15 @@ typedef struct {
     struct {
         size_t count;
         int selected;
+        int sel_native;
+        int sel_prev;
         int sel_switch;
         size_t sel_count;
         size_t sel_shift;
     } curline;
 
     led_line_struct line_src;
+    led_line_struct line_ready;
     led_line_struct line_dst;
 
     PCRE2_UCHAR8 buf_message[LED_MSG_MAX+1];
@@ -113,18 +116,18 @@ typedef struct {
 
 extern led_struct led;
 
-int led_line_reset();
-int led_line_init();
-int led_line_copy();
-int led_line_append();
-int led_line_append_zone();
-int led_line_append_before_zone();
-int led_line_append_after_zone();
-int led_line_append_str(const char* str);
-int led_line_append_str_len(const char* str, size_t len);
-int led_line_append_char(const char c);
-int led_line_append_str_start_len(const char* str, size_t start, size_t len);
-int led_line_append_str_start_stop(const char* str, size_t start, size_t stop);
+int led_line_reset(led_line_struct* pline);
+int led_line_init(led_line_struct* pline);
+int led_line_copy(led_line_struct* pline, led_line_struct* pline_src);
+int led_line_append(led_line_struct* pline, led_line_struct* pline_src);
+int led_line_append_zone(led_line_struct* pline, led_line_struct* pline_src);
+int led_line_append_before_zone(led_line_struct* pline, led_line_struct* pline_src);
+int led_line_append_after_zone(led_line_struct* pline, led_line_struct* pline_src);
+int led_line_append_str(led_line_struct* pline, const char* str);
+int led_line_append_str_len(led_line_struct* pline, const char* str, size_t len);
+int led_line_append_char(led_line_struct* pline, const char c);
+int led_line_append_str_start_len(led_line_struct* pline, const char* str, size_t start, size_t len);
+int led_line_append_str_start_stop(led_line_struct* pline, const char* str, size_t start, size_t stop);
 
 //-----------------------------------------------
 // LED function management

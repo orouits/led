@@ -120,8 +120,8 @@ int led_init_opt(const char* arg) {
             case 'm':
                 led.opt.output_match = TRUE;
                 break;
-            case 'b':
-                led.opt.sel_block = TRUE;
+            case 'p':
+                led.opt.sel_pack = TRUE;
                 break;
             case 's':
                 led.opt.output_selected = TRUE;
@@ -369,7 +369,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 \n\
 ## Selector Options:\n\
     -n  invert selection\n\
-    -b  group selection as blocks of contiguous lines before function process\n\
+    -p  pack contiguous selected line in one multi-line before function process\n\
     -s  output only selected\n\
 \n\
 ## File Options:\n\
@@ -413,7 +413,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 // LED process functions
 //-----------------------------------------------
 
-int led_next_file() {
+int led_file_next() {
     led_debug("Next file");
 
     if ( led.opt.file_in ) {
@@ -449,29 +449,31 @@ int led_next_file() {
     }
     led.curline.count = 0;
     led.curline.sel_count = 0;
-    led.curline.selected = FALSE;
+    led.curline.sel_native = FALSE;
     return led.curfile.file != NULL;
 }
 
 int led_line_read() {
-
-    if (feof(led.curfile.file)) return 0;
-    // memset(led.line_src, 0, sizeof(led.line_src));
-
-    led.line_src.str = fgets(led.line_src.buf, LED_BUF_MAX, led.curfile.file);
-    if (led.line_src.str == NULL) return FALSE;
-
-    led.line_src.len = strlen((char*)led.line_src.str);
-    while (led.line_src.len > 0 && led.line_src.str[led.line_src.len - 1] == '\n') {
-        // no trailing \n for processing
-        led.line_src.len--;
-        led.line_src.str[led.line_src.len] = '\0';
+    if (feof(led.curfile.file)) {
+        led_line_reset(&led.line_src);
+        led_debug("End of file: (%d)", led.curline.count);
     }
-    led.line_src.zone_start = 0;
-    led.line_src.zone_stop = led.line_src.len;
-    led.curline.count++;
-    led_debug("New line: (%d) %s", led.curline.count, led.line_src.str);
-    return TRUE;
+    else {
+        led.line_src.str = fgets(led.line_src.buf, LED_BUF_MAX, led.curfile.file);
+        if (led.line_src.str == NULL) return FALSE;
+
+        led.line_src.len = strlen((char*)led.line_src.str);
+        while (led.line_src.len > 0 && led.line_src.str[led.line_src.len - 1] == '\n') {
+            // no trailing \n for processing
+            led.line_src.len--;
+            led.line_src.str[led.line_src.len] = '\0';
+        }
+        led.line_src.zone_start = 0;
+        led.line_src.zone_stop = led.line_src.len;
+        led.curline.count++;
+        led_debug("New line: (%d) %s", led.curline.count, led.line_src.str);
+    }
+    return led.line_src.str != NULL;
 }
 
 void led_line_write() {
@@ -479,72 +481,72 @@ void led_line_write() {
 
     // if no filter empty strings are output
     if (led.line_dst.str != NULL && (led.line_dst.len || !led.opt.filter_empty)) {
-        led_line_append_char('\n');
+        led_line_append_char(&led.line_dst, '\n');
         fwrite(led.line_dst.str, sizeof(char), led.line_dst.len, stdout);
         fflush(stdout);
-        led_line_reset();
+        led_line_reset(&led.line_dst);
     }
 }
 
-int led_line_reset() {
-    memset(&led.line_dst, 0, sizeof(led.line_dst));
-    return led.line_dst.len;
+int led_line_reset(led_line_struct* pline) {
+    memset(pline, 0, sizeof(*pline));
+    return pline->len;
 }
-int led_line_init() {
-    led_line_reset();
-    led.line_dst.str = led.line_dst.buf;
-    return led.line_dst.len;
+int led_line_init(led_line_struct* pline) {
+    led_line_reset(pline);
+    pline->str = pline->buf;
+    return pline->len;
 }
-int led_line_copy() {
-    led.line_dst.str = led.line_dst.buf;
-    memcpy(led.line_dst.buf, led.line_src.buf, led.line_src.len);
-    led.line_dst.len = led.line_src.len;
-    return led.line_dst.len;
+int led_line_copy(led_line_struct* pline, led_line_struct* pline_src) {
+    pline->str = pline->buf;
+    memcpy(pline->buf, pline_src->buf, pline_src->len);
+    pline->len = pline_src->len;
+    return pline->len;
 }
-int led_line_append() {
-    led_line_append_str_len(led.line_src.str, led.line_src.len);
-    return led.line_dst.len;
+int led_line_append(led_line_struct* pline, led_line_struct* pline_src) {
+    led_line_append_str_len(pline, pline_src->str, pline_src->len);
+    return pline->len;
 }
-int led_line_append_zone() {
-    return led_line_append_str_start_stop(led.line_src.str, led.line_src.zone_start, led.line_src.zone_stop);
+int led_line_append_zone(led_line_struct* pline, led_line_struct* pline_src) {
+    return led_line_append_str_start_stop(pline, pline_src->str, pline_src->zone_start, pline_src->zone_stop);
 }
-int led_line_append_before_zone() {
-    return led_line_append_str_start_stop(led.line_src.str, 0, led.line_src.zone_start);
+int led_line_append_before_zone(led_line_struct* pline, led_line_struct* pline_src) {
+    return led_line_append_str_start_stop(pline, pline_src->str, 0, pline_src->zone_start);
 }
-int led_line_append_after_zone() {
-    return led_line_append_str_start_stop(led.line_src.str, led.line_src.zone_stop, led.line_src.len);
+int led_line_append_after_zone(led_line_struct* pline, led_line_struct* pline_src) {
+    return led_line_append_str_start_stop(pline, pline_src->str, pline_src->zone_stop, pline_src->len);
 }
-int led_line_append_char(const char c) {
-    led.line_dst.str = led.line_dst.buf;
-    if (led.line_dst.len < LED_BUF_MAX-1) {
-        led.line_dst.str[led.line_dst.len++] = c;
-        led.line_dst.str[led.line_dst.len] = '\0';
+int led_line_append_char(led_line_struct* pline, const char c) {
+    pline->str = pline->buf;
+    if (pline->len < LED_BUF_MAX-1) {
+        pline->str[pline->len++] = c;
+        pline->str[pline->len] = '\0';
     }
-    return led.line_dst.len;
+    return pline->len;
 }
-int led_line_append_str(const char* str) {
-    led.line_dst.str = led.line_dst.buf;
-    for (size_t i = 0; led.line_dst.len < LED_BUF_MAX-1 && str[i]; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
-    led.line_dst.str[led.line_dst.len] = '\0';
-    return led.line_dst.len;
+int led_line_append_str(led_line_struct* pline, const char* str) {
+    pline->str = pline->buf;
+    for (size_t i = 0; pline->len < LED_BUF_MAX-1 && str[i]; pline->len++, i++) pline->str[pline->len] = str[i];
+    pline->str[pline->len] = '\0';
+    return pline->len;
 }
-int led_line_append_str_len(const char* str, size_t len) {
-    return led_line_append_str_start_len(str, 0, len);
+int led_line_append_str_len(led_line_struct* pline, const char* str, size_t len) {
+    return led_line_append_str_start_len(pline, str, 0, len);
 }
-int led_line_append_str_start_len(const char* str, size_t start, size_t len) {
-    led.line_dst.str = led.line_dst.buf;
+int led_line_append_str_start_len(led_line_struct* pline, const char* str, size_t start, size_t len) {
+    pline->str = pline->buf;
     str += start;
-    for (size_t i = 0; led.line_dst.len < LED_BUF_MAX-1 && str[i] && i < len; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
-    led.line_dst.str[led.line_dst.len] = '\0';
-    return led.line_dst.len;
+    for (size_t i = 0; pline->len < LED_BUF_MAX-1 && str[i] && i < len; pline->len++, i++) pline->str[pline->len] = str[i];
+    pline->str[pline->len] = '\0';
+    return pline->len;
 }
-int led_line_append_str_start_stop(const char* str, size_t start, size_t stop) {
-    led.line_dst.str = led.line_dst.buf;
-    for (size_t i = start; led.line_dst.len < LED_BUF_MAX-1 && str[i] && i < stop; led.line_dst.len++, i++) led.line_dst.str[led.line_dst.len] = str[i];
-    led.line_dst.str[led.line_dst.len] = '\0';
-    return led.line_dst.len;
+int led_line_append_str_start_stop(led_line_struct* pline, const char* str, size_t start, size_t stop) {
+    pline->str = pline->buf;
+    for (size_t i = start; pline->len < LED_BUF_MAX-1 && str[i] && i < stop; pline->len++, i++) pline->str[pline->len] = str[i];
+    pline->str[pline->len] = '\0';
+    return pline->len;
 }
-int led_select() {
+int led_line_select() {
     // stop selection on stop boundary
     if ((led.sel[1].type == SEL_TYPE_NONE && led.sel[0].type != SEL_TYPE_NONE && led.curline.sel_shift == 0)
         || (led.sel[1].type == SEL_TYPE_COUNT && led.curline.sel_count >= led.sel[1].val)
@@ -565,12 +567,32 @@ int led_select() {
         led.curline.sel_count = 0;
     }
 
-    led.curline.selected = led.curline.sel_switch && led.curline.sel_shift == 0;
-    led_debug("Select: %d, %d => %d", led.curline.sel_switch, led.curline.sel_shift, led.curline.selected);
+    led.curline.sel_prev = led.curline.selected;
+    led.curline.sel_native = led.curline.sel_switch && led.curline.sel_shift == 0;
+    led.curline.selected = led.curline.sel_native == !led.opt.sel_invert;
+    led_debug("Select native: %d, %d => %d (%d)", led.curline.sel_switch, led.curline.sel_shift, led.curline.sel_native, led.curline.selected);
 
-    if (led.curline.selected) led.curline.sel_count++;
+    if (led.curline.sel_native) led.curline.sel_count++;
 
     return led.curline.selected;
+}
+
+int led_line_ready() {
+    int ready = FALSE;
+    if (led.opt.sel_pack) {
+        if (led.curline.selected) {
+            if ( led.line_ready.len > 0 ) led_line_append_char(&led.line_ready, '\n');
+            led_line_append(&led.line_ready, &led.line_src);
+        }
+        else {
+            ready = led.curline.sel_prev;
+        }
+    }
+    else if (led.curline.selected){
+        led_line_copy(&led.line_ready, &led.line_src);
+        ready = TRUE;
+    }
+    return ready;
 }
 
 void led_process() {
@@ -592,12 +614,12 @@ int main(int argc, char* argv[]) {
     if (led.opt.help)
         led_help();
     else
-        while (led_next_file()) {
+        while (led_file_next()) {
             while (led_line_read()) {
-                led_select();
-                if (led.curline.selected == !led.opt.sel_invert)
+                led_line_select();
+                if (led_line_ready())
                     led_process();
-                if (led.curline.selected == !led.opt.sel_invert || !led.opt.output_selected)
+                if (led.curline.selected || !led.opt.output_selected)
                     led_line_write();
             }
         }

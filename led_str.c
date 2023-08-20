@@ -22,7 +22,7 @@ int led_str_equal_len(const char* str1, const char* str2, int len) {
 pcre2_code* LED_REGEX_BLANK_LINE = NULL;
 
 void led_regex_init() {
-    if (LED_REGEX_BLANK_LINE == NULL) LED_REGEX_BLANK_LINE = led_regex_compile("^\\s+$");
+    if (LED_REGEX_BLANK_LINE == NULL) LED_REGEX_BLANK_LINE = led_regex_compile("^\\s*$");
 }
 
 void led_regex_free() {

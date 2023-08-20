@@ -9,7 +9,7 @@ LFLAGS        = -Wl,-O1
 
 
 SOURCES       = *.c
-OBJECTS       = led.o led_fn.o led_str.o
+OBJECTS       = led.o led_fn.o led_str.o led_line.o
 LIBS          = -lpcre2-8 -lb64
 DESTDIR       = .
 TARGET        = led
@@ -45,6 +45,9 @@ led_fn.o: led_fn.c led.h
 
 led_str.o: led_str.c led.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o led_str.o led_str.c
+
+led_line.o: led_line.c led.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o led_line.o led_line.c
 
 ####### Install
 

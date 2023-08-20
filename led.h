@@ -39,6 +39,7 @@ typedef struct {
     size_t len;
     size_t zone_start;
     size_t zone_stop;
+    int selected;
 } led_line_struct;
 
 typedef struct {
@@ -54,7 +55,7 @@ typedef struct {
         int sel_pack;
         int output_selected;
         int output_match;
-        int filter_empty;
+        int filter_blank;
         int file_in;
         int file_out;
         int file_out_unchanged;
@@ -67,10 +68,20 @@ typedef struct {
 
     // selector
     struct {
-        int type;
-        pcre2_code* regex;
-        size_t val;
-    } sel[LED_SEL_MAX];
+        int type_start;
+        pcre2_code* regex_start;
+        size_t val_start;
+
+        int type_stop;
+        pcre2_code* regex_stop;
+        size_t val_stop;
+
+        size_t total_count;
+        size_t count;
+        size_t shift;
+        int selected;
+        int inboundary;
+    } sel;
 
     // processor function Id
     size_t fn_id;
@@ -96,16 +107,6 @@ typedef struct {
         FILE* file;
     } curfile;
 
-    struct {
-        size_t count;
-        int selected;
-        int sel_native;
-        int sel_prev;
-        int sel_switch;
-        size_t sel_count;
-        size_t sel_shift;
-    } curline;
-
     led_line_struct line_src;
     led_line_struct line_ready;
     led_line_struct line_dst;
@@ -116,18 +117,24 @@ typedef struct {
 
 extern led_struct led;
 
-int led_line_reset(led_line_struct* pline);
-int led_line_init(led_line_struct* pline);
-int led_line_copy(led_line_struct* pline, led_line_struct* pline_src);
-int led_line_append(led_line_struct* pline, led_line_struct* pline_src);
-int led_line_append_zone(led_line_struct* pline, led_line_struct* pline_src);
-int led_line_append_before_zone(led_line_struct* pline, led_line_struct* pline_src);
-int led_line_append_after_zone(led_line_struct* pline, led_line_struct* pline_src);
-int led_line_append_str(led_line_struct* pline, const char* str);
-int led_line_append_str_len(led_line_struct* pline, const char* str, size_t len);
-int led_line_append_char(led_line_struct* pline, const char c);
-int led_line_append_str_start_len(led_line_struct* pline, const char* str, size_t start, size_t len);
-int led_line_append_str_start_stop(led_line_struct* pline, const char* str, size_t start, size_t stop);
+int led_line_defined(led_line_struct* pline);
+int led_line_select(led_line_struct* pline, int selected);
+int led_line_selected(led_line_struct* pline);
+int led_line_isempty(led_line_struct* pline);
+int led_line_isblank(led_line_struct* pline);
+
+size_t led_line_reset(led_line_struct* pline);
+size_t led_line_init(led_line_struct* pline);
+size_t led_line_copy(led_line_struct* pline, led_line_struct* pline_src);
+size_t led_line_append(led_line_struct* pline, led_line_struct* pline_src);
+size_t led_line_append_zone(led_line_struct* pline, led_line_struct* pline_src);
+size_t led_line_append_before_zone(led_line_struct* pline, led_line_struct* pline_src);
+size_t led_line_append_after_zone(led_line_struct* pline, led_line_struct* pline_src);
+size_t led_line_append_str(led_line_struct* pline, const char* str);
+size_t led_line_append_str_len(led_line_struct* pline, const char* str, size_t len);
+size_t led_line_append_char(led_line_struct* pline, const char c);
+size_t led_line_append_str_start_len(led_line_struct* pline, const char* str, size_t start, size_t len);
+size_t led_line_append_str_start_stop(led_line_struct* pline, const char* str, size_t start, size_t stop);
 
 //-----------------------------------------------
 // LED function management

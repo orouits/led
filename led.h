@@ -51,8 +51,8 @@ typedef struct {
         int quiet;
         int zero;
         int exit_mode;
-        int sel_invert;
-        int sel_pack;
+        int invert_selected;
+        int pack_selected;
         int output_selected;
         int output_match;
         int filter_blank;
@@ -107,9 +107,9 @@ typedef struct {
         FILE* file;
     } curfile;
 
-    led_line_struct line_src;
-    led_line_struct line_ready;
-    led_line_struct line_dst;
+    led_line_struct line_read;
+    led_line_struct line_prep;
+    led_line_struct line_write;
 
     PCRE2_UCHAR8 buf_message[LED_MSG_MAX+1];
 

@@ -117,13 +117,13 @@ int led_init_opt(const char* arg) {
                 led.opt.exit_mode = LED_EXIT_VAL;
                 break;
             case 'n':
-                led.opt.sel_invert = TRUE;
+                led.opt.invert_selected = TRUE;
                 break;
             case 'm':
                 led.opt.output_match = TRUE;
                 break;
             case 'p':
-                led.opt.sel_pack = TRUE;
+                led.opt.pack_selected = TRUE;
                 break;
             case 's':
                 led.opt.output_selected = TRUE;
@@ -464,50 +464,50 @@ int led_file_next() {
 }
 
 int led_process_read() {
-    if (!led_line_defined(&led.line_src)) {
-        led.line_src.str = fgets(led.line_src.buf, sizeof led.line_src.buf, led.curfile.file);
-        if (led.line_src.str != NULL) {
-            led.line_src.len = strlen(led.line_src.str);
-            if (led.line_src.len > 0 && led.line_src.str[led.line_src.len - 1] == '\n')
-                led.line_src.str[--led.line_src.len] = '\0';
-            led.line_src.zone_start = 0;
-            led.line_src.zone_stop = led.line_src.len;
-            led.line_src.selected = FALSE;
+    if (!led_line_defined(&led.line_read)) {
+        led.line_read.str = fgets(led.line_read.buf, sizeof led.line_read.buf, led.curfile.file);
+        if (led.line_read.str != NULL) {
+            led.line_read.len = strlen(led.line_read.str);
+            if (led.line_read.len > 0 && led.line_read.str[led.line_read.len - 1] == '\n')
+                led.line_read.str[--led.line_read.len] = '\0';
+            led.line_read.zone_start = 0;
+            led.line_read.zone_stop = led.line_read.len;
+            led.line_read.selected = FALSE;
             led.sel.total_count++;
-            led_debug("Read line: (%d) len=%d", led.sel.total_count, led.line_src.len);
+            led_debug("Read line: (%d) len=%d", led.sel.total_count, led.line_read.len);
         }
     }
-    return led_line_defined(&led.line_src);
+    return led_line_defined(&led.line_read);
 }
 
 void led_process_write() {
-    if (led_line_defined(&led.line_dst)) {
-        led_debug("Write line: (%d) len=%d", led.sel.total_count, led.line_dst.len);
-        led_line_append_char(&led.line_dst, '\n');
-        fwrite(led.line_dst.str, sizeof *led.line_dst.str, led.line_dst.len, stdout);
+    if (led_line_defined(&led.line_write)) {
+        led_debug("Write line: (%d) len=%d", led.sel.total_count, led.line_write.len);
+        led_line_append_char(&led.line_write, '\n');
+        fwrite(led.line_write.str, sizeof *led.line_write.str, led.line_write.len, stdout);
         fflush(stdout);
-        led_line_reset(&led.line_dst);
+        led_line_reset(&led.line_write);
     }
 }
 
 int led_process_selector() {
     int ready = FALSE;
     // stop selection on stop boundary
-    if (!led_line_defined(&led.line_src)
+    if (!led_line_defined(&led.line_read)
         || (led.sel.type_stop == SEL_TYPE_NONE && led.sel.type_start != SEL_TYPE_NONE && led.sel.shift == 0)
         || (led.sel.type_stop == SEL_TYPE_COUNT && led.sel.count >= led.sel.val_stop)
-        || (led.sel.type_stop == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_stop, led.line_src.str, led.line_src.len)) ) {
+        || (led.sel.type_stop == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_stop, led.line_read.str, led.line_read.len)) ) {
         led.sel.inboundary = FALSE;
         led.sel.count = 0;
     }
     if (led.sel.shift > 0) led.sel.shift--;
 
     // start selection on start boundary
-    if (led_line_defined(&led.line_src)
+    if (led_line_defined(&led.line_read)
         && (
             led.sel.type_start == SEL_TYPE_NONE
             || (led.sel.type_start == SEL_TYPE_COUNT && led.sel.total_count == led.sel.val_start)
-            || (led.sel.type_start == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_start, led.line_src.str, led.line_src.len))
+            || (led.sel.type_start == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_start, led.line_read.str, led.line_read.len))
         )) {
 
         led.sel.inboundary = TRUE;
@@ -516,38 +516,38 @@ int led_process_selector() {
     }
 
     led.sel.selected = led.sel.inboundary && led.sel.shift == 0;
-    led.line_src.selected = led.sel.selected == !led.opt.sel_invert;
-    led_debug("Select: inboundary=%d, shift=%d selected=%d line selected=%d", led.sel.inboundary, led.sel.shift, led.sel.selected, led.line_src.selected);
+    led.line_read.selected = led.sel.selected == !led.opt.invert_selected;
+    led_debug("Select: inboundary=%d, shift=%d selected=%d line selected=%d", led.sel.inboundary, led.sel.shift, led.sel.selected, led.line_read.selected);
 
     if (led.sel.selected) led.sel.count++;
 
-    if (led.opt.sel_pack) {
-        if (led_line_selected(&led.line_src)) {
+    if (led.opt.pack_selected) {
+        if (led_line_selected(&led.line_read)) {
             led_debug("pack: append to ready");
-            if (!(led.opt.filter_blank && led_line_isblank(&led.line_src))) {
-                if ( led.line_ready.len > 0 )
-                    led_line_append_char(&led.line_ready, '\n');
-                led_line_append(&led.line_ready, &led.line_src);
+            if (!(led.opt.filter_blank && led_line_isblank(&led.line_read))) {
+                if ( led.line_prep.len > 0 )
+                    led_line_append_char(&led.line_prep, '\n');
+                led_line_append(&led.line_prep, &led.line_read);
             }
-            led_line_select(&led.line_ready, TRUE);
-            led_line_reset(&led.line_src);
+            led_line_select(&led.line_prep, TRUE);
+            led_line_reset(&led.line_read);
         }
-        else if (led_line_selected(&led.line_ready)) {
+        else if (led_line_selected(&led.line_prep)) {
             led_debug("pack: ready to process");
             ready = TRUE;
         }
         else {
             led_debug("pack: no selection");
-            if (!(led.opt.filter_blank && led_line_isblank(&led.line_src)))
-                led_line_copy(&led.line_ready, &led.line_src);
-            led_line_reset(&led.line_src);
+            if (!(led.opt.filter_blank && led_line_isblank(&led.line_read)))
+                led_line_copy(&led.line_prep, &led.line_read);
+            led_line_reset(&led.line_read);
             ready = TRUE;
         }
     }
     else {
-        if (!(led.opt.filter_blank && led_line_isblank(&led.line_src)))
-            led_line_copy(&led.line_ready, &led.line_src);
-        led_line_reset(&led.line_src);
+        if (!(led.opt.filter_blank && led_line_isblank(&led.line_read)))
+            led_line_copy(&led.line_prep, &led.line_read);
+        led_line_reset(&led.line_read);
         ready = TRUE;
     }
 
@@ -556,19 +556,19 @@ int led_process_selector() {
 }
 
 void led_process_function() {
-    led_debug("Process line ready (len=%d)", led.line_ready.len);
+    led_debug("Process line ready (len=%d)", led.line_prep.len);
     led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-    if (led_line_selected(&led.line_ready)) {
+    if (led_line_selected(&led.line_prep)) {
         led_assert(fn_desc->impl != NULL, LED_ERR_ARG, "Function not implemented: %s", fn_desc->long_name);
         led_debug("Process function %s", fn_desc->long_name);
         (fn_desc->impl)();
     }
     else if (!led.opt.output_selected) {
         led_debug("Copy un selected to dest %s", fn_desc->long_name);
-        led_line_copy(&led.line_dst, &led.line_ready);
+        led_line_copy(&led.line_write, &led.line_prep);
     }
-    led_line_reset(&led.line_ready);
-    led_debug("Result line dest (len=%d)", led.line_dst.len);
+    led_line_reset(&led.line_prep);
+    led_debug("Result line dest (len=%d)", led.line_write.len);
 }
 
 //-----------------------------------------------

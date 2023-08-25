@@ -194,7 +194,7 @@ void led_fn_impl_append() {
     led_line_append_str_len(&led.line_write, led.fn_arg[0].str, led.fn_arg[0].len);
 }
 
-void led_fn_impl_quote(char q) {
+void led_fn_impl_quote_base(char q) {
     led_zone_pre_process(led.fn_arg[0].regex);
 
     if (! (led.line_prep.str[led.line_prep.zone_start] == q && led.line_prep.str[led.line_prep.zone_stop - 1] == q) ) {
@@ -209,9 +209,9 @@ void led_fn_impl_quote(char q) {
     led_zone_post_process();
 }
 
-void led_fn_impl_quote_simple() { led_fn_impl_quote('\''); }
-void led_fn_impl_quote_double() { led_fn_impl_quote('"'); }
-void led_fn_impl_quote_back() { led_fn_impl_quote('`'); }
+void led_fn_impl_quote_simple() { led_fn_impl_quote_base('\''); }
+void led_fn_impl_quote_double() { led_fn_impl_quote_base('"'); }
+void led_fn_impl_quote_back() { led_fn_impl_quote_base('`'); }
 
 void led_fn_impl_quote_remove() {
     const char* QUOTES="'\"`";
@@ -366,10 +366,42 @@ void led_fn_impl_revert() {
     led_zone_post_process();
 }
 
+void led_fn_impl_field_base(size_t field_n, const char* field_sep, pcre2_code* zone_regex) {
+    led_zone_pre_process(zone_regex);
+
+    size_t n = 0;
+    int was_sep = TRUE;
+    size_t str_start = led.line_prep.zone_start;
+    size_t str_stop = led.line_prep.zone_stop;
+    for (; str_start < led.line_prep.zone_stop; str_start++ ) {
+        int is_sep = led_char_in_str(led.line_prep.str[str_start], field_sep);
+        if (was_sep && !is_sep) {
+            n++;
+            if (n == field_n) break;
+        }
+        was_sep = is_sep;
+    }
+    if (n == field_n) {
+        was_sep = FALSE;
+        for (str_stop = str_start; str_stop < led.line_prep.zone_stop; str_stop++ ) {
+            int is_sep = led_char_in_str(led.line_prep.str[str_stop], field_sep);
+            if (!was_sep && is_sep) break;
+        }
+        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, str_start, str_stop);
+    }
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_field() { led_fn_impl_field_base(led.fn_arg[0].uval, led.fn_arg[1].str, led.fn_arg[2].regex); }
+void led_fn_impl_field_csv() { led_fn_impl_field_base(led.fn_arg[0].uval, ",;", led.fn_arg[1].regex); }
+void led_fn_impl_field_space() { led_fn_impl_field_base(led.fn_arg[0].uval, " \t\n", led.fn_arg[1].regex); }
+void led_fn_impl_field_mixed() { led_fn_impl_field_base(led.fn_arg[0].uval, ",; \t\n", led.fn_arg[1].regex); }
+
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
-    { "exe:", "execute:", NULL, "RS", "Execute", "execute: <regex> <replace=command>" },
+    { "exe:", "execute:", NULL, "Sr", "Execute", "execute: <replace-command> [<regex>]" },
     { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<regex>]" },
     { "rmb:", "remove_blank:", &led_fn_impl_remove_blank, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },
@@ -390,7 +422,10 @@ led_fn_struct LED_FN_TABLE[] = {
     { "tmr:", "trim_right:", &led_fn_impl_trim_right, "r", "Trim right", "trim_right: [<regex>]" },
     { "sp:", "split:", NULL, "s", "Split", "split: [chars]" },
     { "rv:", "revert:", &led_fn_impl_revert, "r", "Revert", "revert: [<regex>]" },
-    { "fl:", "field:", NULL, "Psr", "Extract field", "field: <N> [<sep>] [<regex>]" },
+    { "fld:", "field:", &led_fn_impl_field, "PSr", "Extract field", "field: <N> <sep> <[<regex>]" },
+    { "flm:", "field_mixed:", &led_fn_impl_field_mixed, "Pr", "Extract field", "field: <N> [<regex>]" },
+    { "flc:", "field_csv:", &led_fn_impl_field_csv, "Pr", "Extract field", "field: <N> [<regex>]" },
+    { "fls:", "field_space:", &led_fn_impl_field_space, "Pr", "Extract field", "field: <N> [<regex>]" },
     { "jn:", "join:", NULL, "", "Join lines", "join:" },
     { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encrypt base64", "encrypt_base64: [<regex>]" },
     { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decrypt base64", "decrypt_base64: [<regex>]" },
@@ -402,10 +437,11 @@ led_fn_struct LED_FN_TABLE[] = {
     { "fnl:", "fname_upper:", NULL, "r", "Rename file of path without specific chars, using upper case", "fname_upper: [<regex>]" },
     { "fnc:", "fname_camel:", NULL, "r", "Rename file of path without specific chars, using camel case", "fname_camel: [<regex>]" },
     { "fns:", "fname_special:", NULL, "r", "Rename file of path without specific chars, using special form", "fname_special: [<regex>]" },
-    { "rnn:", "randomize_num:", NULL, "r", "Randomize numeric values", "randomize_num: [<regex>]" },
-    { "rna:", "randomize_alpha:", NULL, "r", "Randomize alpha values", "randomize_alpha: [<regex>]" },
-    { "rnan:", "randomize_alnum:", NULL, "r", "Randomize alpha numeric values", "randomize_alnum: [<regex>]" },
-    { "rnh:", "randomize_hexa:", NULL, "r", "Randomize alpha numeric values", "randomize_hexa: [<regex>]" },
+    { "rzn:", "randomize_num:", NULL, "r", "Randomize numeric values", "randomize_num: [<regex>]" },
+    { "rza:", "randomize_alpha:", NULL, "r", "Randomize alpha values", "randomize_alpha: [<regex>]" },
+    { "rzan:", "randomize_alnum:", NULL, "r", "Randomize alpha numeric values", "randomize_alnum: [<regex>]" },
+    { "rzh:", "randomize_hexa:", NULL, "r", "Randomize alpha numeric values", "randomize_hexa: [<regex>]" },
+    { "rzc:", "randomize_custom:", NULL, "r", "Randomize alpha numeric and custom chars", "randomize_custom: <chars> [<regex>]" },
 };
 
 #define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)

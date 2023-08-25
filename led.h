@@ -174,6 +174,7 @@ extern pcre2_code* LED_REGEX_BLANK_LINE;
 int led_str_trim(char* str);
 int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);
+int led_char_in_str(char c, const char* str);
 void led_regex_init();
 void led_regex_free();
 pcre2_code* led_regex_compile(const char* pattern);

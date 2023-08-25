@@ -426,7 +426,7 @@ led_fn_struct LED_FN_TABLE[] = {
     { "flm:", "field_mixed:", &led_fn_impl_field_mixed, "Pr", "Extract field", "field_mixed: <N> [<zone regex>]" },
     { "flc:", "field_csv:", &led_fn_impl_field_csv, "Pr", "Extract field", "field_csv: <N> [<zone regex>]" },
     { "fls:", "field_space:", &led_fn_impl_field_space, "Pr", "Extract field", "field_space: <N> [<zone regex>]" },
-    { "jn:", "join:", NULL, "", "Join lines", "join:" },
+    { "jn:", "join:", NULL, "", "Join lines (only with pack mode)", "join:" },
     { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encrypt base64", "encrypt_base64: [<zone regex>]" },
     { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decrypt base64", "decrypt_base64: [<zone regex>]" },
     { "urle:", "url_encode:", &led_fn_impl_url_encode, "r", "Encode URL", "url_encode: [<zone regex>]" },

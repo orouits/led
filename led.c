@@ -578,7 +578,7 @@ void led_process_function() {
 int main(int argc, char* argv[]) {
     led_init(argc, argv);
 
-    if (led.opt.help)
+    if (argc == 1 || led.opt.help)
         led_help();
     else
         while (led_file_next()) {

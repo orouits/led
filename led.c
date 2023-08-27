@@ -558,7 +558,7 @@ int led_process_selector() {
 void led_process_function() {
     led_debug("Process line ready (len=%d)", led.line_prep.len);
     led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-    if (led_line_selected(&led.line_prep)) {
+    if (led_line_defined(&led.line_prep) && led_line_selected(&led.line_prep)) {
         led_assert(fn_desc->impl != NULL, LED_ERR_ARG, "Function not implemented: %s", fn_desc->long_name);
         led_debug("Process function %s", fn_desc->long_name);
         (fn_desc->impl)();
@@ -578,7 +578,7 @@ void led_process_function() {
 int main(int argc, char* argv[]) {
     led_init(argc, argv);
 
-    if (argc == 1 || led.opt.help)
+    if (led.opt.help)
         led_help();
     else
         while (led_file_next()) {

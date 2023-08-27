@@ -31,10 +31,8 @@ int led_line_isempty(led_line_struct* pline) {
     return pline->len == 0;
 }
 size_t led_line_copy(led_line_struct* pline, led_line_struct* pline_src) {
-    pline->str = pline->buf;
-    memcpy(pline->buf, pline_src->buf, pline_src->len);
-    pline->len = pline_src->len;
-    pline->selected = pline_src->selected;
+    memcpy(pline, pline_src, sizeof *pline_src);
+    if (led_line_defined(pline_src)) pline->str = pline->buf;
     return pline->len;
 }
 size_t led_line_append(led_line_struct* pline, led_line_struct* pline_src) {

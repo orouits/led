@@ -398,6 +398,53 @@ void led_fn_impl_field_csv() { led_fn_impl_field_base(led.fn_arg[0].uval, ",;", 
 void led_fn_impl_field_space() { led_fn_impl_field_base(led.fn_arg[0].uval, " \t\n", led.fn_arg[1].regex); }
 void led_fn_impl_field_mixed() { led_fn_impl_field_base(led.fn_arg[0].uval, ",; \t\n", led.fn_arg[1].regex); }
 
+void led_fn_impl_join() {
+   for (size_t i = 0; i < led.line_prep.len; i++) {
+        char c = led.line_prep.str[i];
+        if ( c != '\n') led_line_append_char(&led.line_write, c);
+   }
+}
+
+void led_fn_impl_split_base(const char* field_sep, pcre2_code* zone_regex) {
+    led_zone_pre_process(zone_regex);
+
+    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
+        char c = led.line_prep.str[i];
+        if ( led_char_in_str(c, field_sep) ) c = '\n';
+        led_line_append_char(&led.line_write, c);
+    }
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_split() { led_fn_impl_split_base(led.fn_arg[0].str, led.fn_arg[1].regex); }
+void led_fn_impl_split_space() { led_fn_impl_split_base(" \t\n", led.fn_arg[0].regex); }
+void led_fn_impl_split_csv() { led_fn_impl_split_base(",;", led.fn_arg[0].regex); }
+void led_fn_impl_split_mixed() { led_fn_impl_split_base(",; \t\n", led.fn_arg[0].regex); }
+
+void led_fn_impl_randomize_base(const char* charset, size_t len, pcre2_code* zone_regex) {
+    led_zone_pre_process(zone_regex);
+
+    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
+        char c = charset[rand() % len];
+        led_line_append_char(&led.line_write, c);
+    }
+
+    led_zone_post_process();
+}
+
+const char randomize_table_num[] = "0123456789";
+const char randomize_table_alpha[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const char randomize_table_alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const char randomize_table_hexa[] = "0123456789ABCDEF";
+const char randomize_table_mixed[] = "0123456789-_/=!:;,~#$*?%abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+void led_fn_impl_randomize_num() { led_fn_impl_randomize_base(randomize_table_num, sizeof randomize_table_num - 1, led.fn_arg[0].regex); }
+void led_fn_impl_randomize_alpha() { led_fn_impl_randomize_base(randomize_table_alpha, sizeof randomize_table_alpha -1, led.fn_arg[0].regex); }
+void led_fn_impl_randomize_alnum() { led_fn_impl_randomize_base(randomize_table_alnum, sizeof randomize_table_alnum - 1, led.fn_arg[0].regex); }
+void led_fn_impl_randomize_hexa() { led_fn_impl_randomize_base(randomize_table_hexa, sizeof randomize_table_hexa - 1, led.fn_arg[0].regex); }
+void led_fn_impl_randomize_mixed() { led_fn_impl_randomize_base(randomize_table_mixed, sizeof randomize_table_mixed - 1, led.fn_arg[0].regex); }
+
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
@@ -413,22 +460,23 @@ led_fn_struct LED_FN_TABLE[] = {
     { "csu:", "case_upper:", &led_fn_impl_case_upper, "r", "Case to upper", "case_upper: [<zone regex>]" },
     { "csf:", "case_first:", &led_fn_impl_case_first, "r", "Case first upper", "case_first: [<zone regex>]" },
     { "csc:", "case_camel:", &led_fn_impl_case_camel, "r", "Case to camel style", "case_camel: [<zone regex>]" },
-    { "ctl:", "count_line:", NULL, "", "Count selected lines", "count_line:" },
-    { "ctw:", "count_word:", NULL, "r", "Count words of selected lines", "count_word: [<zone regex>]" },
     { "qts:", "quote_simple:", &led_fn_impl_quote_simple, "r", "Quote simple", "quote_simple: [<zone regex>]" },
     { "qtd:", "quote_double:", &led_fn_impl_quote_double, "r", "Quote double", "quote_double: [<zone regex>]" },
     { "qtb:", "quote_back:", &led_fn_impl_quote_back, "r", "Quote back", "quote_back: [<zone regex>]" },
     { "qtr:", "quote_remove:", &led_fn_impl_quote_remove, "r", "Quote remove", "quote_remove: [<zone regex>]" },
+    { "sp:", "split:", &led_fn_impl_split, "Sr", "Split using chars", "split: <chars> [regex]" },
+    { "spc:", "split_csv:", &led_fn_impl_split_csv, "r", "Split using comma", "split: [regex]" },
+    { "sps:", "split_space:", &led_fn_impl_split_space, "r", "Split using space", "split: [regex]" },
+    { "spm:", "split_mixed:", &led_fn_impl_split_mixed, "r", "Split using comma and space", "split: [regex]" },
+    { "jn:", "join:", &led_fn_impl_join, "", "Join lines (only with pack mode)", "join:" },
     { "tm:", "trim:", &led_fn_impl_trim, "r", "Trim", "trim: [<zone regex>]" },
     { "tml:", "trim_left:", &led_fn_impl_trim_left, "r", "Trim left", "trim_left: [<zone regex>]" },
     { "tmr:", "trim_right:", &led_fn_impl_trim_right, "r", "Trim right", "trim_right: [<zone regex>]" },
-    { "sp:", "split:", NULL, "s", "Split", "split: [chars]" },
     { "rv:", "revert:", &led_fn_impl_revert, "r", "Revert", "revert: [<zone regex>]" },
     { "fld:", "field:", &led_fn_impl_field, "PSr", "Extract field", "field: <N> <sep> <[<zone regex>]" },
     { "flm:", "field_mixed:", &led_fn_impl_field_mixed, "Pr", "Extract field", "field_mixed: <N> [<zone regex>]" },
     { "flc:", "field_csv:", &led_fn_impl_field_csv, "Pr", "Extract field", "field_csv: <N> [<zone regex>]" },
     { "fls:", "field_space:", &led_fn_impl_field_space, "Pr", "Extract field", "field_space: <N> [<zone regex>]" },
-    { "jn:", "join:", NULL, "", "Join lines (only with pack mode)", "join:" },
     { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encrypt base64", "encrypt_base64: [<zone regex>]" },
     { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decrypt base64", "decrypt_base64: [<zone regex>]" },
     { "urle:", "url_encode:", &led_fn_impl_url_encode, "r", "Encode URL", "url_encode: [<zone regex>]" },
@@ -439,11 +487,11 @@ led_fn_struct LED_FN_TABLE[] = {
     { "fnl:", "fname_upper:", NULL, "r", "simplify file name using upper case", "fname_upper: [<zone regex>]" },
     { "fnc:", "fname_camel:", NULL, "r", "simplify file name using camel case", "fname_camel: [<zone regex>]" },
     { "fnm:", "fname_magic:", NULL, "r", "simplify file name using a special form", "fname_special: [<zone regex>]" },
-    { "rzn:", "randomize_num:", NULL, "r", "Randomize numeric values", "randomize_num: [<zone regex>]" },
-    { "rza:", "randomize_alpha:", NULL, "r", "Randomize alpha values", "randomize_alpha: [<zone regex>]" },
-    { "rzan:", "randomize_alnum:", NULL, "r", "Randomize alpha numeric values", "randomize_alnum: [<zone regex>]" },
-    { "rzh:", "randomize_hexa:", NULL, "r", "Randomize alpha numeric values", "randomize_hexa: [<zone regex>]" },
-    { "rzc:", "randomize_custom:", NULL, "r", "Randomize alpha numeric and custom chars", "randomize_custom: <chars> [<zone regex>]" },
+    { "rzn:", "randomize_num:", &led_fn_impl_randomize_num, "r", "Randomize numeric values", "randomize_num: [<zone regex>]" },
+    { "rza:", "randomize_alpha:", &led_fn_impl_randomize_alpha, "r", "Randomize alpha values", "randomize_alpha: [<zone regex>]" },
+    { "rzan:", "randomize_alnum:", &led_fn_impl_randomize_alnum, "r", "Randomize alpha numeric values", "randomize_alnum: [<zone regex>]" },
+    { "rzh:", "randomize_hexa:", &led_fn_impl_randomize_hexa, "r", "Randomize alpha numeric values", "randomize_hexa: [<zone regex>]" },
+    { "rzm:", "randomize_mixed:", &led_fn_impl_randomize_mixed, "r", "Randomize alpha numeric and custom chars", "randomize_mixed: [<zone regex>]" },
 };
 
 #define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)

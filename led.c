@@ -101,9 +101,6 @@ int led_init_opt(const char* arg) {
             case 'h':
                 led.opt.help = TRUE;
                 break;
-            case 'z':
-                led.opt.zero = TRUE;
-                break;
             case 'v':
                 led.opt.verbose = TRUE;
                 break;
@@ -370,7 +367,6 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     <function>: [arg] ...\n\
 \n\
 ## Global options\n\
-    -z  end of line is 0\n\
     -v  verbose to STDERR\n\
     -r  report to STDERR\n\
     -q  quiet, do not ouptut anything (exit code only)\n\
@@ -559,7 +555,6 @@ void led_process_function() {
     led_debug("Process line ready (len=%d)", led.line_prep.len);
     led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
     if (led_line_defined(&led.line_prep) && led_line_selected(&led.line_prep)) {
-        led_assert(fn_desc->impl != NULL, LED_ERR_ARG, "Function not implemented: %s", fn_desc->long_name);
         led_debug("Process function %s", fn_desc->long_name);
         (fn_desc->impl)();
     }

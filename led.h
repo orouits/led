@@ -49,7 +49,6 @@ typedef struct {
         int verbose;
         int report;
         int quiet;
-        int zero;
         int exit_mode;
         int invert_selected;
         int pack_selected;

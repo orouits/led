@@ -504,7 +504,7 @@ led_fn_struct LED_FN_TABLE[] = {
     { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encode base64", "base64_encode: [<zone regex>]" },
     { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decode base64", "base64_decode: [<zone regex>]" },
     { "urle:", "url_encode:", &led_fn_impl_url_encode, "r", "Encode URL", "url_encode: [<zone regex>]" },
-    { "phc:", "path_canonical:", &led_fn_impl_path_canonical, "r", "Conert to canonical path", "path_canonical: [<zone regex>]" },
+    { "phc:", "path_canonical:", &led_fn_impl_path_canonical, "r", "Convert to canonical path", "path_canonical: [<zone regex>]" },
     { "phd:", "path_dir:", &led_fn_impl_path_dir, "r", "Extract last dir of the path", "path_dir: [<zone regex>]" },
     { "phf:", "path_file:", &led_fn_impl_path_file, "r", "Extract file of the path", "path_file: [<zone regex>]" },
     { "fnl:", "fname_lower:", NULL, "r", "simplify file name using lower case", "fname_lower: [<zone regex>]" },

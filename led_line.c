@@ -82,3 +82,9 @@ size_t led_line_append_str_start_stop(led_line_struct* pline, const char* str, s
     pline->str[pline->len] = '\0';
     return pline->len;
 }
+
+size_t led_line_unappend_char(led_line_struct* pline, char c) {
+    if (led_line_defined(pline) && pline->len > 0 && pline->buf[pline->len - 1] == c)
+        pline->buf[--pline->len] = '\0';
+    return pline->len;
+}

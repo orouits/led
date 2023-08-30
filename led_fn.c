@@ -461,7 +461,7 @@ void led_fn_impl_execute() {
         while (fgets(output, sizeof output, fp) != NULL) {
             led_line_append_str(&led.line_write, output);
         }
-
+        led_line_unappend_char(&led.line_write, '\n');
         pclose(fp);
     }
 

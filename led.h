@@ -135,6 +135,7 @@ size_t led_line_append_str_len(led_line_struct* pline, const char* str, size_t l
 size_t led_line_append_char(led_line_struct* pline, const char c);
 size_t led_line_append_str_start_len(led_line_struct* pline, const char* str, size_t start, size_t len);
 size_t led_line_append_str_start_stop(led_line_struct* pline, const char* str, size_t start, size_t stop);
+size_t led_line_unappend_char(led_line_struct* pline, char c);
 
 //-----------------------------------------------
 // LED function management

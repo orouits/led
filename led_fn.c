@@ -452,7 +452,7 @@ void led_fn_impl_execute() {
         led_line_struct cmd;
         led_line_init(&cmd);
         led_line_append_str_len(&cmd, led.fn_arg[0].str, led.fn_arg[0].len);
-        led_line_append_char(&cmd, ' ');
+        if (cmd.len > 0) led_line_append_char(&cmd, ' ');
         led_line_append_str_len(&cmd, led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start);
         FILE *fp = popen(cmd.str, "r");
         led_assert(fp != NULL, LED_ERR_ARG, "Command error");

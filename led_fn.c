@@ -470,7 +470,7 @@ void led_fn_impl_execute() {
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
-    { "exe:", "execute:", &led_fn_impl_execute, "Sr", "Execute", "execute: <replace-command> [<zone regex>]" },
+    { "exe:", "execute:", &led_fn_impl_execute, "Sr", "Execute", "execute: <command> [<zone regex>]" },
     { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<zone regex>]" },
     { "rmb:", "remove_blank:", &led_fn_impl_remove_blank, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },

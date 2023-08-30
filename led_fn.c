@@ -457,8 +457,9 @@ void led_fn_impl_execute() {
         FILE *fp = popen(cmd.str, "r");
         led_assert(fp != NULL, LED_ERR_ARG, "Command error");
 
-        while (fgets(led.line_write.buf + led.line_write.len, 1024 > sizeof led.line_write.buf - led.line_write.len ? sizeof led.line_write.buf - led.line_write.len : 1024, fp) != NULL) {
-            led.line_write.len += strlen(led.line_write.buf + led.line_write.len);
+        char output[4096];
+        while (fgets(output, sizeof output, fp) != NULL) {
+            led_line_append_str(&led.line_write, output);
         }
         pclose(fp);
     }

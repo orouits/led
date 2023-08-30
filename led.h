@@ -117,13 +117,14 @@ typedef struct {
 extern led_struct led;
 
 int led_line_defined(led_line_struct* pline);
-int led_line_select(led_line_struct* pline, int selected);
+int led_line_len(led_line_struct* pline);
 int led_line_selected(led_line_struct* pline);
 int led_line_isempty(led_line_struct* pline);
 int led_line_isblank(led_line_struct* pline);
 
 size_t led_line_reset(led_line_struct* pline);
 size_t led_line_init(led_line_struct* pline);
+int led_line_select(led_line_struct* pline, int selected);
 size_t led_line_copy(led_line_struct* pline, led_line_struct* pline_src);
 size_t led_line_append(led_line_struct* pline, led_line_struct* pline_src);
 size_t led_line_append_zone(led_line_struct* pline, led_line_struct* pline_src);

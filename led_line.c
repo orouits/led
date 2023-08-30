@@ -8,6 +8,10 @@ int led_line_defined(led_line_struct* pline) {
     return pline->str != NULL;
 }
 
+int led_line_len(led_line_struct* pline) {
+    return pline->len;
+}
+
 size_t led_line_reset(led_line_struct* pline) {
     memset(pline, 0, sizeof *pline);
     return pline->len;

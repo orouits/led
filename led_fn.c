@@ -445,10 +445,32 @@ void led_fn_impl_randomize_alnum() { led_fn_impl_randomize_base(randomize_table_
 void led_fn_impl_randomize_hexa() { led_fn_impl_randomize_base(randomize_table_hexa, sizeof randomize_table_hexa - 1, led.fn_arg[0].regex); }
 void led_fn_impl_randomize_mixed() { led_fn_impl_randomize_base(randomize_table_mixed, sizeof randomize_table_mixed - 1, led.fn_arg[0].regex); }
 
+void led_fn_impl_execute() {
+    led_zone_pre_process(led.fn_arg[1].regex);
+
+    if (led.line_prep.zone_start < led.line_prep.zone_stop) {
+        led_line_struct cmd;
+        led_line_init(&cmd);
+        led_line_append_str_len(&cmd, led.fn_arg[0].str, led.fn_arg[0].len);
+        led_line_append_char(&cmd, ' ');
+        led_line_append_str_len(&cmd, led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start);
+        FILE *fp = popen(cmd.str, "r");
+        led_assert(fp != NULL, LED_ERR_ARG, "Command error");
+
+        while (fgets(led.line_write.buf + led.line_write.len, 1024 > sizeof led.line_write.buf - led.line_write.len ? sizeof led.line_write.buf - led.line_write.len : 1024, fp) != NULL) {
+            led.line_write.len += strlen(led.line_write.buf + led.line_write.len);
+        }
+        pclose(fp);
+    }
+
+    led_zone_post_process();
+}
+
+
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
-    { "exe:", "execute:", NULL, "Sr", "Execute", "execute: <replace-command> [<zone regex>]" },
+    { "exe:", "execute:", &led_fn_impl_execute, "Sr", "Execute", "execute: <replace-command> [<zone regex>]" },
     { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<zone regex>]" },
     { "rmb:", "remove_blank:", &led_fn_impl_remove_blank, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },

@@ -122,9 +122,11 @@ int led_line_selected(led_line_struct* pline);
 int led_line_isempty(led_line_struct* pline);
 int led_line_isblank(led_line_struct* pline);
 
+char led_line_last_char(led_line_struct* pline);
+int led_line_select(led_line_struct* pline, int selected);
+
 size_t led_line_reset(led_line_struct* pline);
 size_t led_line_init(led_line_struct* pline);
-int led_line_select(led_line_struct* pline, int selected);
 size_t led_line_copy(led_line_struct* pline, led_line_struct* pline_src);
 size_t led_line_append(led_line_struct* pline, led_line_struct* pline_src);
 size_t led_line_append_zone(led_line_struct* pline, led_line_struct* pline_src);
@@ -136,6 +138,8 @@ size_t led_line_append_char(led_line_struct* pline, const char c);
 size_t led_line_append_str_start_len(led_line_struct* pline, const char* str, size_t start, size_t len);
 size_t led_line_append_str_start_stop(led_line_struct* pline, const char* str, size_t start, size_t stop);
 size_t led_line_unappend_char(led_line_struct* pline, char c);
+size_t led_line_search_fist(led_line_struct* pline, char c, size_t start, size_t stop);
+size_t led_line_search_last(led_line_struct* pline, char c, size_t start, size_t stop);
 
 //-----------------------------------------------
 // LED function management

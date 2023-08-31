@@ -173,8 +173,8 @@ void led_fn_impl_case_camel() {
         int c = led.line_prep.str[i];
         int isword = isalnum(c) || c == '_';
         if (isword) {
-            if (wasword) led_line_append_char(&led.line_write, tolower(led.line_prep.str[i]));
-            else led_line_append_char(&led.line_write, toupper(led.line_prep.str[i]));
+            if (wasword) led_line_append_char(&led.line_write, tolower(c));
+            else led_line_append_char(&led.line_write, toupper(c));
         }
         wasword = isword;
     }
@@ -468,6 +468,71 @@ void led_fn_impl_execute() {
     led_zone_post_process();
 }
 
+void led_fn_impl_fname_lower() {
+    led_zone_pre_process(led.fn_arg[1].regex);
+
+    if (led.line_prep.zone_start < led.line_prep.zone_stop) {
+        size_t iname = led.line_prep.zone_start;
+        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
+            if (led.line_prep.str[i] == '/') iname = i+1;
+
+        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
+        for (; iname < led.line_prep.zone_stop; iname++) {
+            char c = led.line_prep.str[iname];
+            if (isalnum(c))
+                led_line_append_char(&led.line_write, tolower(c));
+            else if (isalnum(led_line_last_char(&led.line_write)))
+                led_line_append_char(&led.line_write, '_');
+        }
+    }
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_fname_upper() {
+    led_zone_pre_process(led.fn_arg[1].regex);
+
+    if (led.line_prep.zone_start < led.line_prep.zone_stop) {
+        size_t iname = led.line_prep.zone_start;
+        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
+            if (led.line_prep.str[i] == '/') iname = i+1;
+
+        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
+        for (; iname < led.line_prep.zone_stop; iname++) {
+            char c = led.line_prep.str[iname];
+            if (isalnum(c))
+                led_line_append_char(&led.line_write, toupper(c));
+            else if (isalnum(led_line_last_char(&led.line_write)))
+                led_line_append_char(&led.line_write, '_');
+        }
+    }
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_fname_camel() {
+    led_zone_pre_process(led.fn_arg[1].regex);
+
+    if (led.line_prep.zone_start < led.line_prep.zone_stop) {
+        size_t iname = led.line_prep.zone_start;
+        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
+            if (led.line_prep.str[i] == '/') iname = i+1;
+
+        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
+        int wasword = FALSE;
+        for (; iname < led.line_prep.zone_stop; iname++) {
+            char c = led.line_prep.str[iname];
+            int isword = isalnum(c);
+            if (isword) {
+                if (wasword) led_line_append_char(&led.line_write, tolower(c));
+                else led_line_append_char(&led.line_write, toupper(c));
+            }
+            wasword = isword;
+        }
+    }
+
+    led_zone_post_process();
+}
 
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
@@ -507,10 +572,9 @@ led_fn_struct LED_FN_TABLE[] = {
     { "phc:", "path_canonical:", &led_fn_impl_path_canonical, "r", "Convert to canonical path", "path_canonical: [<zone regex>]" },
     { "phd:", "path_dir:", &led_fn_impl_path_dir, "r", "Extract last dir of the path", "path_dir: [<zone regex>]" },
     { "phf:", "path_file:", &led_fn_impl_path_file, "r", "Extract file of the path", "path_file: [<zone regex>]" },
-    { "fnl:", "fname_lower:", NULL, "r", "simplify file name using lower case", "fname_lower: [<zone regex>]" },
-    { "fnl:", "fname_upper:", NULL, "r", "simplify file name using upper case", "fname_upper: [<zone regex>]" },
-    { "fnc:", "fname_camel:", NULL, "r", "simplify file name using camel case", "fname_camel: [<zone regex>]" },
-    { "fnm:", "fname_magic:", NULL, "r", "simplify file name using a special form", "fname_special: [<zone regex>]" },
+    { "fnl:", "fname_lower:", &led_fn_impl_fname_lower, "r", "simplify file name using lower case", "fname_lower: [<zone regex>]" },
+    { "fnu:", "fname_upper:", &led_fn_impl_fname_upper, "r", "simplify file name using upper case", "fname_upper: [<zone regex>]" },
+    { "fnc:", "fname_camel:", &led_fn_impl_fname_camel, "r", "simplify file name using camel case", "fname_camel: [<zone regex>]" },
     { "rzn:", "randomize_num:", &led_fn_impl_randomize_num, "r", "Randomize numeric values", "randomize_num: [<zone regex>]" },
     { "rza:", "randomize_alpha:", &led_fn_impl_randomize_alpha, "r", "Randomize alpha values", "randomize_alpha: [<zone regex>]" },
     { "rzan:", "randomize_alnum:", &led_fn_impl_randomize_alnum, "r", "Randomize alpha numeric values", "randomize_alnum: [<zone regex>]" },

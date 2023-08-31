@@ -88,3 +88,22 @@ size_t led_line_unappend_char(led_line_struct* pline, char c) {
         pline->buf[--pline->len] = '\0';
     return pline->len;
 }
+
+size_t led_line_search_fisrt(led_line_struct* pline, char c, size_t start, size_t stop) {
+    size_t ichar = stop;
+    for (size_t i = start; i < stop && ichar < stop; i++)
+        if (pline->str[ichar] == c) ichar = i;
+    return ichar;
+}
+
+size_t led_line_search_last(led_line_struct* pline, char c, size_t start, size_t stop) {
+    size_t ichar = start;
+    for (size_t i = start; i < stop; i++)
+        if (pline->str[ichar] == c) ichar = i + 1;
+    return ichar;
+}
+
+char led_line_last_char(led_line_struct* pline) {
+    if (pline->len == 0) return '\0';
+    return pline->str[pline->len - 1];
+}

@@ -63,6 +63,7 @@ typedef struct {
         const char* file_out_ext;
         const char* file_out_dir;
         const char* file_out_path;
+        pcre2_code* regex_zone;
     } opt;
 
     // selector

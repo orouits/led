@@ -10,14 +10,14 @@
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
 
-int led_zone_pre_process(pcre2_code* regex) {
+int led_zone_pre_process() {
     int rc;
     led_line_init(&led.line_write);
 
-    if (regex != NULL) {
+    if (led.opt.regex_zone != NULL) {
         led.line_prep.zone_start = led.line_prep.len;
         led.line_prep.zone_stop = led.line_prep.len;
-        rc = led_regex_match_offset(regex, led.line_prep.str, led.line_prep.len, &led.line_prep.zone_start, &led.line_prep.zone_stop);
+        rc = led_regex_match_offset(led.opt.regex_zone, led.line_prep.str, led.line_prep.len, &led.line_prep.zone_start, &led.line_prep.zone_stop);
     }
     else {
         led.line_prep.zone_start = 0;
@@ -61,7 +61,7 @@ void led_fn_impl_substitute() {
 }
 
 void led_fn_impl_remove() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     if (led.line_prep.zone_start == 0 && led.line_prep.zone_stop == led.line_prep.len)
         // delete all the line if it all match
@@ -122,7 +122,7 @@ void led_fn_impl_range_unsel() {
 }
 
 void led_fn_impl_translate() {
-    led_zone_pre_process(led.fn_arg[1].regex);
+    led_zone_pre_process();
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
         char c = led.line_prep.str[i];
@@ -138,7 +138,7 @@ void led_fn_impl_translate() {
 }
 
 void led_fn_impl_case_lower() {
-    led_zone_pre_process(led.fn_arg[1].regex);
+    led_zone_pre_process();
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++)
         led_line_append_char(&led.line_write, tolower(led.line_prep.str[i]));
@@ -147,7 +147,7 @@ void led_fn_impl_case_lower() {
 }
 
 void led_fn_impl_case_upper() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++)
         led_line_append_char(&led.line_write, toupper(led.line_prep.str[i]));
@@ -156,7 +156,7 @@ void led_fn_impl_case_upper() {
 }
 
 void led_fn_impl_case_first() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     led_line_append_char(&led.line_write, toupper(led.line_prep.str[led.line_prep.zone_start]));
     for (size_t i=led.line_prep.zone_start+1; i<led.line_prep.zone_stop; i++)
@@ -166,7 +166,7 @@ void led_fn_impl_case_first() {
 }
 
 void led_fn_impl_case_camel() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     int wasword = FALSE;
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
@@ -195,7 +195,7 @@ void led_fn_impl_append() {
 }
 
 void led_fn_impl_quote_base(char q) {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     if (! (led.line_prep.str[led.line_prep.zone_start] == q && led.line_prep.str[led.line_prep.zone_stop - 1] == q) ) {
         led_debug("quote active");
@@ -215,7 +215,7 @@ void led_fn_impl_quote_back() { led_fn_impl_quote_base('`'); }
 
 void led_fn_impl_quote_remove() {
     const char* QUOTES="'\"`";
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     char q = QUOTES[0];
     for(size_t i = 0; q != '\0'; i++, q = QUOTES[i]) {
@@ -233,7 +233,7 @@ void led_fn_impl_quote_remove() {
 }
 
 void led_fn_impl_trim() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     size_t str_start = led.line_prep.zone_start;
     size_t str_stop = led.line_prep.zone_stop;
@@ -249,7 +249,7 @@ void led_fn_impl_trim() {
 }
 
 void led_fn_impl_trim_left() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     size_t str_start = led.line_prep.zone_start;
     for (; str_start < led.line_prep.zone_stop; str_start++) {
@@ -261,7 +261,7 @@ void led_fn_impl_trim_left() {
 }
 
 void led_fn_impl_trim_right() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     size_t str_stop = led.line_prep.zone_stop;
     for (; str_stop > led.line_prep.zone_start; str_stop--)
@@ -272,7 +272,7 @@ void led_fn_impl_trim_right() {
 }
 
 void led_fn_impl_base64_encode() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     base64_encodestate base64_state;
 	size_t count = 0;
@@ -287,7 +287,7 @@ void led_fn_impl_base64_encode() {
 }
 
 void led_fn_impl_base64_decode() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
 	base64_decodestate base64_state;
 	size_t count = 0;
@@ -301,7 +301,7 @@ void led_fn_impl_base64_decode() {
 }
 
 void led_fn_impl_url_encode() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     const char *HEX = "0123456789ABCDEF";
     char pcbuf[4] = "%00";
@@ -321,7 +321,7 @@ void led_fn_impl_url_encode() {
 }
 
 void led_fn_impl_path_canonical() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     char c = led.line_prep.buf[led.line_prep.zone_stop]; // temporary save this char for realpath function
     led.line_prep.buf[led.line_prep.zone_stop] = '\0';
@@ -338,7 +338,7 @@ void led_fn_impl_path_canonical() {
 }
 
 void led_fn_impl_path_dir() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     const char* dir = dirname(led.line_prep.str + led.line_prep.zone_start);
     if (dir != NULL) led_line_append_str(&led.line_write, dir);
@@ -348,7 +348,7 @@ void led_fn_impl_path_dir() {
 }
 
 void led_fn_impl_path_file() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     const char* fname = basename(led.line_prep.str + led.line_prep.zone_start);
     if (fname != NULL) led_line_append_str(&led.line_write, fname);
@@ -358,7 +358,7 @@ void led_fn_impl_path_file() {
 }
 
 void led_fn_impl_revert() {
-    led_zone_pre_process(led.fn_arg[0].regex);
+    led_zone_pre_process();
 
     for (size_t i = led.line_prep.zone_stop; i > led.line_prep.zone_start; i--)
         led_line_append_char(&led.line_write, led.line_prep.buf[i - 1]);
@@ -366,8 +366,8 @@ void led_fn_impl_revert() {
     led_zone_post_process();
 }
 
-void led_fn_impl_field_base(size_t field_n, const char* field_sep, pcre2_code* zone_regex) {
-    led_zone_pre_process(zone_regex);
+void led_fn_impl_field_base(size_t field_n, const char* field_sep) {
+    led_zone_pre_process();
 
     size_t n = 0;
     int was_sep = TRUE;
@@ -393,10 +393,10 @@ void led_fn_impl_field_base(size_t field_n, const char* field_sep, pcre2_code* z
     led_zone_post_process();
 }
 
-void led_fn_impl_field() { led_fn_impl_field_base(led.fn_arg[0].uval, led.fn_arg[1].str, led.fn_arg[2].regex); }
-void led_fn_impl_field_csv() { led_fn_impl_field_base(led.fn_arg[0].uval, ",;", led.fn_arg[1].regex); }
-void led_fn_impl_field_space() { led_fn_impl_field_base(led.fn_arg[0].uval, " \t\n", led.fn_arg[1].regex); }
-void led_fn_impl_field_mixed() { led_fn_impl_field_base(led.fn_arg[0].uval, ",; \t\n", led.fn_arg[1].regex); }
+void led_fn_impl_field() { led_fn_impl_field_base(led.fn_arg[0].uval, led.fn_arg[1].str); }
+void led_fn_impl_field_csv() { led_fn_impl_field_base(led.fn_arg[0].uval, ",;"); }
+void led_fn_impl_field_space() { led_fn_impl_field_base(led.fn_arg[0].uval, " \t\n"); }
+void led_fn_impl_field_mixed() { led_fn_impl_field_base(led.fn_arg[0].uval, ",; \t\n"); }
 
 void led_fn_impl_join() {
    for (size_t i = 0; i < led.line_prep.len; i++) {
@@ -405,8 +405,8 @@ void led_fn_impl_join() {
    }
 }
 
-void led_fn_impl_split_base(const char* field_sep, pcre2_code* zone_regex) {
-    led_zone_pre_process(zone_regex);
+void led_fn_impl_split_base(const char* field_sep) {
+    led_zone_pre_process();
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
         char c = led.line_prep.str[i];
@@ -417,13 +417,13 @@ void led_fn_impl_split_base(const char* field_sep, pcre2_code* zone_regex) {
     led_zone_post_process();
 }
 
-void led_fn_impl_split() { led_fn_impl_split_base(led.fn_arg[0].str, led.fn_arg[1].regex); }
-void led_fn_impl_split_space() { led_fn_impl_split_base(" \t\n", led.fn_arg[0].regex); }
-void led_fn_impl_split_csv() { led_fn_impl_split_base(",;", led.fn_arg[0].regex); }
-void led_fn_impl_split_mixed() { led_fn_impl_split_base(",; \t\n", led.fn_arg[0].regex); }
+void led_fn_impl_split() { led_fn_impl_split_base(led.fn_arg[0].str); }
+void led_fn_impl_split_space() { led_fn_impl_split_base(" \t\n"); }
+void led_fn_impl_split_csv() { led_fn_impl_split_base(",;"); }
+void led_fn_impl_split_mixed() { led_fn_impl_split_base(",; \t\n"); }
 
-void led_fn_impl_randomize_base(const char* charset, size_t len, pcre2_code* zone_regex) {
-    led_zone_pre_process(zone_regex);
+void led_fn_impl_randomize_base(const char* charset, size_t len) {
+    led_zone_pre_process();
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
         char c = charset[rand() % len];
@@ -439,14 +439,14 @@ const char randomize_table_alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEF
 const char randomize_table_hexa[] = "0123456789ABCDEF";
 const char randomize_table_mixed[] = "0123456789-_/=!:;,~#$*?%abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-void led_fn_impl_randomize_num() { led_fn_impl_randomize_base(randomize_table_num, sizeof randomize_table_num - 1, led.fn_arg[0].regex); }
-void led_fn_impl_randomize_alpha() { led_fn_impl_randomize_base(randomize_table_alpha, sizeof randomize_table_alpha -1, led.fn_arg[0].regex); }
-void led_fn_impl_randomize_alnum() { led_fn_impl_randomize_base(randomize_table_alnum, sizeof randomize_table_alnum - 1, led.fn_arg[0].regex); }
-void led_fn_impl_randomize_hexa() { led_fn_impl_randomize_base(randomize_table_hexa, sizeof randomize_table_hexa - 1, led.fn_arg[0].regex); }
-void led_fn_impl_randomize_mixed() { led_fn_impl_randomize_base(randomize_table_mixed, sizeof randomize_table_mixed - 1, led.fn_arg[0].regex); }
+void led_fn_impl_randomize_num() { led_fn_impl_randomize_base(randomize_table_num, sizeof randomize_table_num - 1); }
+void led_fn_impl_randomize_alpha() { led_fn_impl_randomize_base(randomize_table_alpha, sizeof randomize_table_alpha -1); }
+void led_fn_impl_randomize_alnum() { led_fn_impl_randomize_base(randomize_table_alnum, sizeof randomize_table_alnum - 1); }
+void led_fn_impl_randomize_hexa() { led_fn_impl_randomize_base(randomize_table_hexa, sizeof randomize_table_hexa - 1); }
+void led_fn_impl_randomize_mixed() { led_fn_impl_randomize_base(randomize_table_mixed, sizeof randomize_table_mixed - 1); }
 
 void led_fn_impl_execute() {
-    led_zone_pre_process(led.fn_arg[1].regex);
+    led_zone_pre_process();
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         led_line_struct cmd;
@@ -469,18 +469,23 @@ void led_fn_impl_execute() {
 }
 
 void led_fn_impl_fname_lower() {
-    led_zone_pre_process(led.fn_arg[1].regex);
+    led_zone_pre_process();
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         size_t iname = led.line_prep.zone_start;
         for (size_t i = iname; i < led.line_prep.zone_stop; i++)
             if (led.line_prep.str[i] == '/') iname = i+1;
+        size_t iextdot = led.line_prep.zone_stop;
+        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
+            if (led.line_prep.str[i] == '.') iextdot = i;
 
         led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
         for (; iname < led.line_prep.zone_stop; iname++) {
             char c = led.line_prep.str[iname];
             if (isalnum(c))
                 led_line_append_char(&led.line_write, tolower(c));
+            else if (iname == iextdot)
+                led_line_append_char(&led.line_write, '.');
             else if (isalnum(led_line_last_char(&led.line_write)))
                 led_line_append_char(&led.line_write, '_');
         }
@@ -490,28 +495,32 @@ void led_fn_impl_fname_lower() {
 }
 
 void led_fn_impl_fname_upper() {
-    led_zone_pre_process(led.fn_arg[1].regex);
+    led_zone_pre_process();
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         size_t iname = led.line_prep.zone_start;
         for (size_t i = iname; i < led.line_prep.zone_stop; i++)
             if (led.line_prep.str[i] == '/') iname = i+1;
+        size_t iextdot = led.line_prep.zone_stop;
+        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
+            if (led.line_prep.str[i] == '.') iextdot = i;
 
         led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
         for (; iname < led.line_prep.zone_stop; iname++) {
             char c = led.line_prep.str[iname];
             if (isalnum(c))
                 led_line_append_char(&led.line_write, toupper(c));
+            else if (iname == iextdot)
+                led_line_append_char(&led.line_write, '.');
             else if (isalnum(led_line_last_char(&led.line_write)))
                 led_line_append_char(&led.line_write, '_');
         }
     }
-
     led_zone_post_process();
 }
 
 void led_fn_impl_fname_camel() {
-    led_zone_pre_process(led.fn_arg[1].regex);
+    led_zone_pre_process();
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         size_t iname = led.line_prep.zone_start;
@@ -519,16 +528,35 @@ void led_fn_impl_fname_camel() {
             if (led.line_prep.str[i] == '/') iname = i+1;
 
         led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
-        int wasword = FALSE;
+        int wasword = TRUE;
+        int isfirst = TRUE;
         for (; iname < led.line_prep.zone_stop; iname++) {
             char c = led.line_prep.str[iname];
-            int isword = isalnum(c);
-            if (isword) {
-                if (wasword) led_line_append_char(&led.line_write, tolower(c));
-                else led_line_append_char(&led.line_write, toupper(c));
+            if (c == '.') {
+                led_line_append_char(&led.line_write, c);
+                isfirst = TRUE;
             }
-            wasword = isword;
+            else {
+                int isword = isalnum(c);
+                if (isword) {
+                    if (wasword || isfirst) led_line_append_char(&led.line_write, tolower(c));
+                    else led_line_append_char(&led.line_write, toupper(c));
+                    isfirst = FALSE;
+                }
+                wasword = isword;
+            }
         }
+    }
+    led_zone_post_process();
+}
+
+void led_fn_impl_generate() {
+    led_zone_pre_process();
+    size_t n = led.fn_arg[1].uval > 0 ? led.line_prep.zone_start + led.fn_arg[1].uval : led.line_prep.zone_stop;
+    char c = led.fn_arg[0].str[0];
+
+    for (size_t i = led.line_prep.zone_start; i < n; i++) {
+        led_line_append_char(&led.line_write, c);
     }
 
     led_zone_post_process();
@@ -537,49 +565,50 @@ void led_fn_impl_fname_camel() {
 led_fn_struct LED_FN_TABLE[] = {
     { "nn:", "none:", &led_fn_impl_none, "", "No processing", "none:" },
     { "sub:", "substitute:", &led_fn_impl_substitute, "RS", "Substitute", "substitute: <regex> <replace>" },
-    { "exe:", "execute:", &led_fn_impl_execute, "Sr", "Execute", "execute: <command> [<zone regex>]" },
-    { "rm:", "remove:", &led_fn_impl_remove, "r", "Remove line", "remove: [<zone regex>]" },
+    { "exe:", "execute:", &led_fn_impl_execute, "S", "Execute", "execute: <command>" },
+    { "rm:", "remove:", &led_fn_impl_remove, "", "Remove line", "remove:" },
     { "rmb:", "remove_blank:", &led_fn_impl_remove_blank, "", "Remove blank/empty lines", "remove_blank:" },
     { "ins:", "insert:", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },
     { "app:", "append:", &led_fn_impl_append, "Sp", "Append line", "append: <string> [N]" },
     { "rns:", "range_sel:", &led_fn_impl_range_sel, "Np", "Range select", "range_sel: <start> [count]" },
     { "rnu:", "range_unsel:", &led_fn_impl_range_unsel, "Np", "Range unselect", "range_unsel: <start> [count]" },
     { "tr:", "translate:", &led_fn_impl_translate, "SS", "Translate", "translate: <chars> <chars>" },
-    { "csl:", "case_lower:", &led_fn_impl_case_lower, "r", "Case to lower", "case_lower: [<zone regex>]" },
-    { "csu:", "case_upper:", &led_fn_impl_case_upper, "r", "Case to upper", "case_upper: [<zone regex>]" },
-    { "csf:", "case_first:", &led_fn_impl_case_first, "r", "Case first upper", "case_first: [<zone regex>]" },
-    { "csc:", "case_camel:", &led_fn_impl_case_camel, "r", "Case to camel style", "case_camel: [<zone regex>]" },
-    { "qts:", "quote_simple:", &led_fn_impl_quote_simple, "r", "Quote simple", "quote_simple: [<zone regex>]" },
-    { "qtd:", "quote_double:", &led_fn_impl_quote_double, "r", "Quote double", "quote_double: [<zone regex>]" },
-    { "qtb:", "quote_back:", &led_fn_impl_quote_back, "r", "Quote back", "quote_back: [<zone regex>]" },
-    { "qtr:", "quote_remove:", &led_fn_impl_quote_remove, "r", "Quote remove", "quote_remove: [<zone regex>]" },
-    { "sp:", "split:", &led_fn_impl_split, "Sr", "Split using chars", "split: <chars> [regex]" },
-    { "spc:", "split_csv:", &led_fn_impl_split_csv, "r", "Split using comma", "split: [regex]" },
-    { "sps:", "split_space:", &led_fn_impl_split_space, "r", "Split using space", "split: [regex]" },
-    { "spm:", "split_mixed:", &led_fn_impl_split_mixed, "r", "Split using comma and space", "split: [regex]" },
+    { "csl:", "case_lower:", &led_fn_impl_case_lower, "", "Case to lower", "case_lower:" },
+    { "csu:", "case_upper:", &led_fn_impl_case_upper, "", "Case to upper", "case_upper:" },
+    { "csf:", "case_first:", &led_fn_impl_case_first, "", "Case first upper", "case_first:" },
+    { "csc:", "case_camel:", &led_fn_impl_case_camel, "", "Case to camel style", "case_camel:" },
+    { "qts:", "quote_simple:", &led_fn_impl_quote_simple, "", "Quote simple", "quote_simple:" },
+    { "qtd:", "quote_double:", &led_fn_impl_quote_double, "", "Quote double", "quote_double:" },
+    { "qtb:", "quote_back:", &led_fn_impl_quote_back, "", "Quote back", "quote_back:" },
+    { "qtr:", "quote_remove:", &led_fn_impl_quote_remove, "", "Quote remove", "quote_remove:" },
+    { "sp:", "split:", &led_fn_impl_split, "S", "Split using chars", "split: <chars> [regex]" },
+    { "spc:", "split_csv:", &led_fn_impl_split_csv, "", "Split using comma", "split: [regex]" },
+    { "sps:", "split_space:", &led_fn_impl_split_space, "", "Split using space", "split: [regex]" },
+    { "spm:", "split_mixed:", &led_fn_impl_split_mixed, "", "Split using comma and space", "split: [regex]" },
     { "jn:", "join:", &led_fn_impl_join, "", "Join lines (only with pack mode)", "join:" },
-    { "tm:", "trim:", &led_fn_impl_trim, "r", "Trim", "trim: [<zone regex>]" },
-    { "tml:", "trim_left:", &led_fn_impl_trim_left, "r", "Trim left", "trim_left: [<zone regex>]" },
-    { "tmr:", "trim_right:", &led_fn_impl_trim_right, "r", "Trim right", "trim_right: [<zone regex>]" },
-    { "rv:", "revert:", &led_fn_impl_revert, "r", "Revert", "revert: [<zone regex>]" },
-    { "fld:", "field:", &led_fn_impl_field, "PSr", "Extract field with separator chars", "field: <N> <sep> [<zone regex>]" },
-    { "fls:", "field_space:", &led_fn_impl_field_space, "Pr", "Extract field separated by space", "field_space: <N> [<zone regex>]" },
-    { "flc:", "field_csv:", &led_fn_impl_field_csv, "Pr", "Extract field separated by comma", "field_csv: <N> [<zone regex>]" },
-    { "flm:", "field_mixed:", &led_fn_impl_field_mixed, "Pr", "Extract field separated by space or comma", "field_mixed: <N> [<zone regex>]" },
-    { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "r", "Encode base64", "base64_encode: [<zone regex>]" },
-    { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "r", "Decode base64", "base64_decode: [<zone regex>]" },
-    { "urle:", "url_encode:", &led_fn_impl_url_encode, "r", "Encode URL", "url_encode: [<zone regex>]" },
-    { "phc:", "path_canonical:", &led_fn_impl_path_canonical, "r", "Convert to canonical path", "path_canonical: [<zone regex>]" },
-    { "phd:", "path_dir:", &led_fn_impl_path_dir, "r", "Extract last dir of the path", "path_dir: [<zone regex>]" },
-    { "phf:", "path_file:", &led_fn_impl_path_file, "r", "Extract file of the path", "path_file: [<zone regex>]" },
-    { "fnl:", "fname_lower:", &led_fn_impl_fname_lower, "r", "simplify file name using lower case", "fname_lower: [<zone regex>]" },
-    { "fnu:", "fname_upper:", &led_fn_impl_fname_upper, "r", "simplify file name using upper case", "fname_upper: [<zone regex>]" },
-    { "fnc:", "fname_camel:", &led_fn_impl_fname_camel, "r", "simplify file name using camel case", "fname_camel: [<zone regex>]" },
-    { "rzn:", "randomize_num:", &led_fn_impl_randomize_num, "r", "Randomize numeric values", "randomize_num: [<zone regex>]" },
-    { "rza:", "randomize_alpha:", &led_fn_impl_randomize_alpha, "r", "Randomize alpha values", "randomize_alpha: [<zone regex>]" },
-    { "rzan:", "randomize_alnum:", &led_fn_impl_randomize_alnum, "r", "Randomize alpha numeric values", "randomize_alnum: [<zone regex>]" },
-    { "rzh:", "randomize_hexa:", &led_fn_impl_randomize_hexa, "r", "Randomize alpha numeric values", "randomize_hexa: [<zone regex>]" },
-    { "rzm:", "randomize_mixed:", &led_fn_impl_randomize_mixed, "r", "Randomize alpha numeric and custom chars", "randomize_mixed: [<zone regex>]" },
+    { "tm:", "trim:", &led_fn_impl_trim, "", "Trim", "trim:" },
+    { "tml:", "trim_left:", &led_fn_impl_trim_left, "", "Trim left", "trim_left:" },
+    { "tmr:", "trim_right:", &led_fn_impl_trim_right, "", "Trim right", "trim_right:" },
+    { "rv:", "revert:", &led_fn_impl_revert, "", "Revert", "revert:" },
+    { "fld:", "field:", &led_fn_impl_field, "PS", "Extract field with separator chars", "field: <N> <sep>" },
+    { "fls:", "field_space:", &led_fn_impl_field_space, "P", "Extract field separated by space", "field_space: <N>" },
+    { "flc:", "field_csv:", &led_fn_impl_field_csv, "P", "Extract field separated by comma", "field_csv: <N>" },
+    { "flm:", "field_mixed:", &led_fn_impl_field_mixed, "P", "Extract field separated by space or comma", "field_mixed: <N>" },
+    { "b64e:", "base64_encode:", &led_fn_impl_base64_encode, "", "Encode base64", "base64_encode:" },
+    { "b64d:", "base64_decode:", &led_fn_impl_base64_decode, "", "Decode base64", "base64_decode:" },
+    { "urle:", "url_encode:", &led_fn_impl_url_encode, "", "Encode URL", "url_encode:" },
+    { "phc:", "path_canonical:", &led_fn_impl_path_canonical, "", "Convert to canonical path", "path_canonical:" },
+    { "phd:", "path_dir:", &led_fn_impl_path_dir, "", "Extract last dir of the path", "path_dir:" },
+    { "phf:", "path_file:", &led_fn_impl_path_file, "", "Extract file of the path", "path_file:" },
+    { "fnl:", "fname_lower:", &led_fn_impl_fname_lower, "", "simplify file name using lower case", "fname_lower:" },
+    { "fnu:", "fname_upper:", &led_fn_impl_fname_upper, "", "simplify file name using upper case", "fname_upper:" },
+    { "fnc:", "fname_camel:", &led_fn_impl_fname_camel, "", "simplify file name using camel case", "fname_camel:" },
+    { "rzn:", "randomize_num:", &led_fn_impl_randomize_num, "", "Randomize numeric values", "randomize_num:" },
+    { "rza:", "randomize_alpha:", &led_fn_impl_randomize_alpha, "", "Randomize alpha values", "randomize_alpha:" },
+    { "rzan:", "randomize_alnum:", &led_fn_impl_randomize_alnum, "", "Randomize alpha numeric values", "randomize_alnum:" },
+    { "rzh:", "randomize_hexa:", &led_fn_impl_randomize_hexa, "", "Randomize alpha numeric values", "randomize_hexa:" },
+    { "rzm:", "randomize_mixed:", &led_fn_impl_randomize_mixed, "", "Randomize alpha numeric and custom chars", "randomize_mixed:" },
+    { "gen:", "generate:", &led_fn_impl_generate, "Sp", "Generate chars", "generate: <char> [N]" },
 };
 
 #define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)

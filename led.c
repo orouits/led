@@ -44,6 +44,10 @@ void led_free() {
         pcre2_code_free(led.sel.regex_stop);
         led.sel.regex_stop = NULL;
     }
+    if ( led.opt.regex_zone != NULL) {
+        pcre2_code_free(led.opt.regex_zone);
+        led.opt.regex_zone = NULL;
+    }
     for (int i=0; i<LED_FARG_MAX; i++ ) {
         if (led.fn_arg[i].regex != NULL) {
             pcre2_code_free(led.fn_arg[i].regex);
@@ -91,7 +95,7 @@ void led_debug(const char* message, ...) {
 // LED init functions
 //-----------------------------------------------
 
-int led_init_opt(const char* arg) {
+int led_init_opt(const char* arg, const char* arg_next, int* pargi) {
     int rc = led_str_match("^-[a-zA-Z]+", arg);
     if ( rc ) {
         int argl = strlen(arg);
@@ -128,6 +132,11 @@ int led_init_opt(const char* arg) {
             case 'e':
                 led.opt.filter_blank = TRUE;
                 break;
+            case 'z':
+                led_assert(led.opt.regex_zone == NULL, LED_ERR_ARG, "Bad option -%c, zone regex already set", arg[opti]);
+                led.opt.regex_zone = led_regex_compile(arg_next);
+                (*pargi)++;
+                break;
             case 'f':
                 led.opt.file_in = TRUE;
                 break;
@@ -135,23 +144,23 @@ int led_init_opt(const char* arg) {
                 led.opt.file_out = TRUE;
                 break;
             case 'I':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
                 led.opt.file_out_mode = LED_FILE_OUT_INPLACE;
                 break;
             case 'W':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
                 led.opt.file_out_mode = LED_FILE_OUT_WRITE;
                 led.opt.file_out_path = arg + opti + 1;
                 opti = argl;
                 break;
             case 'A':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
                 led.opt.file_out_mode = LED_FILE_OUT_APPEND;
                 led.opt.file_out_path = arg + opti + 1;
                 opti = argl;
                 break;
             case 'E':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option %c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
                 led.opt.file_out_mode = LED_FILE_OUT_NEWEXT;
                 led.opt.file_out_extn = atoi(arg + opti + 1);
                 if ( led.opt.file_out_extn <= 0 )
@@ -314,12 +323,13 @@ void led_init(int argc, char* argv[]) {
     int arg_section = 0;
     for (int argi=1; argi < argc; argi++) {
         const char* arg = argv[argi];
+        const char* arg_next = argi + 1 < argc ? argv[argi + 1] : NULL;
 
         if (arg_section == ARGS_SEC_FILES ) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
         }
-        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg) ) {
+        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg, arg_next, &argi) ) {
             if (led.opt.file_in) arg_section = ARGS_SEC_FILES;
         }
         else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) {
@@ -391,6 +401,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     -U          write unchanged filenames\n\
 \n\
 ## Processor options\n\
+    -z <regex>  identify a processing matching zone into the line\n\
     -m          output only processed maching zone when regex is used\n\
 \n\
 ## Processor commands:\n\n\
@@ -472,6 +483,8 @@ int led_process_read() {
             led.sel.total_count++;
             led_debug("Read line: (%d) len=%d", led.sel.total_count, led.line_read.len);
         }
+        else
+            led_debug("Read line is NULL: (%d)", led.sel.total_count);
     }
     return led_line_defined(&led.line_read);
 }
@@ -559,7 +572,7 @@ void led_process_function() {
         (fn_desc->impl)();
     }
     else if (!led.opt.output_selected) {
-        led_debug("Copy un selected to dest %s", fn_desc->long_name);
+        led_debug("Copy unselected to dest");
         led_line_copy(&led.line_write, &led.line_prep);
     }
     led_line_reset(&led.line_prep);

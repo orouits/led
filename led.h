@@ -63,7 +63,6 @@ typedef struct {
         const char* file_out_ext;
         const char* file_out_dir;
         const char* file_out_path;
-        pcre2_code* regex_zone;
     } opt;
 
     // selector
@@ -85,6 +84,7 @@ typedef struct {
 
     // processor function Id
     size_t fn_id;
+    pcre2_code* fn_regex;
 
     struct {
         const char* str;
@@ -181,6 +181,7 @@ int led_str_trim(char* str);
 int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);
 int led_char_in_str(char c, const char* str);
+int led_char_pos_str(char c, const char* str);
 void led_regex_init();
 void led_regex_free();
 pcre2_code* led_regex_compile(const char* pattern);

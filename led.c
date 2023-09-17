@@ -44,9 +44,9 @@ void led_free() {
         pcre2_code_free(led.sel.regex_stop);
         led.sel.regex_stop = NULL;
     }
-    if ( led.opt.regex_zone != NULL) {
-        pcre2_code_free(led.opt.regex_zone);
-        led.opt.regex_zone = NULL;
+    if ( led.fn_regex != NULL) {
+        pcre2_code_free(led.fn_regex);
+        led.fn_regex = NULL;
     }
     for (int i=0; i<LED_FARG_MAX; i++ ) {
         if (led.fn_arg[i].regex != NULL) {
@@ -95,7 +95,7 @@ void led_debug(const char* message, ...) {
 // LED init functions
 //-----------------------------------------------
 
-int led_init_opt(const char* arg, const char* arg_next, int* pargi) {
+int led_init_opt(const char* arg) {
     int rc = led_str_match("^-[a-zA-Z]+", arg);
     if ( rc ) {
         int argl = strlen(arg);
@@ -131,11 +131,6 @@ int led_init_opt(const char* arg, const char* arg_next, int* pargi) {
                 break;
             case 'e':
                 led.opt.filter_blank = TRUE;
-                break;
-            case 'z':
-                led_assert(led.opt.regex_zone == NULL, LED_ERR_ARG, "Bad option -%c, zone regex already set", arg[opti]);
-                led.opt.regex_zone = led_regex_compile(arg_next);
-                (*pargi)++;
                 break;
             case 'f':
                 led.opt.file_in = TRUE;
@@ -183,18 +178,32 @@ int led_init_opt(const char* arg, const char* arg_next, int* pargi) {
 }
 
 int led_init_func(const char* arg) {
-    int is_func = led_str_match("^[a-z0-9_]+:$", arg);
+    int is_func = led_str_match("^[a-z0-9_]+:.*$", arg);
     if (is_func) {
+        // search for function
+        int isep =  led_char_pos_str(':', arg);
         led_debug("Funcion table max: %d", led_fn_table_size());
         for (led.fn_id = 0; led.fn_id < led_fn_table_size(); led.fn_id++) {
             led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-            if ( led_str_equal(arg, fn_desc->short_name) || led_str_equal(arg, fn_desc->long_name) ) {
+            if ( led_str_equal_len(arg, fn_desc->short_name, isep) || led_str_equal_len(arg, fn_desc->long_name, isep) ) {
                 led_debug("Function found: %d", led.fn_id);
                 break;
             }
         }
-        led_assert(led.fn_id < led_fn_table_size(), LED_ERR_ARG, "Unknown function: %s", arg);
-        led_assert(led_fn_table_descriptor(led.fn_id)->impl != NULL, LED_ERR_ARG, "Function not yet implemented: %s", led_fn_table_descriptor(led.fn_id)->long_name);
+        // check if func is usable
+        led_assert(led.fn_id < led_fn_table_size(), LED_ERR_ARG, "Unknown function in: %s", arg);
+        led_assert(led_fn_table_descriptor(led.fn_id)->impl != NULL, LED_ERR_ARG, "Function not yet implemented in: %s", led_fn_table_descriptor(led.fn_id)->long_name);
+
+        // compile zone regex if given
+        const char* rxstr = arg + isep + 1;
+        if (rxstr[0] != '\0' ) {
+            led_debug("Regex found: %s", rxstr);
+            led.fn_regex = led_regex_compile(rxstr);
+        }
+        else {
+            led_debug("Regex NOT found, fixed to ^.*$");
+            led.fn_regex = led_regex_compile("^.*$");
+        }
     }
     return is_func;
 }
@@ -323,13 +332,12 @@ void led_init(int argc, char* argv[]) {
     int arg_section = 0;
     for (int argi=1; argi < argc; argi++) {
         const char* arg = argv[argi];
-        const char* arg_next = argi + 1 < argc ? argv[argi + 1] : NULL;
 
         if (arg_section == ARGS_SEC_FILES ) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
         }
-        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg, arg_next, &argi) ) {
+        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg) ) {
             if (led.opt.file_in) arg_section = ARGS_SEC_FILES;
         }
         else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) {

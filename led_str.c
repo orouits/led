@@ -20,9 +20,14 @@ int led_str_equal_len(const char* str1, const char* str2, int len) {
 }
 
 int led_char_in_str(char c, const char* str) {
-    for (size_t i = 0; str[i] != '\0'; i++)
-        if (str[i] == c ) return TRUE;
-    return FALSE;
+    return led_char_pos_str(c, str) >= 0;
+}
+
+int led_char_pos_str(char c, const char* str) {
+    int pos = -1;
+    for (size_t i = 0; str[i] != '\0' && pos < 0; i++)
+        if (str[i] == c ) pos = i;
+    return pos;
 }
 
 pcre2_code* LED_REGEX_BLANK_LINE = NULL;

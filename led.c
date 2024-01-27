@@ -31,10 +31,10 @@ led_struct led;
 //-----------------------------------------------
 
 void led_free() {
-    if ( led.curfile.file ) {
-        fclose(led.curfile.file);
-        led.curfile.file = NULL;
-        led.curfile.name = NULL;
+    if ( led.file_in.file ) {
+        fclose(led.file_in.file);
+        led.file_in.file = NULL;
+        led.file_in.name = NULL;
     }
     if ( led.sel.regex_start != NULL) {
         pcre2_code_free(led.sel.regex_start);
@@ -382,7 +382,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     <n>     <count>      => select group of lines starting line <n> (included) until <count> lines are selected\n\
 \n\
 ## Processor:\n\
-    <function>: [arg] ...\n\
+    <function>:[regex] [arg] ...\n\
 \n\
 ## Global options\n\
     -v  verbose to STDERR\n\
@@ -438,49 +438,55 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 //-----------------------------------------------
 
 int led_file_next() {
-    led_debug("Next file");
+    led_debug("=== Next file ===");
 
     if ( led.opt.file_in ) {
-        if ( led.curfile.file ) {
-            fclose(led.curfile.file);
-            led.curfile.file = NULL;
-            led.curfile.name = NULL;
+        if ( led.file_in.file ) {
+            fclose(led.file_in.file);
+            led.file_in.file = NULL;
+            led.file_in.name = NULL;
         }
         if ( led.file_count ) {
-            led.curfile.name = led.file_names[0];
+            led.file_in.name = led.file_names[0];
             led.file_names++;
             led.file_count--;
-            led.curfile.file = fopen(led.curfile.name, "r");
-            led_assert(led.curfile.file != NULL, LED_ERR_FILE, "File not found: %s", led.curfile.name);
+            led_str_trim(led.file_in.name);
+            led_debug("File name from ARGS: %s", led.file_in.name);
+            led.file_in.file = fopen(led.file_in.name, "r");
+            led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
         }
-        else if (led.stdin_ispipe && !feof(stdin)) {
-            led.curfile.name = fgets(led.buf_fname, LED_FNAME_MAX, stdin);
-            led_assert(led.curfile.name != NULL, LED_ERR_FILE, "STDIN not readable: %s", led.curfile.name);
-            led_str_trim(led.curfile.name);
-            led.curfile.file = fopen(led.curfile.name, "r");
-            led_assert(led.curfile.file != NULL, LED_ERR_FILE, "File not found: %s", led.curfile.name);
+        else if (led.stdin_ispipe) {
+            led.file_in.name = fgets(led.buf_fname, LED_FNAME_MAX, stdin);
+            if (led.file_in.name) {
+                led_str_trim(led.file_in.name);
+                led_debug("File name from STDIN: %s", led.file_in.name);
+                led.file_in.file = fopen(led.file_in.name, "r");
+                led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
+            }
+            else
+                led_debug("No more file names on STDIN");
         }
     }
     else {
-        if ( led.curfile.file ) {
-            led.curfile.file = NULL;
-            led.curfile.name = NULL;
+        if ( led.file_in.file ) {
+            led.file_in.file = NULL;
+            led.file_in.name = NULL;
         }
         else if (led.stdin_ispipe){
-            led.curfile.file = stdin;
-            led.curfile.name = "STDIN";
+            led.file_in.file = stdin;
+            led.file_in.name = "STDIN";
         }
     }
     led.sel.total_count = 0;
     led.sel.count = 0;
     led.sel.selected = FALSE;
     led.sel.inboundary = FALSE;
-    return led.curfile.file != NULL;
+    return led.file_in.file != NULL;
 }
 
 int led_process_read() {
     if (!led_line_defined(&led.line_read)) {
-        led.line_read.str = fgets(led.line_read.buf, sizeof led.line_read.buf, led.curfile.file);
+        led.line_read.str = fgets(led.line_read.buf, sizeof led.line_read.buf, led.file_in.file);
         if (led.line_read.str != NULL) {
             led.line_read.len = strlen(led.line_read.str);
             if (led.line_read.len > 0 && led.line_read.str[led.line_read.len - 1] == '\n')

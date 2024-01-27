@@ -105,7 +105,11 @@ typedef struct {
     struct {
         char* name;
         FILE* file;
-    } curfile;
+    } file_in;
+    struct {
+        char* name;
+        FILE* file;
+    } file_out;
 
     led_line_struct line_read;
     led_line_struct line_prep;

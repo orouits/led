@@ -20,11 +20,14 @@ DISTDIR       = /home/ol/src/led/$(DISTNAME)
 
 led:  $(OBJECTS)
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
+	mkdir -p ~/.local/bin
+	ln -s -f /home/ol/src/led/led ~/.local/bin/led
 
 all: led
 
 clean:
 	rm -f *.o led
+	rm -f ~/.local/bin/led
 
 distclean: clean
 

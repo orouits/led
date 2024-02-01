@@ -506,6 +506,9 @@ int led_file_next() {
                 rename(led.file_out.name, buf_fname);
                 led_assert(!syserr, LED_ERR_FILE, "File rename error: %d => %s", syserr, led.file_out.name);
             }
+            fwrite(led.file_out.name, sizeof *led.file_out.name, strlen(led.file_out.name), stdout);
+            fwrite("\n", sizeof *led.file_out.name, 1, stdout);
+            fflush(stdout);
             led_str_empty(led.file_out.name);
         }
         if ( led.file_in.file && ! led.file_out.file) {

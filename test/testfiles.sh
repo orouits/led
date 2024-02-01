@@ -27,6 +27,6 @@ EOT
 
 # ls test/files/* | led -v TEST -Atest/files/append -f
 
-ls test/files/* | led -v TEST -Dtest/files_out -f
+ls test/files/* | led TEST -Dtest/files_out -f
 
-cat test/files/*
+# cat test/files/*

@@ -280,7 +280,7 @@ void led_fn_impl_base64_encode() {
 	base64_init_encodestate(&base64_state);
 	count = base64_encode_block(led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start, led.line_write.buf + led.line_write.len, &base64_state);
 	count += base64_encode_blockend(led.line_write.buf + led.line_write.len + count, &base64_state);
-    led.line_write.len += count;
+    led.line_write.len += count - 1; // remove newline
     led.line_write.str[led.line_write.len] = '\0';
 
     led_zone_post_process();

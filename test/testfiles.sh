@@ -19,14 +19,14 @@ dfsldkfjsldf
 EOT
 
 
-# ls test/files/* | led -v TEST -f
+ls test/files/* | led -v TEST -f
 
-# ls test/files/* | led -v TEST -F -f
+ls test/files/* | led -v TEST -F -f
 
-# ls test/files/* | led -v TEST -Wtest/files/write -f
+ls test/files/* | led -v TEST -Wtest/files/write -f
 
-# ls test/files/* | led -v TEST -Atest/files/append -f
+ls test/files/* | led -v TEST -Atest/files/append -f
 
 ls test/files/* | led TEST -Dtest/files_out -f
 
-# cat test/files/*
+cat test/files/*

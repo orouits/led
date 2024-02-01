@@ -407,18 +407,18 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     -p  pack contiguous selected line in one multi-line before function process\n\
     -s  output only selected\n\
 \n\
-## File Options:\n\
+## File input options:\n\
     -f          read filenames from STDIN instead of content or from command line if followed file names (file section)\n\
-    -F          write filenames to STDOUT instead of content.\n\
-                    Combined with -f -I, this option allows advanced massive files transformations through pipes.\n\
-    -I          modify files inplace\n\
+\n\
+## File output options:\n\
+    -F          modify files inplace\n\
     -W<path>    write content to a fixed file\n\
     -A<path>    append content to a fixed file\n\
     -E<ext>     write content to <current filename>.<ext>\n\
-    -E          write content to <current filename>.<NNN>\n\
-                    The ext number is computed regarding existing files.\n\
     -D<dir>     write files in <dir>.\n\
     -U          write unchanged filenames\n\
+\n\
+    All these options output the output filenames on STDOUT\n\
 \n\
 ## Processor options\n\
     -z <regex>  identify a processing matching zone into the line\n\

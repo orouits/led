@@ -276,7 +276,6 @@ It tells led to read file names from STDIN.
 
 - `-f` read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)
 - `-F` write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
-- `-I` write content to filename inplace
 - `-W<path>` write content to a fixed file
 - `-A<path>` append content to a fixed file
 - `-E<ext>` write content to filename.ext

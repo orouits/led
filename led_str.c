@@ -4,11 +4,43 @@
 // LED str functions
 //-----------------------------------------------
 
-int led_str_trim(char* str) {
+char* led_str_empty(char* str) {
+    str[0] = '\0';
+    return str;
+}
+
+char* led_str_app(char* dest, const char* src, int maxlen) {
+    int len = strlen(dest);
+    return strncat(dest, src, maxlen - len);
+}
+
+char* led_str_cpy(char* dest, const char* src, int maxlen) {
+    int len = strlen(dest);
+    return strncpy(dest, src, maxlen - len);
+}
+
+char* led_str_trunc(char* dest, int size) {
+    int len = strlen(dest);
+    if (size >= 0) {
+        if (size > len) size = len;
+    }
+    else {
+        if (len + size > 0) size = len + size;
+        else size = 0;
+    }
+    dest[size] = '\0';
+    return dest;
+}
+
+char* led_str_trim(char* str) {
     size_t len = strlen(str);
     while (len > 0 && isspace(str[len-1])) len--;
     str[len] = '\0';
-    return len;
+    return str;
+}
+
+int led_str_isempty(char* str) {
+    return str[0] == '\0';
 }
 
 int led_str_equal(const char* str1, const char* str2) {

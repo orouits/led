@@ -18,4 +18,15 @@ SLFKSLDkfj
 dfsldkfjsldf
 EOT
 
-ls test/files/* | led -v -F TEST -f
+
+# ls test/files/* | led -v TEST -f
+
+# ls test/files/* | led -v TEST -F -f
+
+# ls test/files/* | led -v TEST -Wtest/files/write -f
+
+# ls test/files/* | led -v TEST -Atest/files/append -f
+
+ls test/files/* | led -v TEST -Dtest/files_out -f
+
+cat test/files/*

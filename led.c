@@ -18,11 +18,15 @@ const char* LED_SEC_TABLE[] = {
 #define LED_EXIT_STD 0
 #define LED_EXIT_VAL 1
 
-#define LED_FILE_OUT_NONE 0
-#define LED_FILE_OUT_INPLACE 1
-#define LED_FILE_OUT_WRITE 2
-#define LED_FILE_OUT_APPEND 3
-#define LED_FILE_OUT_NEWEXT 4
+#define LED_INPUT_STDIN 0
+#define LED_INPUT_FILE 1
+
+#define LED_OUTPUT_STDOUT 0
+#define LED_OUTPUT_FILE_INPLACE 1
+#define LED_OUTPUT_FILE_WRITE 2
+#define LED_OUTPUT_FILE_APPEND 3
+#define LED_OUTPUT_FILE_NEWEXT 4
+#define LED_OUTPUT_FILE_DIR 5
 
 led_struct led;
 
@@ -34,7 +38,12 @@ void led_free() {
     if ( led.file_in.file ) {
         fclose(led.file_in.file);
         led.file_in.file = NULL;
-        led.file_in.name = NULL;
+        led_str_empty(led.file_in.name);
+    }
+    if ( led.file_out.file ) {
+        fclose(led.file_out.file);
+        led.file_out.file = NULL;
+        led_str_empty(led.file_out.name);
     }
     if ( led.sel.regex_start != NULL) {
         pcre2_code_free(led.sel.regex_start);
@@ -98,9 +107,10 @@ void led_debug(const char* message, ...) {
 int led_init_opt(const char* arg) {
     int rc = led_str_match("^-[a-zA-Z]+", arg);
     if ( rc ) {
+        led_debug("arg option: %s", arg);
         int argl = strlen(arg);
         for(int opti = 1; opti < argl; opti++) {
-            led_debug("options: %c", arg[opti]);
+            led_debug("option: %c", arg[opti]);
             switch (arg[opti]) {
             case 'h':
                 led.opt.help = TRUE;
@@ -133,37 +143,39 @@ int led_init_opt(const char* arg) {
                 led.opt.filter_blank = TRUE;
                 break;
             case 'f':
-                led.opt.file_in = TRUE;
+                led.opt.file_in = LED_INPUT_FILE;
                 break;
             case 'F':
-                led.opt.file_out = TRUE;
-                break;
-            case 'I':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
-                led.opt.file_out_mode = LED_FILE_OUT_INPLACE;
+                led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led.opt.file_out = LED_OUTPUT_FILE_INPLACE;
                 break;
             case 'W':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
-                led.opt.file_out_mode = LED_FILE_OUT_WRITE;
+                led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led.opt.file_out = LED_OUTPUT_FILE_WRITE;
                 led.opt.file_out_path = arg + opti + 1;
+                led_debug("Option path: %s", led.opt.file_out_path);
                 opti = argl;
                 break;
             case 'A':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
-                led.opt.file_out_mode = LED_FILE_OUT_APPEND;
+                led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led.opt.file_out = LED_OUTPUT_FILE_APPEND;
                 led.opt.file_out_path = arg + opti + 1;
+                led_debug("Option path: %s", led.opt.file_out_path);
                 opti = argl;
                 break;
             case 'E':
-                led_assert(!led.opt.file_out_mode, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
-                led.opt.file_out_mode = LED_FILE_OUT_NEWEXT;
+                led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led.opt.file_out = LED_OUTPUT_FILE_NEWEXT;
                 led.opt.file_out_extn = atoi(arg + opti + 1);
                 if ( led.opt.file_out_extn <= 0 )
                     led.opt.file_out_ext = arg + opti + 1;
+                led_debug("Option ext: %s", led.opt.file_out_ext);
                 opti = argl;
                 break;
             case 'D':
                 led.opt.file_out_dir = arg + opti + 1;
+                led.opt.file_out = LED_OUTPUT_FILE_DIR;
+                led_debug("Option dir: %s", led.opt.file_out_dir);
                 opti = argl;
                 break;
             case 'U':
@@ -439,15 +451,17 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 
 int led_file_next() {
     led_debug("=== Next file ===");
+    char buf_fname[LED_FNAME_MAX+1];
 
+    // input management
     if ( led.opt.file_in ) {
         if ( led.file_in.file ) {
             fclose(led.file_in.file);
             led.file_in.file = NULL;
-            led.file_in.name = NULL;
+            led_str_empty(led.file_in.name);
         }
         if ( led.file_count ) {
-            led.file_in.name = led.file_names[0];
+            led_str_cpy(led.file_in.name, led.file_names[0], LED_FNAME_MAX);
             led.file_names++;
             led.file_count--;
             led_str_trim(led.file_in.name);
@@ -456,8 +470,9 @@ int led_file_next() {
             led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
         }
         else if (led.stdin_ispipe) {
-            led.file_in.name = fgets(led.buf_fname, LED_FNAME_MAX, stdin);
-            if (led.file_in.name) {
+            char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
+            if (fname) {
+                led_str_cpy(led.file_in.name, fname, LED_FNAME_MAX);
                 led_str_trim(led.file_in.name);
                 led_debug("File name from STDIN: %s", led.file_in.name);
                 led.file_in.file = fopen(led.file_in.name, "r");
@@ -470,13 +485,61 @@ int led_file_next() {
     else {
         if ( led.file_in.file ) {
             led.file_in.file = NULL;
-            led.file_in.name = NULL;
+            led_str_empty(led.file_in.name);
         }
         else if (led.stdin_ispipe){
             led.file_in.file = stdin;
-            led.file_in.name = "STDIN";
+            led_str_cpy(led.file_in.name, "STDIN", LED_FNAME_MAX);
         }
     }
+
+    // output management
+    if ( led.opt.file_out && led.opt.file_in ) {
+        if ( led.file_out.file && led.opt.file_out != LED_OUTPUT_FILE_WRITE && led.opt.file_out != LED_OUTPUT_FILE_APPEND ) {
+            fclose(led.file_out.file);
+            led.file_out.file = NULL;
+            if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
+                led_str_cpy(buf_fname, led.file_out.name, LED_FNAME_MAX);
+                led_str_trunc(buf_fname, -5);
+                int syserr = remove(buf_fname);
+                led_assert(!syserr, LED_ERR_FILE, "File remove error: %d => %s", syserr, buf_fname);
+                rename(led.file_out.name, buf_fname);
+                led_assert(!syserr, LED_ERR_FILE, "File rename error: %d => %s", syserr, led.file_out.name);
+            }
+            led_str_empty(led.file_out.name);
+        }
+        if ( led.file_in.file && ! led.file_out.file) {
+            const char* mode = "";
+            if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
+                led_str_cpy(led.file_out.name, led.file_in.name, LED_FNAME_MAX);
+                led_str_app(led.file_out.name, ".part", LED_FNAME_MAX);
+                mode = "w+";
+            }
+            else if (led.opt.file_out == LED_OUTPUT_FILE_WRITE) {
+                led_str_cpy(led.file_out.name, led.opt.file_out_path, LED_FNAME_MAX);
+                mode = "w+";
+            }
+            else if (led.opt.file_out == LED_OUTPUT_FILE_APPEND) {
+                led_str_cpy(led.file_out.name, led.opt.file_out_path, LED_FNAME_MAX);
+                mode = "a";
+            }
+            else if (led.opt.file_out == LED_OUTPUT_FILE_DIR) {
+                led_str_cpy(led.file_out.name, led.opt.file_out_dir, LED_FNAME_MAX);
+                led_str_app(led.file_out.name, "/", LED_FNAME_MAX);
+                led_str_cpy(buf_fname, led.file_in.name, LED_FNAME_MAX);
+                led_str_app(led.file_out.name, basename(buf_fname), LED_FNAME_MAX);
+                mode = "w+";
+            }
+            led.file_out.file = fopen(led.file_out.name, mode);
+            led_assert(led.file_out.file != NULL, LED_ERR_FILE, "File open error: %s", led.file_out.name);
+        }
+    }
+    else {
+        led.file_out.file = stdout;
+        led_str_cpy(led.file_out.name, "STDOUT", LED_FNAME_MAX);
+    }
+    led_debug("Input from: %s", led.file_in.name);
+    led_debug("Output to: %s", led.file_out.name);
     led.sel.total_count = 0;
     led.sel.count = 0;
     led.sel.selected = FALSE;
@@ -507,8 +570,9 @@ void led_process_write() {
     if (led_line_defined(&led.line_write)) {
         led_debug("Write line: (%d) len=%d", led.sel.total_count, led.line_write.len);
         led_line_append_char(&led.line_write, '\n');
-        fwrite(led.line_write.str, sizeof *led.line_write.str, led.line_write.len, stdout);
-        fflush(stdout);
+        led_debug("Write line to %s", led.file_out.file);
+        fwrite(led.line_write.str, sizeof *led.line_write.str, led.line_write.len, led.file_out.file);
+        fflush(led.file_out.file);
         led_line_reset(&led.line_write);
     }
 }

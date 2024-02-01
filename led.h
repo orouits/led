@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <libgen.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
@@ -58,7 +59,6 @@ typedef struct {
         int file_in;
         int file_out;
         int file_out_unchanged;
-        int file_out_mode;
         int file_out_extn;
         const char* file_out_ext;
         const char* file_out_dir;
@@ -97,17 +97,16 @@ typedef struct {
     // files
     char**  file_names;
     size_t  file_count;
-    char    buf_fname[LED_FNAME_MAX+1];
     int     stdin_ispipe;
     int     stdout_ispipe;
 
     // runtime variables
     struct {
-        char* name;
+        char name[LED_FNAME_MAX+1];
         FILE* file;
     } file_in;
     struct {
-        char* name;
+        char name[LED_FNAME_MAX+1];
         FILE* file;
     } file_out;
 
@@ -181,7 +180,12 @@ void led_debug(const char* message, ...);
 
 extern pcre2_code* LED_REGEX_BLANK_LINE;
 
-int led_str_trim(char* str);
+char* led_str_empty(char* str);
+char* led_str_cpy(char* dest, const char* src, int maxlen);
+char* led_str_app(char* dest, const char* src, int maxlen);
+char* led_str_trunc(char* dest, int size);
+char* led_str_trim(char* str);
+int led_str_isempty(char* str);
 int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);
 int led_char_in_str(char c, const char* str);

@@ -449,32 +449,55 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 // LED process functions
 //-----------------------------------------------
 
-int led_file_next() {
-    led_debug("=== Next file ===");
-    char buf_fname[LED_FNAME_MAX+1];
+void led_file_close_out() {
+    if ( led.file_out.file && led.opt.file_out
+        && led.opt.file_out != LED_OUTPUT_FILE_WRITE
+        && led.opt.file_out != LED_OUTPUT_FILE_APPEND ) {
 
-    // input management
-    if ( led.opt.file_in ) {
-        if ( led.file_in.file ) {
-            fclose(led.file_in.file);
-            led.file_in.file = NULL;
-            led_str_empty(led.file_in.name);
+        char buf_fname[LED_FNAME_MAX+1];
+
+        fclose(led.file_out.file);
+        led.file_out.file = NULL;
+        if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
+            led_str_cpy(buf_fname, led.file_out.name, LED_FNAME_MAX);
+            led_str_trunc(buf_fname, -5);
+            led_debug("Rename: %s ==> %s", led.file_out.name, buf_fname);
+            int syserr = remove(buf_fname);
+            led_assert(!syserr, LED_ERR_FILE, "File remove error: %d => %s", syserr, buf_fname);
+            rename(led.file_out.name, buf_fname);
+            led_assert(!syserr, LED_ERR_FILE, "File rename error: %d => %s", syserr, led.file_out.name);
         }
+        fwrite(led.file_out.name, sizeof *led.file_out.name, strlen(led.file_out.name), stdout);
+        fwrite("\n", sizeof *led.file_out.name, 1, stdout);
+        fflush(stdout);
+        led_str_empty(led.file_out.name);
+    }
+}
+
+void led_file_close_in() {
+    if ( led.opt.file_in && led.file_in.file ) {
+        fclose(led.file_in.file);
+        led.file_in.file = NULL;
+        led_str_empty(led.file_in.name);
+    }
+}
+
+void led_file_open_in() {
+    if ( led.opt.file_in ) {
         if ( led.file_count ) {
             led_str_cpy(led.file_in.name, led.file_names[0], LED_FNAME_MAX);
             led.file_names++;
             led.file_count--;
             led_str_trim(led.file_in.name);
-            led_debug("File name from ARGS: %s", led.file_in.name);
             led.file_in.file = fopen(led.file_in.name, "r");
             led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
         }
         else if (led.stdin_ispipe) {
+            char buf_fname[LED_FNAME_MAX+1];
             char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
             if (fname) {
                 led_str_cpy(led.file_in.name, fname, LED_FNAME_MAX);
                 led_str_trim(led.file_in.name);
-                led_debug("File name from STDIN: %s", led.file_in.name);
                 led.file_in.file = fopen(led.file_in.name, "r");
                 led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
             }
@@ -492,25 +515,11 @@ int led_file_next() {
             led_str_cpy(led.file_in.name, "STDIN", LED_FNAME_MAX);
         }
     }
+    led_debug("Input from: %s", led.file_in.name);
+}
 
-    // output management
+void led_file_open_out() {
     if ( led.opt.file_out && led.opt.file_in ) {
-        if ( led.file_out.file && led.opt.file_out != LED_OUTPUT_FILE_WRITE && led.opt.file_out != LED_OUTPUT_FILE_APPEND ) {
-            fclose(led.file_out.file);
-            led.file_out.file = NULL;
-            if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
-                led_str_cpy(buf_fname, led.file_out.name, LED_FNAME_MAX);
-                led_str_trunc(buf_fname, -5);
-                int syserr = remove(buf_fname);
-                led_assert(!syserr, LED_ERR_FILE, "File remove error: %d => %s", syserr, buf_fname);
-                rename(led.file_out.name, buf_fname);
-                led_assert(!syserr, LED_ERR_FILE, "File rename error: %d => %s", syserr, led.file_out.name);
-            }
-            fwrite(led.file_out.name, sizeof *led.file_out.name, strlen(led.file_out.name), stdout);
-            fwrite("\n", sizeof *led.file_out.name, 1, stdout);
-            fflush(stdout);
-            led_str_empty(led.file_out.name);
-        }
         if ( led.file_in.file && ! led.file_out.file) {
             const char* mode = "";
             if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
@@ -527,6 +536,7 @@ int led_file_next() {
                 mode = "a";
             }
             else if (led.opt.file_out == LED_OUTPUT_FILE_DIR) {
+                char buf_fname[LED_FNAME_MAX+1];
                 led_str_cpy(led.file_out.name, led.opt.file_out_dir, LED_FNAME_MAX);
                 led_str_app(led.file_out.name, "/", LED_FNAME_MAX);
                 led_str_cpy(buf_fname, led.file_in.name, LED_FNAME_MAX);
@@ -541,8 +551,17 @@ int led_file_next() {
         led.file_out.file = stdout;
         led_str_cpy(led.file_out.name, "STDOUT", LED_FNAME_MAX);
     }
-    led_debug("Input from: %s", led.file_in.name);
     led_debug("Output to: %s", led.file_out.name);
+}
+
+int led_file_next() {
+    led_debug("Next file ---------------------------------------------------");
+
+    led_file_close_out();
+    led_file_close_in();
+    led_file_open_in();
+    led_file_open_out();
+
     led.sel.total_count = 0;
     led.sel.count = 0;
     led.sel.selected = FALSE;

@@ -56,4 +56,4 @@ dkms.conf
 **/*.debug
 **/*.pro.user
 debug
-test/files**
+test/**

@@ -1,5 +1,0 @@
-
-void led_fn_impl_none();
-void led_fn_impl_substitute();
-aaa
-void led_fn_impl_remove();

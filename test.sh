@@ -18,6 +18,7 @@ AAA
 
 AAA 222
 CCC 222
+TEST AAA
 EOT
 
 cat - > $TEST_DIR/files_in/file_1<<EOT
@@ -55,22 +56,22 @@ fi
 
 if [[ $TEST == 2 || $TEST == all ]]; then
     echo -e "\ntest 2:"
-    ls $TEST_DIR/files_in/* | led -v TEST -f
+    ls $TEST_DIR/files_in/* | led TEST -f
 fi
 
 if [[ $TEST == 3 || $TEST == all ]]; then
     echo -e "\ntest 3:"
-    ls $TEST_DIR/files_in/* | led -v TEST -F -f
+    ls $TEST_DIR/files_in/* | led TEST -F -f
 fi
 
 if [[ $TEST == 4 || $TEST == all ]]; then
     echo -e "\ntest 4:"
-    ls $TEST_DIR/files_in/* | led -v TEST -W$TEST_DIR/files_out/write -f
+    ls $TEST_DIR/files_in/* | led TEST -W$TEST_DIR/files_out/write -f
 fi
 
 if [[ $TEST == 5 || $TEST == all ]]; then
     echo -e "\ntest 5:"
-    ls $TEST_DIR/files_in/* | led -v TEST -A$TEST_DIR/files_out/append -f
+    ls $TEST_DIR/files_in/* | led TEST -A$TEST_DIR/files_out/append -f
 fi
 
 if [[ $TEST == 6 || $TEST == all ]]; then
@@ -80,7 +81,7 @@ fi
 
 if [[ $TEST == 7 || $TEST == all ]]; then
     echo -e "\ntest 7:"
-    ls $TEST_DIR/files_in/file_0 | led -v AA -W$TEST_DIR/files_out/file_0 -f | led -v '22*' -W$TEST_DIR/files_out/file_02 -f
+    ls $TEST_DIR/files_in/file_0 | led -v AA -W$TEST_DIR/files_out/file_0 -f | led -v 'TE*' -W$TEST_DIR/files_out/file_02 -f
 fi
 
 echo -e "\nfiles_out:"

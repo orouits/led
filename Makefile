@@ -7,53 +7,44 @@ LFLAGS        = -Wl,-O1
 
 ####### Output directory
 
+SOURCEDIR 	= $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+SOURCES     = $(wildcard *.c)
+OBJECTS		= $(patsubst %.c,%.o,$(SOURCES))
+EXECUTABLE	= led
+LIBS        = -lpcre2-8 -lb64
+VERSION     = 1.0.0
+INSTALLDIR  = /usr/local/bin/
 
-SOURCES       = *.c
-OBJECTS       = led.o led_fn.o led_str.o led_line.o
-LIBS          = -lpcre2-8 -lb64
-DESTDIR       = .
-TARGET        = led
-DISTNAME      = led-1.0.0
-DISTDIR       = /home/ol/src/led/$(DISTNAME)
 
 ####### Build rules
 
-led:  $(OBJECTS)
-	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
-	mkdir -p ~/.local/bin
-	ln -s -f /home/ol/src/led/led ~/.local/bin/led
+%.o : %.c $(EXECUTABLE).h
+	$(CC) -c $(CFLAGS) $(INCPATH) $< -o $@
 
-all: led
+$(EXECUTABLE): $(OBJECTS)
+	$(LINK) $(LFLAGS) -o $@ $? $(LIBS)
+	mkdir -p ~/.local/bin
+	ln -s -f $(SOURCEDIR)$(EXECUTABLE) ~/.local/bin/$(EXECUTABLE)
+
+all: $(EXECUTABLE)
 
 clean:
-	rm -f *.o led
-	rm -f ~/.local/bin/led
+	rm -f *.o $(EXECUTABLE)
+	rm -f ~/.local/bin/$(EXECUTABLE)
 
 distclean: clean
 
-####### actons
+####### Test
 
-test: FORCE
-	test/test.sh
-
-FORCE:
-
-####### Compile
-
-led.o: led.c led.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o led.o led.c
-
-led_fn.o: led_fn.c led.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o led_fn.o led_fn.c
-
-led_str.o: led_str.c led.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o led_str.o led_str.c
-
-led_line.o: led_line.c led.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o led_line.o led_line.c
+.PHONY: test
+test: $(EXECUTABLE)
+	./test.sh
 
 ####### Install
 
-install:
+install: $(EXECUTABLE)
+	sudo mkdir -p $(INSTALLDIR)
+	sudo cp $(SOURCEDIR)$(EXECUTABLE) $(INSTALLDIR)$(EXECUTABLE)
 
 uninstall:
+	rm -f $(INSTALLDIR)$(EXECUTABLE)

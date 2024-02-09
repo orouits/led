@@ -680,8 +680,6 @@ int led_process_selector() {
         ready = TRUE;
     }
 
-    if (ready) led.report.line_match_count++;
-
     led_debug("Line ready to process: %d", ready);
     return ready;
 }
@@ -690,6 +688,7 @@ void led_process_function() {
     led_debug("Process line ready (len=%d)", led.line_prep.len);
     led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
     if (led_line_defined(&led.line_prep) && led_line_selected(&led.line_prep)) {
+        led.report.line_match_count++;
         led_debug("Process function %s", fn_desc->long_name);
         (fn_desc->impl)();
     }

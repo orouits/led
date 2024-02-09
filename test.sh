@@ -5,6 +5,10 @@ TEST_DIR=$SCRIPT_DIR/test
 
 TEST=${1:-all}
 
+# echo -e "\nmake:"
+
+# make || exit 1
+
 echo -e "\ncleanup data:"
 
 rm -rf $TEST_DIR/files_*
@@ -35,6 +39,16 @@ TEST 22222222
 SLFKSLDkfj
 222222 TEST SDFMLSDF
 dfsldkfjsldf
+EOT
+
+cat - > $TEST_DIR/files_in/file_pass<<EOT
+# user
+app1_user: test # no white chars allowed
+app2_user: test # no white chars allowed
+
+# password
+app1_pwd: "_super_P@ssW0rd_" # strong password > 16
+app2_pwd: "_super_P@ssW0rd_" # strong password > 16
 EOT
 
 cat - > $TEST_DIR/files_out/append<<EOT
@@ -84,5 +98,21 @@ if [[ $TEST == 7 || $TEST == all ]]; then
     ls $TEST_DIR/files_in/file_0 | led -v AA -W$TEST_DIR/files_out/file_0 -f | led -v 'TE*' -W$TEST_DIR/files_out/file_02 -f
 fi
 
-echo -e "\nfiles_out:"
-ls -l $TEST_DIR/files_out/*
+if [[ $TEST == 9 || $TEST == all ]]; then
+    echo -e "\ntest 9:"
+    ls $TEST_DIR/files_in/* | led -v AA -E.out1 -f | led -v 'TE*' -E.out2 -f
+fi
+
+if [[ $TEST == 10 || $TEST == all ]]; then
+    echo -e "\ntest 10:"
+    ls $TEST_DIR/files_in/file_pass | led -v _pwd -F b64e:'"(.+)"' -f | led -v _pwd -E.dec b64d:'"(.+)"' -f
+fi
+
+if [[ $TEST == 11 || $TEST == all ]]; then
+    echo -e "\ntest 11:"
+    ls $TEST_DIR/files_in/* | led _pwd -F b64e:'"(.+)"' -f | led -r _pwd -E.dec b64d:'"(.+)"' -f
+fi
+
+echo -e "\nfiles:"
+ls -1 $TEST_DIR/files_in/*
+ls -1 $TEST_DIR/files_out/*

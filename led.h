@@ -94,6 +94,14 @@ typedef struct {
         pcre2_code* regex;
     } fn_arg[LED_FARG_MAX];
 
+    struct {
+        size_t line_match_count;
+
+        size_t file_in_count;
+        size_t file_out_count;
+        size_t file_match_count;
+    } report;
+
     // files
     char**  file_names;
     size_t  file_count;

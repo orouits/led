@@ -35,29 +35,29 @@ led_struct led;
 //-----------------------------------------------
 
 void led_free() {
-    if ( led.opt.file_in && led.file_in.file ) {
+    if (led.opt.file_in && led.file_in.file) {
         fclose(led.file_in.file);
         led.file_in.file = NULL;
         led_str_empty(led.file_in.name);
     }
-    if ( led.opt.file_out && led.file_out.file ) {
+    if (led.opt.file_out && led.file_out.file) {
         fclose(led.file_out.file);
         led.file_out.file = NULL;
         led_str_empty(led.file_out.name);
     }
-    if ( led.sel.regex_start != NULL) {
+    if (led.sel.regex_start != NULL) {
         pcre2_code_free(led.sel.regex_start);
         led.sel.regex_start = NULL;
     }
-    if ( led.sel.regex_stop != NULL) {
+    if (led.sel.regex_stop != NULL) {
         pcre2_code_free(led.sel.regex_stop);
         led.sel.regex_stop = NULL;
     }
-    if ( led.fn_regex != NULL) {
+    if (led.fn_regex != NULL) {
         pcre2_code_free(led.fn_regex);
         led.fn_regex = NULL;
     }
-    for (int i=0; i<LED_FARG_MAX; i++ ) {
+    for (int i=0; i<LED_FARG_MAX; i++) {
         if (led.fn_arg[i].regex != NULL) {
             pcre2_code_free(led.fn_arg[i].regex);
             led.fn_arg[i].regex = NULL;
@@ -106,7 +106,7 @@ void led_debug(const char* message, ...) {
 
 int led_init_opt(const char* arg) {
     int rc = led_str_match("^-[a-zA-Z]+", arg);
-    if ( rc ) {
+    if (rc) {
         led_debug("arg option: %s", arg);
         int argl = strlen(arg);
         for(int opti = 1; opti < argl; opti++) {
@@ -167,7 +167,7 @@ int led_init_opt(const char* arg) {
                 led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
                 led.opt.file_out = LED_OUTPUT_FILE_NEWEXT;
                 led.opt.file_out_extn = atoi(arg + opti + 1);
-                if ( led.opt.file_out_extn <= 0 )
+                if (led.opt.file_out_extn <= 0)
                     led.opt.file_out_ext = arg + opti + 1;
                 led_debug("Option ext: %s", led.opt.file_out_ext);
                 opti = argl;
@@ -197,7 +197,7 @@ int led_init_func(const char* arg) {
         led_debug("Funcion table max: %d", led_fn_table_size());
         for (led.fn_id = 0; led.fn_id < led_fn_table_size(); led.fn_id++) {
             led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-            if ( led_str_equal_len(arg, fn_desc->short_name, isep) || led_str_equal_len(arg, fn_desc->long_name, isep) ) {
+            if (led_str_equal_len(arg, fn_desc->short_name, isep) || led_str_equal_len(arg, fn_desc->long_name, isep)) {
                 led_debug("Function found: %d", led.fn_id);
                 break;
             }
@@ -208,7 +208,7 @@ int led_init_func(const char* arg) {
 
         // compile zone regex if given
         const char* rxstr = arg + isep + 1;
-        if (rxstr[0] != '\0' ) {
+        if (rxstr[0] != '\0') {
             led_debug("Regex found: %s", rxstr);
             led.fn_regex = led_regex_compile(rxstr);
         }
@@ -224,7 +224,7 @@ int led_init_func_arg(const char* arg) {
     int rc = !led.fn_arg[LED_FARG_MAX - 1].str;
     if (rc) {
         for (size_t i = 0; i < LED_FARG_MAX; i++) {
-            if ( !led.fn_arg[i].str ) {
+            if (!led.fn_arg[i].str) {
                 led.fn_arg[i].str = arg;
                 led.fn_arg[i].len = strlen(arg);
                 break;
@@ -345,20 +345,20 @@ void led_init(int argc, char* argv[]) {
     for (int argi=1; argi < argc; argi++) {
         const char* arg = argv[argi];
 
-        if (arg_section == ARGS_SEC_FILES ) {
+        if (arg_section == ARGS_SEC_FILES) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
         }
-        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg) ) {
+        else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg)) {
             if (led.opt.file_in) arg_section = ARGS_SEC_FILES;
         }
-        else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg) ) {
+        else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg)) {
 
         }
-        else if (arg_section < ARGS_SEC_FUNCT && led_init_func(arg) ) {
+        else if (arg_section < ARGS_SEC_FUNCT && led_init_func(arg)) {
             arg_section = ARGS_SEC_FUNCT;
         }
-        else if (arg_section == ARGS_SEC_SELECT && led_init_sel(arg) ) {
+        else if (arg_section == ARGS_SEC_SELECT && led_init_sel(arg)) {
 
         }
         else {
@@ -426,7 +426,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 \n\
 ## Processor commands:\n\n\
 "
-    );
+   );
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
     fprintf(stderr, "| %-4s| %-19s| %-9s| %-49s| %-39s|\n", "Id", "Name", "Short", "Description", "Format");
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
@@ -439,7 +439,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
             fn_desc->short_name,
             fn_desc->help_desc,
             fn_desc->help_format
-        );
+       );
         if (!fn_desc->impl) fprintf(stderr, "\e[0m");
     }
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
@@ -448,11 +448,78 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 //-----------------------------------------------
 // LED process functions
 //-----------------------------------------------
-void led_file_print_out() {
-    fwrite(led.file_out.name, sizeof *led.file_out.name, strlen(led.file_out.name), stdout);
-    fwrite("\n", sizeof *led.file_out.name, 1, stdout);
-    fflush(stdout);
-    led_str_empty(led.file_out.name);
+
+void led_file_open_in() {
+    if (led.file_count) {
+        led_str_cpy(led.file_in.name, led.file_names[0], LED_FNAME_MAX);
+        led.file_names++;
+        led.file_count--;
+        led_str_trim(led.file_in.name);
+        led.file_in.file = fopen(led.file_in.name, "r");
+        led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
+        led.report.file_in_count++;
+    }
+    else if (led.stdin_ispipe) {
+        char buf_fname[LED_FNAME_MAX+1];
+        char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
+        if (fname) {
+            led_str_cpy(led.file_in.name, fname, LED_FNAME_MAX);
+            led_str_trim(led.file_in.name);
+            led.file_in.file = fopen(led.file_in.name, "r");
+            led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
+            led.report.file_in_count++;
+        }
+    }
+}
+
+void led_file_close_in() {
+    fclose(led.file_in.file);
+    led.file_in.file = NULL;
+    led_str_empty(led.file_in.name);
+}
+
+void led_file_stdin() {
+    if (led.file_in.file) {
+        led_assert(led.file_in.file == stdin, LED_ERR_FILE, "File is not STDIN internal error: %s", led.file_in.name);
+        led.file_in.file = NULL;
+        led_str_empty(led.file_in.name);
+    } else if (led.stdin_ispipe) {
+        led.file_in.file = stdin;
+        led_str_cpy(led.file_in.name, "STDIN", LED_FNAME_MAX);
+    }
+}
+
+void led_file_open_out() {
+    const char* mode = "";
+    if (led.opt.file_out == LED_OUTPUT_FILE_INPLACE) {
+        led_str_cpy(led.file_out.name, led.file_in.name, LED_FNAME_MAX);
+        led_str_app(led.file_out.name, ".part", LED_FNAME_MAX);
+        mode = "w+";
+    }
+    else if (led.opt.file_out == LED_OUTPUT_FILE_WRITE) {
+        led_str_cpy(led.file_out.name, led.opt.file_out_path, LED_FNAME_MAX);
+        mode = "w+";
+    }
+    else if (led.opt.file_out == LED_OUTPUT_FILE_APPEND) {
+        led_str_cpy(led.file_out.name, led.opt.file_out_path, LED_FNAME_MAX);
+        mode = "a";
+    }
+    else if (led.opt.file_out == LED_OUTPUT_FILE_NEWEXT) {
+        led_str_cpy(led.file_out.name, led.file_in.name, LED_FNAME_MAX);
+        led_str_app(led.file_out.name, led.opt.file_out_ext, LED_FNAME_MAX);
+        mode = "w+";
+    }
+    else if (led.opt.file_out == LED_OUTPUT_FILE_DIR) {
+        char buf_fname[LED_FNAME_MAX+1];
+        led_str_cpy(led.file_out.name, led.opt.file_out_dir, LED_FNAME_MAX);
+        led_str_app(led.file_out.name, "/", LED_FNAME_MAX);
+        led_str_cpy(buf_fname, led.file_in.name, LED_FNAME_MAX);
+        led_str_app(led.file_out.name, basename(buf_fname), LED_FNAME_MAX);
+        mode = "w+";
+    }
+    led.file_out.file = fopen(led.file_out.name, mode);
+    led_assert(led.file_out.file != NULL, LED_ERR_FILE, "File open error: %s", led.file_out.name);
+    led.report.file_out_count++;
 }
 
 void led_file_close_out() {
@@ -460,7 +527,7 @@ void led_file_close_out() {
 
     fclose(led.file_out.file);
     led.file_out.file = NULL;
-    if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
+    if (led.opt.file_out == LED_OUTPUT_FILE_INPLACE) {
         led_str_cpy(buf_fname, led.file_out.name, LED_FNAME_MAX);
         led_str_trunc(buf_fname, -5);
         led_debug("Rename: %s ==> %s", led.file_out.name, buf_fname);
@@ -472,102 +539,48 @@ void led_file_close_out() {
     }
 }
 
-void led_file_close_in() {
-    fclose(led.file_in.file);
-    led.file_in.file = NULL;
-    led_str_empty(led.file_in.name);
+void led_file_print_out() {
+    fwrite(led.file_out.name, sizeof *led.file_out.name, strlen(led.file_out.name), stdout);
+    fwrite("\n", sizeof *led.file_out.name, 1, stdout);
+    fflush(stdout);
+    led_str_empty(led.file_out.name);
 }
 
-void led_file_open_in() {
-    if ( led.opt.file_in ) {
-        if ( led.file_count ) {
-            led_str_cpy(led.file_in.name, led.file_names[0], LED_FNAME_MAX);
-            led.file_names++;
-            led.file_count--;
-            led_str_trim(led.file_in.name);
-            led.file_in.file = fopen(led.file_in.name, "r");
-            led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
-        }
-        else if (led.stdin_ispipe) {
-            char buf_fname[LED_FNAME_MAX+1];
-            char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
-            if (fname) {
-                led_str_cpy(led.file_in.name, fname, LED_FNAME_MAX);
-                led_str_trim(led.file_in.name);
-                led.file_in.file = fopen(led.file_in.name, "r");
-                led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led.file_in.name);
-            }
-            else
-                led_debug("No more file names on STDIN");
-        }
-    }
-    else {
-        if (led.file_in.file) {
-            led.file_in.file = NULL;
-            led_str_empty(led.file_in.name);
-        }
-        else if (led.stdin_ispipe) {
-            led.file_in.file = stdin;
-            led_str_cpy(led.file_in.name, "STDIN", LED_FNAME_MAX);
-        }
-    }
-    led_debug("Input from: %s", led.file_in.name);
-}
-
-void led_file_open_out() {
-    if ( led.opt.file_out ) {
-        const char* mode = "";
-        if ( led.opt.file_out == LED_OUTPUT_FILE_INPLACE ) {
-            led_str_cpy(led.file_out.name, led.file_in.name, LED_FNAME_MAX);
-            led_str_app(led.file_out.name, ".part", LED_FNAME_MAX);
-            mode = "w+";
-        }
-        else if (led.opt.file_out == LED_OUTPUT_FILE_WRITE) {
-            led_str_cpy(led.file_out.name, led.opt.file_out_path, LED_FNAME_MAX);
-            mode = "w+";
-        }
-        else if (led.opt.file_out == LED_OUTPUT_FILE_APPEND) {
-            led_str_cpy(led.file_out.name, led.opt.file_out_path, LED_FNAME_MAX);
-            mode = "a";
-        }
-        else if (led.opt.file_out == LED_OUTPUT_FILE_DIR) {
-            char buf_fname[LED_FNAME_MAX+1];
-            led_str_cpy(led.file_out.name, led.opt.file_out_dir, LED_FNAME_MAX);
-            led_str_app(led.file_out.name, "/", LED_FNAME_MAX);
-            led_str_cpy(buf_fname, led.file_in.name, LED_FNAME_MAX);
-            led_str_app(led.file_out.name, basename(buf_fname), LED_FNAME_MAX);
-            mode = "w+";
-        }
-        led.file_out.file = fopen(led.file_out.name, mode);
-        led_assert(led.file_out.file != NULL, LED_ERR_FILE, "File open error: %s", led.file_out.name);
-    }
-    else {
-        led.file_out.file = stdout;
-        led_str_cpy(led.file_out.name, "STDOUT", LED_FNAME_MAX);
-    }
-    led_debug("Ounput to: %s", led.file_out.name);
+void led_file_stdout() {
+    led.file_out.file = stdout;
+    led_str_cpy(led.file_out.name, "STDOUT", LED_FNAME_MAX);
 }
 
 int led_file_next() {
     led_debug("Next file ---------------------------------------------------");
 
-    if ( led.file_out.file && led.opt.file_out && ! (led.opt.file_out == LED_OUTPUT_FILE_WRITE || led.opt.file_out == LED_OUTPUT_FILE_APPEND) ) {
+    if (led.opt.file_out && led.file_out.file && ! (led.opt.file_out == LED_OUTPUT_FILE_WRITE || led.opt.file_out == LED_OUTPUT_FILE_APPEND)) {
         led_file_close_out();
         led_file_print_out();
     }
 
-    if ( led.file_in.file && led.opt.file_in )
+    if (led.opt.file_in && led.file_in.file)
         led_file_close_in();
 
-    led_file_open_in();
+    if (led.opt.file_in)
+        led_file_open_in();
+    else
+        led_file_stdin();
 
-    if ( ! led.file_out.file && led.file_in.file )
-        led_file_open_out();
+    if (! led.file_out.file && led.file_in.file) {
+        if (led.opt.file_out)
+            led_file_open_out();
+        else
+            led_file_stdout();
+    }
 
-    if ( led.file_out.file && ! led.file_in.file ) {
+    if (! led.file_in.file && led.file_out.file) {
         led_file_close_out();
         led_file_print_out();
     }
+
+    led_debug("Input from: %s", led.file_in.name);
+    led_debug("Ounput to: %s", led.file_out.name);
 
     led.sel.total_count = 0;
     led.sel.count = 0;
@@ -599,7 +612,7 @@ void led_process_write() {
     if (led_line_defined(&led.line_write)) {
         led_debug("Write line: (%d) len=%d", led.sel.total_count, led.line_write.len);
         led_line_append_char(&led.line_write, '\n');
-        led_debug("Write line to %s", led.file_out.file);
+        led_debug("Write line to %s", led.file_out.name);
         fwrite(led.line_write.str, sizeof *led.line_write.str, led.line_write.len, led.file_out.file);
         fflush(led.file_out.file);
         led_line_reset(&led.line_write);
@@ -612,7 +625,7 @@ int led_process_selector() {
     if (!led_line_defined(&led.line_read)
         || (led.sel.type_stop == SEL_TYPE_NONE && led.sel.type_start != SEL_TYPE_NONE && led.sel.shift == 0)
         || (led.sel.type_stop == SEL_TYPE_COUNT && led.sel.count >= led.sel.val_stop)
-        || (led.sel.type_stop == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_stop, led.line_read.str, led.line_read.len)) ) {
+        || (led.sel.type_stop == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_stop, led.line_read.str, led.line_read.len))) {
         led.sel.inboundary = FALSE;
         led.sel.count = 0;
     }
@@ -624,7 +637,7 @@ int led_process_selector() {
             led.sel.type_start == SEL_TYPE_NONE
             || (led.sel.type_start == SEL_TYPE_COUNT && led.sel.total_count == led.sel.val_start)
             || (led.sel.type_start == SEL_TYPE_REGEX && led_regex_match(led.sel.regex_start, led.line_read.str, led.line_read.len))
-        )) {
+       )) {
 
         led.sel.inboundary = TRUE;
         led.sel.shift = led.sel.val_start;
@@ -641,7 +654,7 @@ int led_process_selector() {
         if (led_line_selected(&led.line_read)) {
             led_debug("pack: append to ready");
             if (!(led.opt.filter_blank && led_line_isblank(&led.line_read))) {
-                if ( led.line_prep.len > 0 )
+                if (led.line_prep.len > 0)
                     led_line_append_char(&led.line_prep, '\n');
                 led_line_append(&led.line_prep, &led.line_read);
             }
@@ -667,6 +680,8 @@ int led_process_selector() {
         ready = TRUE;
     }
 
+    if (ready) led.report.line_match_count++;
+
     led_debug("Line ready to process: %d", ready);
     return ready;
 }
@@ -684,6 +699,15 @@ void led_process_function() {
     }
     led_line_reset(&led.line_prep);
     led_debug("Result line dest (len=%d)", led.line_write.len);
+}
+
+void led_report() {
+    fprintf(stderr, "\nLED report:\n");
+    fprintf(stderr, "Line match count: %ld\n", led.report.line_match_count);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "File input count: %ld\n", led.report.file_in_count);
+    fprintf(stderr, "File output count: %ld\n", led.report.file_out_count);
+    fprintf(stderr, "File match count: %ld\n", led.report.file_match_count);
 }
 
 //-----------------------------------------------
@@ -706,6 +730,8 @@ int main(int argc, char* argv[]) {
                 }
             } while(isline);
         }
+    if (led.opt.report)
+        led_report();
     led_free();
     return 0;
 }

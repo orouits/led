@@ -15,7 +15,6 @@ LIBS        = -lpcre2-8 -lb64
 VERSION     = 1.0.0
 INSTALLDIR  = /usr/local/bin/
 
-
 ####### Build rules
 
 %.o : %.c $(APP).h
@@ -48,3 +47,6 @@ install: $(APP)
 
 uninstall:
 	sudo rm -f $(INSTALLDIR)$(APP)
+
+deb: $(APP)
+	# not implemented

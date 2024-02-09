@@ -1,7 +1,6 @@
 CC            = gcc
 DEFINES       =
 CFLAGS        = -pipe -O2 -Wall -Wextra -fPIC $(DEFINES)
-INCPATH       = -I.
 LINK          = g++
 LFLAGS        = -Wl,-O1
 
@@ -18,7 +17,7 @@ INSTALLDIR  = /usr/local/bin/
 ####### Build rules
 
 %.o : %.c $(APP).h
-	$(CC) -c $(CFLAGS) $(INCPATH) $< -o $@
+	$(CC) -c $(CFLAGS) -I$(SOURCEDIR) $< -o $@
 
 $(APP): $(OBJECTS)
 	$(LINK) $(LFLAGS) -o $@ $^ $(LIBS)

@@ -8,7 +8,8 @@ LFLAGS        = -Wl,-O1
 
 ####### Application and dirs
 
-SOURCEDIR 	= $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+MAKEFILE    = $(lastword $(MAKEFILE_LIST))
+SOURCEDIR 	= $(dir $(realpath $(MAKEFILE)))
 SOURCES     = $(wildcard *.c)
 OBJECTS		= $(patsubst %.c,%.o,$(SOURCES))
 APP			= led
@@ -18,19 +19,25 @@ INSTALLDIR  = /usr/local/bin/
 
 ####### Build rules
 
+all: $(APP) $(HOME)/.local/bin/$(APP) VERSION
+
 %.o : %.c $(APP).h
 	$(CC) -c $(CFLAGS) -I$(SOURCEDIR) $< -o $@
 
 $(APP): $(OBJECTS)
 	$(LINK) $(LFLAGS) -o $@ $^ $(LIBS)
-	mkdir -p ~/.local/bin
-	ln -s -f $(SOURCEDIR)$(APP) ~/.local/bin/$(APP)
 
-all: $(APP)
+VERSION: $(MAKEFILE)
+	echo $(VERSION) > $@
+
+$(HOME)/.local/bin/$(APP):
+	mkdir -p $(HOME)/.local/bin
+	ln -s -f $(SOURCEDIR)$(APP) $@
 
 clean:
 	rm -f *.o $(APP)
 	rm -f ~/.local/bin/$(APP)
+	rm -f VERSION
 
 distclean: clean
 

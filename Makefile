@@ -10,7 +10,7 @@ LFLAGS        = -Wl,-O1
 SOURCEDIR 	= $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 SOURCES     = $(wildcard *.c)
 OBJECTS		= $(patsubst %.c,%.o,$(SOURCES))
-EXECUTABLE	= led
+APP			= led
 LIBS        = -lpcre2-8 -lb64
 VERSION     = 1.0.0
 INSTALLDIR  = /usr/local/bin/
@@ -18,33 +18,33 @@ INSTALLDIR  = /usr/local/bin/
 
 ####### Build rules
 
-%.o : %.c $(EXECUTABLE).h
+%.o : %.c $(APP).h
 	$(CC) -c $(CFLAGS) $(INCPATH) $< -o $@
 
-$(EXECUTABLE): $(OBJECTS)
+$(APP): $(OBJECTS)
 	$(LINK) $(LFLAGS) -o $@ $? $(LIBS)
 	mkdir -p ~/.local/bin
-	ln -s -f $(SOURCEDIR)$(EXECUTABLE) ~/.local/bin/$(EXECUTABLE)
+	ln -s -f $(SOURCEDIR)$(APP) ~/.local/bin/$(APP)
 
-all: $(EXECUTABLE)
+all: $(APP)
 
 clean:
-	rm -f *.o $(EXECUTABLE)
-	rm -f ~/.local/bin/$(EXECUTABLE)
+	rm -f *.o $(APP)
+	rm -f ~/.local/bin/$(APP)
 
 distclean: clean
 
 ####### Test
 
 .PHONY: test
-test: $(EXECUTABLE)
+test: $(APP)
 	./test.sh
 
 ####### Install
 
-install: $(EXECUTABLE)
+install: $(APP)
 	sudo mkdir -p $(INSTALLDIR)
-	sudo cp $(SOURCEDIR)$(EXECUTABLE) $(INSTALLDIR)$(EXECUTABLE)
+	sudo cp $(SOURCEDIR)$(APP) $(INSTALLDIR)$(APP)
 
 uninstall:
-	rm -f $(INSTALLDIR)$(EXECUTABLE)
+	sudo rm -f $(INSTALLDIR)$(APP)

@@ -21,7 +21,7 @@ INSTALLDIR  = /usr/local/bin/
 	$(CC) -c $(CFLAGS) $(INCPATH) $< -o $@
 
 $(APP): $(OBJECTS)
-	$(LINK) $(LFLAGS) -o $@ $? $(LIBS)
+	$(LINK) $(LFLAGS) -o $@ $^ $(LIBS)
 	mkdir -p ~/.local/bin
 	ln -s -f $(SOURCEDIR)$(APP) ~/.local/bin/$(APP)
 

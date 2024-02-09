@@ -1,10 +1,12 @@
+####### Tools and options
+
 CC            = gcc
 DEFINES       =
 CFLAGS        = -pipe -O2 -Wall -Wextra -fPIC $(DEFINES)
 LINK          = g++
 LFLAGS        = -Wl,-O1
 
-####### Output directory
+####### Application and dirs
 
 SOURCEDIR 	= $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 SOURCES     = $(wildcard *.c)
@@ -38,7 +40,7 @@ distclean: clean
 test: $(APP)
 	./test.sh
 
-####### Install
+####### Install an packaging
 
 install: $(APP)
 	sudo mkdir -p $(INSTALLDIR)

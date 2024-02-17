@@ -382,8 +382,8 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 \n\
 ## Synopsis\n\
     Files content processing:    led [<selector>] [<processor>] [-options] -f [files] ...\n\
-    Piped content processing:    cat <file> | led [<selector>] [<processor>] [-options] | led ...\n\
-    Massive files processing:    ls -1 <dir> | led [<selector>] [<processor>] [-options] -F -I -f | led ...\n\
+    Piped content processing:    cat <file> | led [<selector>] [<processor>] [-opts] | led ...\n\
+    Massive files processing:    ls -1 <dir> | led [<selector>] [<processor>] [-opts] -F -f | led ...\n\
 \n\
 ## Selector:\n\
     <regex>              => select all lines matching with <regex>\n\
@@ -392,6 +392,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     <regex> <count>      => select group of lines starting matching <regex> (included) until <count> lines are selected\n\
     <n>     <regex_stop> => select group of lines starting line <n> (included) until matching <regex_stop> (excluded)\n\
     <n>     <count>      => select group of lines starting line <n> (included) until <count> lines are selected\n\
+    +n      +n           => shift start/stop selector boundaries\n\
 \n\
 ## Processor:\n\
     <function>:[regex] [arg] ...\n\
@@ -404,7 +405,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 \n\
 ## Selector Options:\n\
     -n  invert selection\n\
-    -p  pack contiguous selected line in one multi-line before function process\n\
+    -p  pack contiguous selected line in one multi-line before function processing\n\
     -s  output only selected\n\
 \n\
 ## File input options:\n\
@@ -416,12 +417,10 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     -A<path>    append content to a fixed file\n\
     -E<ext>     write content to <current filename>.<ext>\n\
     -D<dir>     write files in <dir>.\n\
-    -U          write unchanged filenames\n\
 \n\
     All these options output the output filenames on STDOUT\n\
 \n\
 ## Processor options\n\
-    -z <regex>  identify a processing matching zone into the line\n\
     -m          output only processed maching zone when regex is used\n\
 \n\
 ## Processor commands:\n\n\

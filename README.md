@@ -1,21 +1,25 @@
 # LED
-Line Editor (led) is a simple command line utility written in C to edit text files using the well known PCRE2 library by Philip Hazel for modern REGEX synthax and more.
-It aims to cover in one tool common text search/replace functions that can sometimes need multiple tools like sed, grep, tr, awk, perl ...
+Line EDitor (LED) is a simple command line utility to edit text files using the well known PCRE2 library (Philip Hazel) for modern REGEX synthax and more.
+It aims to cover in one tool common text search/replace/process functions that can often need multiple tools combined like sed, grep, tr, awk, perl ...
 
 # Command line synthax
 
 ## Overview
 
-led command line arguements is composed of section in the folling order:
+The **led** command line arguments is composed of section in the folling order:
 
-`led [selector] :[processor] [-options] [files]`
+`led [SELECTOR] [PROCESSOR] [-opts...] [-f] [FILES...]`
+`cat [FILES...] | led [SELECTOR] [PROCESSOR] [-opts...]`
+`ls [DIR] | led [SELECTOR] [PROCESSOR] [-opts...] -f`
 
-the section recognition si done by keywork or options.
+The options can be anywhere before -f option
+The section recognition (selector, processor) depends on the arguments format and content.
 
-Led text processor workflow is basic, it optionally select parts of input text (or all if not given), optionally procces selected text and print to output (with options).
+Led text processing workflow is simple:
 
-There is only one selector and one processor function per led call. *led* do not embeed a complex transformation language as *sed* to achieve multiple transformation.
-The choice is to manage complex multiple tranformation through step by step calls with pipe invocation with an advanced way that allows pipes and massive file change together.
+input text lines >> select lines >> process lines >> output text lines
+
+There is only one selector and one processor function per led call. **led**. do not implement a complex transformation language as **sed**. To achieve multiple transformation, just use pipes power with multiple led calls.
 
 ### The selector
 
@@ -24,10 +28,16 @@ the selector is optional, it must be declared before a recognized processor func
 
 When led is used only with the selector, it is equivalent to grep with a similar addressing feature as sed using PCRE2 as regex engine.
 
+Example:
+
+`cat <file> | grep Test`
+is equivalent to:
+`cat <file> | led Test`
+
 #### syntax:
 
 - selector := [address_from] [address_to]
-- address := regex|number
+- address  := regex|number
 
 addressing examples:
 
@@ -41,202 +51,223 @@ cat file.txt | led 10 3
 # select all lines containing abc (regex)
 cat file.txt | led abc
 
-# select all block of lines from a line containing "abc" to a line containing "def" (not included)
+# for each line containing `abc` select the block of lines until it contains `def` (not included)
 cat file.txt | led abc def
 
-# select all block of lines from a line containing "abc" and 5 next ones
+# for each line containing `abc` select the block of 5 next ones
 cat file.txt | led abc 5
 
-# select block of lines from line 4 to a line containing "def" (not included)
+# select block of lines from line 4 to a line containing `def` (not included)
 cat file.txt | led 4 def
 
-# select block of lines from 1 line after lines containing "abc" to 1 line after line containing "def" (not included)
+# select block of lines from 1 line after lines containing `abc` to 1 line after line containing `def` (not included)
 cat file.txt | led abc +1 def +1
 
-# select lines 2 lines after lines containing "abc"
+# for each line containing `abc`; select the line that is 2 lines after
 cat file.txt | led abc +2
 
-# block of lines selected will be given to the processor line by line (default)
-cat file.txt | led abc def line
+# block of contiguous selected lines will be processed 1 per 1 (default)
+cat file.txt | led abc 10 <processor>
 
-# block of lines selected will be given to the processor once in a multi-line buffer (for multi-line processing)
-cat file.txt | led abc def block
+# block of contiguous selected lines will be packed and processed all together (multi-line processing)
+cat file.txt | led abc 10 <processor> -p
 
 ```
 
-
 ### The processor
 
-- processor := function arg arg ...
+- `processor := function:[zone_regex] args ...`
 
-#### sb|substitute command
+in many cases `zone_regex` is used to identify a zone where the function is applied in the line.
 
-The `:sub|:substitute` command allows to substitute string from a regex.
+- not defined => all the line (.*)
+    - it allows to make opreation on the full line
+- defined => only the matching zone
+    - it allows to make operations on a sub part of the line
+- define with 1 capture block (...) => only the captured zone
+    - it allows to make operations on a sub part of the line with a better matching
+
+#### sub|substitute function
+
+The `sub|substitute:` function allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`:sub|:substitute <regex> <replace>`
+`sub|substitute:[regex] <replace>`
 
 - regex: the search regex string
-- replace: th replace string
+- replace: the replace string
 
-#### ex|execute command
+#### exe|execute function
 
-The `:exe|:execute` command allows to substitute string from a regex and execute it.
+The `exe|execute:` function allows to substitute string from a regex and execute it.
 
-PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
-`PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
-
-`:exe|:execute <regex> <command>`
+`exe|execute:[regex] <command>`
 
 - regex = the search regex string
 - command: the replace string to be executed as a command with arguments
 
-#### rm|remove command
+#### rm|remove function
 
 Remove line
 
-`:rm|:remove`
+`rm|remove:`
 
-#### in|insert command
+#### ins|insert function
 
-Insert line(s)
+Insert replaced line(s)
 
-`:ins|:insert string [N]`
+`ins|insert:[regex] <replace> [N]`
 
-#### ap|append command
+- replace: the replaced string to insert before line
+- N: number of line inserted, default 1
 
-Append line(s)
+#### app|append function
 
-`:app|:append string [N]`
+Append replaced line(s)
 
-#### rn|range command
+`app|append:[regex] <replace> [N]`
+
+- replace: the replaced string to append after line
+- N: number of line appended, default 1
+
+#### rn|range functions
 
 Extract a range of characters in the line
 
-`:rn|:range N [C]`
-`:rnn|:rangenot N [C]`
+`rn|range:[regex] N [C]`
+`rnn|rangenot:[regex] N [C]`
 
 - N: from column, relative to the end of line if N is negative
 - C: character count, 1 by default
 
 
-#### tr|translate command
+#### tr|translate function
 
 Translate characters string of a matching regex.
 
-`:tr|:translate <schars> <dchars>`
+`tr:|translate:[regex] <schars> <dchars>`
 
 - schars: a sequence of source characters to be replaced by dest characters
 - dchars: a sequence of dest characters
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
-
-#### case commands
-
-`csl|caselower [<regex>]`
-`csu|caseupper [<regex>]`
-`csf|casefirst [<regex>]`
-`csc|casecamel [<regex>]`
-
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
-
-#### quote commands
-
-`qts|quotesimple [<regex>]`
-`qtd|quotedouble [<regex>]`
-`qtb|quoteback [<regex>]`
-`qtr|quoteremove [<regex>]`
-
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
 
 
-#### trim commands
+#### case functions
 
-Trim a line.
+Convert to various case
 
-`tm|trim       [<regex>]`
-`tml|trimleft  [<regex>]`
-`tmr|trimright [<regex>]`
+`csl|caselower:[regex]`
+`csu|caseupper:[regex]`
+`csf|casefirst:[regex]`
+`csc|casecamel:[regex]`
 
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+#### quote functions
 
-#### split commands
+Quote and unquote if needed.
 
-`sp|split [<regex>]`
+`qts|quotesimple:[regex]`
+`qtd|quotedouble:[regex]`
+`qtb|quoteback:[regex]`
+`qtr|quoteremove:[regex]`
 
-- regex: matching separator string, blank + tab by default
+#### trim functions
 
-#### revert commands
+`tm|trim:[regex]`
+`tml|trimleft:[regex]`
+`tmr|trimright:[regex]`
 
-`rv|revert [<regex>]`
+#### split functions
 
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+ split line with given separators
 
-#### field commands
+`sp|split:[regex] <sep_chars>`
+
+split line with comma separators
+
+`spc|split_csv:[regex]`
+
+split line with space separators
+
+`sps|split_space:[regex]`
+
+split line with space and comma separators
+
+`spm|split_mixed:[regex]`
+
+#### revert function
+
+revert the char order of the line
+
+`rv|revert:[regex]`
+
+#### field functions
 
  Extract fields of a line.
 
-`fl|field [N] [N] ... [<regex>]`
+`fl|field:[regex] <N> <sep_chars>`
+`flc|field_csv:[regex] <N>`
+`fls|field_space:[regex] <N>`
+`flm|field_mixed:[regex] <N>`
 
 - N: extract the Nth field, by default the first one.
-- regex: matching delimiter string, by default blanks and tabs
+- sep: separator chars
 
-#### join command
+#### join function
 
  Join lines.
- This function needs selector `block` mode to transmit all lines in the same buffer.
+ This function needs selector `pack` mode to transmit all lines in the same buffer.
 
-`jn|join [N]`
+`jn|join:`
 
-- N: every N line.
+#### base64 encoding functions
 
-#### crypt commands
-
- encrypt or decrypt lines.
+ encode/decode lines.
  This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
-`ecrb64|encriptbase64`
-`ecrmd5|encriptmd5`
-`ecrsha1|encriptsha1`
-`ecrsha256|encriptsha256`
-`ecraes256|encriptaes256`
+`b64e|base64_encode:[regex]`
+`b64d|base64_decode:[regex]`
 
-`dcrb64|decriptbase64`
-`dcrmd5|decriptmd5`
-`dcrsha1|decriptsha1`
-`dcrsha256|decriptsha256`
-`dcraes256|decriptaes256`
+#### urlencode function
 
-#### uc|urlencode command
+ URL encode line or part of line.
 
- URL encode|decode lines.
+`urc|urlencode:[regex]`
 
-`urc|urlencode [<regex>]`
-`urd|urldecode [<regex>]`
+#### path functions
 
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+Modify path in a line.
 
-#### ph|path command
+`phc|path_canonical:[regex]`
+`phd|path_dir:[regex]`
+`phf|path_file:[regex]`
 
- Modify line as path.
+#### file name functions
 
-`phc|pathcanonical [<regex>]`   set canonical path (default)
-`phd|pathdir [<regex>]`         extract directory
-`phf|pathfile [<regex>]`        extract filename
-`phr|pathrename [<regex>]`      rename with magic filename (experimental), make filenames camel case without non-alnum except `.`
+Modify file name in a line.
 
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+`fnl|fname_lower:[regex]`
+`fnu|fname_upper:[regex]`
+`fnc|fname_camel:[regex]`
 
-#### rn|randomize
+#### randomize functions
 
- Generate randomized characters
+Generate randomized characters
 
-`rnn|randomnum [<regex>]`
-`rna|randomalpha [<regex>]`
-`rnan|randomalphanum [<regex>]`
+`rzn|randomize_num:[regex]`
+`rza|randomize_alpha:[regex]`
+`rzan|randomize_alnum:[regex]`
+`rzh|randomize_hexa:[regex]`
+`rzm|randomize_mixed:[regex]`
 
-- regex: modification of the matching zone in line, if a capture is present, only the first capture is modified
+#### Generate chars function
+
+Generate randomized characters
+
+`gen|generate:[regex] <char> [N]`
+
+- char: the character to repeat
+- N: char count, default is 1
 
 ## Invocation
 
@@ -255,14 +286,15 @@ this is the default mode when the `[files]` section is not given.
 
 `led ... -f <file> <file> ...`
 
-the **-f** option tells led to enter into the files section which is the last one, every subsequent argument is considered as an intput file name.
+the **-f** option must be the last option, every subsequent argument is considered as an intput file name.
 
 ### Advanced pipe mode with files
 
-`find . -spec <filespec> | led -f`
+`find . -spec <filespec> | led ... -f`
 
-the file section is limitted to the **-f** option without any files behind.
-It tells led to read file names from STDIN.
+the file section is limitted to the **-f** option without any files behind. It tells led to read file names from STDIN.
+
+see options -F, -W, -A, -E, -D to ouput filenames and build multiple changes on multiple files
 
 ## Options
 
@@ -279,13 +311,10 @@ It tells led to read file names from STDIN.
 - `-W<path>` write content to a fixed file
 - `-A<path>` append content to a fixed file
 - `-E<ext>` write content to filename.ext
-- `-E<3>` write content to filename.NNN
 - `-D<dir>` write files in dir.
-- `-U` write unchanged filenames
 
 ### Global options
 
-- `-z` end of line is 0
 - `-v` verbose to STDERR
 - `-r` report to STDERR
 - `-q` quiet, do not ouptut anything (exit code only)
@@ -313,15 +342,15 @@ On value (see -e):
 
 ## "sed" like for simple substitute
 
-`led sb <regex> <replace> -f file.txt`
+`led sub:<regex> <replace> -f file.txt`
 
-`cat file.txt | led sb <regex> <replace> > file-changed.txt`
+`cat file.txt | led sub:<regex> <replace> > file-changed.txt`
 
 change inplace:
 
-`led sb <regex> <replace> -FIf file.txt`
+`led sub:<regex> <replace> -F -f file.txt`
 
 
 ## massive multi change inplace:
 
-` ls *.txt | led sb <regex> <replace> -FIUf | led sb <regex> <replace> -FIUf | ...`
+` ls *.txt | led sub:<regex> <replace> -F -f | led sub:<regex> <replace> -F -f | ...`

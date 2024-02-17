@@ -105,7 +105,7 @@ fi
 
 if [[ $TEST == 10 || $TEST == all ]]; then
     echo -e "\ntest 10:"
-    ls $TEST_DIR/files_in/file_pass | led -v _pwd -F b64e:'"(.+)"' -f | led -v _pwd -E.dec b64d:'"(.+)"' -f
+    ls $TEST_DIR/files_in/file_pass | led -v _pwd -E.enc b64e:'"(.+)"' -f | led -v _pwd -E.dec b64d:'"(.+)"' -f
 fi
 
 if [[ $TEST == 11 || $TEST == all ]]; then

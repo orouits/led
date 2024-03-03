@@ -9,7 +9,9 @@ It aims to cover in one tool common text search/replace/process functions that c
 The **led** command line arguments is composed of section in the folling order:
 
 `led [SELECTOR] [PROCESSOR] [-opts...] [-f] [FILES...]`
+
 `cat [FILES...] | led [SELECTOR] [PROCESSOR] [-opts...]`
+
 `ls [DIR] | led [SELECTOR] [PROCESSOR] [-opts...] -f`
 
 The options can be anywhere before -f option

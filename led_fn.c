@@ -126,13 +126,18 @@ void led_fn_impl_translate() {
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
         char c = led.line_prep.str[i];
-        for (size_t j=0; j<led.fn_arg[0].len; j++) {
+        size_t j;
+        for (j=0; j<led.fn_arg[0].len; j++) {
             if (led.fn_arg[0].str[j] == c) {
                 if (j < led.fn_arg[1].len)
-                    led_line_append_char(&led.line_write, led.fn_arg[0].str[j]);
+                    led_line_append_char(&led.line_write, led.fn_arg[1].str[j]);
                 break;
             }
         }
+
+        /* output only if no substitution has been done */
+        if (j == led.fn_arg[0].len)
+            led_line_append_char(&led.line_write, led.line_prep.str[i]);
     }
     led_zone_post_process();
 }

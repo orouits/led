@@ -395,7 +395,9 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     +n      +n           => shift start/stop selector boundaries\n\
 \n\
 ## Processor:\n\
+    <function>:\n\
     <function>:[regex] [arg] ...\n\
+    <function>: [arg] ... (interpret leading space as default regex '^.*$')\n\
 \n\
 ## Global options\n\
     -v  verbose to STDERR\n\

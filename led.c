@@ -203,14 +203,18 @@ int led_init_opt(const char* arg) {
 }
 
 int led_init_func(char* arg) {
-    int is_func = led_str_match("^[a-z0-9_]+/.*$", arg);
+    int is_func = FALSE;
+    char fsep ='\0'; 
+    if (is_func = led_str_match("^[a-z_]+/", arg)) fsep = '/';
+    else if (is_func = led_str_match("^[a-z_]+:", arg)) fsep = ':';
+
     if (is_func) {        
         // check if additional func can be defined
         led_assert(led.func_count < LED_FUNC_MAX, LED_ERR_ARG, "Maximum functions reached %d", LED_FUNC_MAX );
 
         // search for function
         const char* fname = arg;
-        arg =  led_str_cut(arg, '/');
+        arg =  led_str_cut(arg, fsep);
         int ifunc = led.func_count++;
         led_fn_struct* pfunc = &led.func_list[ifunc];
         led_debug("Funcion table max: %d", led_fn_table_size());
@@ -228,7 +232,7 @@ int led_init_func(char* arg) {
 
         // compile zone regex if given
         const char* rxstr = arg;
-        arg =  led_str_cut(arg, '/');
+        arg =  led_str_cut(arg, fsep);
         if (rxstr[0] != '\0') {
             led_debug("Regex found: %s", rxstr);
             pfunc->regex = led_regex_compile(rxstr);
@@ -241,7 +245,7 @@ int led_init_func(char* arg) {
         // store func arguments
         while(arg) {
             const char* farg = arg;
-            arg =  led_str_cut(arg, '/');
+            arg =  led_str_cut(arg, fsep);
             // check if additional func arg can be defined
             led_assert(pfunc->arg_count < LED_FARG_MAX, LED_ERR_ARG, "Maximum function argments reached %d", LED_FARG_MAX );
             led_debug("Function argument found: %s", farg);
@@ -296,7 +300,7 @@ void led_init_config() {
         led_debug("Configure function: %s (%d)", pfn_desc->long_name, pfunc->id);
 
         const char* format = pfn_desc->args_fmt;
-        for (size_t i=0; i < LED_FARG_MAX && format[i]; i++) {
+        for (size_t i=0; format[i] && i < LED_FARG_MAX; i++) {
             if (format[i] == 'R') {
                 led_assert(pfunc->arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing regex\n%s", i+1, pfn_desc->help_format);
                 pfunc->arg[i].regex = led_regex_compile(pfunc->arg[i].str);

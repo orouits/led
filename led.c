@@ -150,10 +150,12 @@ int led_init_opt(const char* arg) {
                 break;
             case 'F':
                 led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.exec, LED_ERR_ARG, "Bad option -%c, exec mode already set", arg[opti]);
                 led.opt.file_out = LED_OUTPUT_FILE_INPLACE;
                 break;
             case 'W':
                 led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.exec, LED_ERR_ARG, "Bad option -%c, exec mode already set", arg[opti]);
                 led.opt.file_out = LED_OUTPUT_FILE_WRITE;
                 led.opt.file_out_path = arg + opti + 1;
                 led_debug("Option path: %s", led.opt.file_out_path);
@@ -161,6 +163,7 @@ int led_init_opt(const char* arg) {
                 break;
             case 'A':
                 led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.exec, LED_ERR_ARG, "Bad option -%c, exec mode already set", arg[opti]);
                 led.opt.file_out = LED_OUTPUT_FILE_APPEND;
                 led.opt.file_out_path = arg + opti + 1;
                 led_debug("Option path: %s", led.opt.file_out_path);
@@ -168,6 +171,7 @@ int led_init_opt(const char* arg) {
                 break;
             case 'E':
                 led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.exec, LED_ERR_ARG, "Bad option -%c, exec mode already set", arg[opti]);
                 led.opt.file_out = LED_OUTPUT_FILE_NEWEXT;
                 led.opt.file_out_extn = atoi(arg + opti + 1);
                 if (led.opt.file_out_extn <= 0)
@@ -176,6 +180,8 @@ int led_init_opt(const char* arg) {
                 opti = argl;
                 break;
             case 'D':
+                led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
+                led_assert(!led.opt.exec, LED_ERR_ARG, "Bad option -%c, exec mode already set", arg[opti]);
                 led.opt.file_out_dir = arg + opti + 1;
                 led.opt.file_out = LED_OUTPUT_FILE_DIR;
                 led_debug("Option dir: %s", led.opt.file_out_dir);
@@ -185,6 +191,7 @@ int led_init_opt(const char* arg) {
                 led.opt.file_out_unchanged = TRUE;
                 break;
             case 'X':
+                led_assert(!led.opt.file_out, LED_ERR_ARG, "Bad option -%c, output file mode already set", arg[opti]);
                 led.opt.exec = TRUE;
                 break;
             default:
@@ -435,6 +442,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     -A<path>    append content to a fixed file\n\
     -E<ext>     write content to <current filename>.<ext>\n\
     -D<dir>     write files in <dir>.\n\
+    -X          execute lines.\n\
 \n\
     All these options output the output filenames on STDOUT\n\
 \n\
@@ -636,6 +644,24 @@ void led_process_write() {
     }
 }
 
+void led_process_exec() {
+    if (led_line_defined(&led.line_write) && !led_line_isblank(&led.line_write)) {
+        led_debug("Exec line: (%d) len=%d", led.sel.total_count, led.line_write.len);
+        led_debug("Exec command %s", led.line_write.str);
+
+        FILE *fp = popen(led.line_write.str, "r");
+        led_assert(fp != NULL, LED_ERR_ARG, "Command error");
+        char output[4096];
+        while (fgets(output, sizeof output, fp) != NULL) {
+            fwrite(output, sizeof *output, strlen(output), led.file_out.file);
+            fflush(led.file_out.file);
+        }
+        pclose(fp);
+
+        led_line_reset(&led.line_write);
+    }
+}
+
 int led_process_selector() {
     int ready = FALSE;
     // stop selection on stop boundary
@@ -750,7 +776,10 @@ int main(int argc, char* argv[]) {
                 isline = led_process_read();
                 if (led_process_selector()) {
                     led_process_functions();
-                    led_process_write();
+                    if (led.opt.exec)
+                        led_process_exec();
+                    else
+                        led_process_write();
                 }
             } while(isline);
         }

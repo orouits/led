@@ -446,29 +446,6 @@ void led_fn_impl_randomize_alnum(led_fn_struct* pfunc) { led_fn_impl_randomize_b
 void led_fn_impl_randomize_hexa(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_hexa, sizeof randomize_table_hexa - 1); }
 void led_fn_impl_randomize_mixed(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_mixed, sizeof randomize_table_mixed - 1); }
 
-// void led_fn_impl_execute(led_fn_struct* pfunc) {
-//     led_zone_pre_process(pfunc);
-
-//     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
-//         led_line_struct cmd;
-//         led_line_init(&cmd);
-//         led_line_append_str_len(&cmd, pfunc->arg[0].str, pfunc->arg[0].len);
-//         if (cmd.len > 0) led_line_append_char(&cmd, ' ');
-//         led_line_append_str_len(&cmd, led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start);
-//         FILE *fp = popen(cmd.str, "r");
-//         led_assert(fp != NULL, LED_ERR_ARG, "Command error");
-
-//         char output[4096];
-//         while (fgets(output, sizeof output, fp) != NULL) {
-//             led_line_append_str(&led.line_write, output);
-//         }
-//         led_line_unappend_char(&led.line_write, '\n');
-//         pclose(fp);
-//     }
-
-//     led_zone_post_process();
-// }
-
 void led_fn_impl_fname_lower(led_fn_struct* pfunc) {
     led_zone_pre_process(pfunc);
 

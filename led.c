@@ -239,12 +239,12 @@ int led_init_func(char* arg) {
         }
 
         // store func arguments
-        while(*arg != '\0') {
+        while(arg) {
             const char* farg = arg;
             arg =  led_str_cut(arg, '/');
             // check if additional func arg can be defined
             led_assert(pfunc->arg_count < LED_FARG_MAX, LED_ERR_ARG, "Maximum function argments reached %d", LED_FARG_MAX );
-            led_debug("Function arguement found: %s", farg);
+            led_debug("Function argument found: %s", farg);
             int ifarg = pfunc->arg_count++;
             pfunc->arg[ifarg].str = farg;
             pfunc->arg[ifarg].len = strlen(farg);
@@ -296,7 +296,7 @@ void led_init_config() {
         led_debug("Configure function: %s (%d)", pfn_desc->long_name, pfunc->id);
 
         const char* format = pfn_desc->args_fmt;
-        for (size_t i=0; i < pfunc->arg_count && format[i]; i++) {
+        for (size_t i=0; i < LED_FARG_MAX && format[i]; i++) {
             if (format[i] == 'R') {
                 led_assert(pfunc->arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing regex\n%s", i+1, pfn_desc->help_format);
                 pfunc->arg[i].regex = led_regex_compile(pfunc->arg[i].str);
@@ -371,18 +371,18 @@ void led_init(int argc, char* argv[]) {
         if (arg_section == ARGS_SEC_FILES) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
-            led_debug("Init arg is file %s", arg);
+            led_debug("Arg is file: %s", arg);
         }
         else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg)) {
             if (led.opt.file_in) arg_section = ARGS_SEC_FILES;
-            led_debug("Init arg is opt %s", arg);
+            led_debug("Arg is opt: %s", arg);
         }
         else if (arg_section <= ARGS_SEC_FUNCT && led_init_func(arg)) {
             arg_section = ARGS_SEC_FUNCT;
-            led_debug("Init arg is func %s", arg);
+            led_debug("Arg is func: %s", arg);
         }
         else if (arg_section == ARGS_SEC_SELECT && led_init_sel(arg)) {
-            led_debug("Init arg is part of selector %s", arg);
+            led_debug("Arg is part of selector: %s", arg);
         }
         else {
             led_assert(FALSE, LED_ERR_ARG, "Unknown or wrong argument: %s (%s section)", arg, LED_SEC_TABLE[arg_section]);

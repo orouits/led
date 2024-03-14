@@ -34,6 +34,11 @@ int led_line_isblank(led_line_struct* pline) {
 int led_line_isempty(led_line_struct* pline) {
     return pline->len == 0;
 }
+int led_line_match(led_line_struct* pline, pcre2_code_8* regex) {
+    pline->zone_start = pline->len;
+    pline->zone_stop = pline->len;
+    return led_regex_match_offset(regex, pline->str, pline->len, &pline->zone_start, &pline->zone_stop);
+}
 size_t led_line_copy(led_line_struct* pline, led_line_struct* pline_src) {
     memcpy(pline, pline_src, sizeof *pline_src);
     if (led_line_defined(pline_src)) pline->str = pline->buf;
@@ -89,7 +94,7 @@ size_t led_line_unappend_char(led_line_struct* pline, char c) {
     return pline->len;
 }
 
-size_t led_line_search_fisrt(led_line_struct* pline, char c, size_t start, size_t stop) {
+size_t led_line_search_first(led_line_struct* pline, char c, size_t start, size_t stop) {
     size_t ichar = stop;
     for (size_t i = start; i < stop && ichar < stop; i++)
         if (pline->str[ichar] == c) ichar = i;

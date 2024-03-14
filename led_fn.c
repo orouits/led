@@ -14,11 +14,8 @@ int led_zone_pre_process(led_fn_struct* pfunc) {
     int rc;
     led_line_init(&led.line_write);
 
-    if (pfunc->regex != NULL) {
-        led.line_prep.zone_start = led.line_prep.len;
-        led.line_prep.zone_stop = led.line_prep.len;
-        rc = led_regex_match_offset(pfunc->regex, led.line_prep.str, led.line_prep.len, &led.line_prep.zone_start, &led.line_prep.zone_stop);
-    }
+    if (pfunc->regex != NULL)
+        rc = led_line_match(&led.line_prep, pfunc->regex);
     else {
         led.line_prep.zone_start = 0;
         led.line_prep.zone_stop = led.line_prep.len;
@@ -37,7 +34,31 @@ void led_zone_post_process() {
 // LED functions
 //-----------------------------------------------
 
+void led_fn_impl_register(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
+    led_line_init(&led.line_reg);
+    led_line_append_zone(&led.line_reg, &led.line_prep);
+    led_line_append_zone(&led.line_write, &led.line_prep);
+    led_zone_post_process();
+    led_debug("Register: len=%d", led.line_reg.len);
+}
+
 void led_fn_impl_substitute(led_fn_struct* pfunc) {
+    led_debug("Try to replace $R in arg (len=%d)", pfunc->arg[0].len);
+    led_line_struct sub_line;
+    led_line_init(&sub_line);
+
+    size_t zone_start;
+    size_t zone_stop;
+    if (led_regex_match_offset(LED_REGEX_REGISTER, pfunc->arg[0].str, pfunc->arg[0].len, &zone_start, &zone_stop)) {
+        led_line_append_str_start_stop(&sub_line, pfunc->arg[0].str, 0, zone_start);
+        led_line_append(&sub_line,&led.line_reg);
+        led_line_append_str_start_stop(&sub_line, pfunc->arg[0].str, zone_stop, pfunc->arg[0].len);
+    }
+    else
+        led_line_append_str_len(&sub_line, pfunc->arg[0].str, pfunc->arg[0].len);
+
+    led_debug("Substitute prep line (len=%d)", led.line_prep.len);
     PCRE2_SIZE len = LED_BUF_MAX;
     int rc = pcre2_substitute(
                 pfunc->regex,
@@ -47,8 +68,8 @@ void led_fn_impl_substitute(led_fn_struct* pfunc) {
                 PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
                 NULL,
                 NULL,
-                (PCRE2_UCHAR8*)pfunc->arg[0].str,
-                pfunc->arg[0].len,
+                (PCRE2_UCHAR8*)sub_line.str,
+                sub_line.len,
                 (PCRE2_UCHAR8*)led.line_write.buf,
                 &len);
     led_assert_pcre(rc);
@@ -414,7 +435,6 @@ void led_fn_impl_split_base(led_fn_struct* pfunc, const char* field_sep) {
         if ( led_char_in_str(c, field_sep) ) c = '\n';
         led_line_append_char(&led.line_write, c);
     }
-
     led_zone_post_process();
 }
 
@@ -468,7 +488,6 @@ void led_fn_impl_fname_lower(led_fn_struct* pfunc) {
                 led_line_append_char(&led.line_write, '_');
         }
     }
-
     led_zone_post_process();
 }
 
@@ -541,6 +560,7 @@ void led_fn_impl_generate(led_fn_struct* pfunc) {
 }
 
 led_fn_desc_struct LED_FN_TABLE[] = {
+    { "r", "register", &led_fn_impl_register, "", "Register", "r/[regex]" },
     { "s", "substitute", &led_fn_impl_substitute, "Ss", "Substitute", "s/[regex]/replace[/opts]" },
     { "d", "delete", &led_fn_impl_delete, "", "Delete line", "d/" },
     { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "i//<string>[/N]" },

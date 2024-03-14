@@ -65,20 +65,26 @@ int led_char_pos_str(char c, const char* str) {
 char* led_str_cut(char* str, char c) {
     char* next = str;
     while (*next != '\0') {
-        if (*next == c ) { *next = '\0'; next++; break; }
+        if (*next == c ) { 
+            *next = '\0'; 
+            return next + 1; 
+        }
         next++;
     }
-    return next;
+    return NULL;
 }
 
 pcre2_code* LED_REGEX_BLANK_LINE = NULL;
+pcre2_code* LED_REGEX_REGISTER = NULL;
 
 void led_regex_init() {
     if (LED_REGEX_BLANK_LINE == NULL) LED_REGEX_BLANK_LINE = led_regex_compile("^\\s*$");
+    if (LED_REGEX_REGISTER == NULL) LED_REGEX_REGISTER = led_regex_compile("\\$R");
 }
 
 void led_regex_free() {
-    if (LED_REGEX_BLANK_LINE != NULL) pcre2_code_free(LED_REGEX_BLANK_LINE);
+    if (LED_REGEX_BLANK_LINE != NULL) { pcre2_code_free(LED_REGEX_BLANK_LINE); LED_REGEX_BLANK_LINE = NULL; }
+    if (LED_REGEX_REGISTER != NULL) { pcre2_code_free(LED_REGEX_REGISTER); LED_REGEX_REGISTER = NULL; }
 }
 
 pcre2_code* led_regex_compile(const char* pattern) {
@@ -108,10 +114,10 @@ int led_regex_match_offset(pcre2_code* regex, const char* str, int len, size_t* 
         int iv = (rc - 1) * 2;
         *pzone_start = ovector[iv];
         *pzone_stop = ovector[iv + 1];
-        led_debug("match_offset values %d (%c) - %d (%c)", *pzone_start, *pzone_stop, str[*pzone_start], str[*pzone_stop]);
+        led_debug("match_offset values %d (%c) - %d (%c)", *pzone_start, str[*pzone_start], *pzone_stop, str[*pzone_stop]);
     }
     pcre2_match_data_free(match_data);
-    return rc > LED_RGX_GROUP_MATCH ? LED_RGX_GROUP_MATCH: rc;
+    return rc > 0;
 }
 
 int led_str_match(const char* str_regex, const char* str) {

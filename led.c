@@ -53,14 +53,17 @@ void led_free() {
         pcre2_code_free(led.sel.regex_stop);
         led.sel.regex_stop = NULL;
     }
-    if (led.fn_regex != NULL) {
-        pcre2_code_free(led.fn_regex);
-        led.fn_regex = NULL;
-    }
-    for (int i=0; i<LED_FARG_MAX; i++) {
-        if (led.fn_arg[i].regex != NULL) {
-            pcre2_code_free(led.fn_arg[i].regex);
-            led.fn_arg[i].regex = NULL;
+    for(size_t i = 0; i < led.func_count; i++) {
+        led_fn_struct* pfunc = &led.func_list[i];
+        if (pfunc->regex != NULL) {
+            pcre2_code_free(pfunc->regex);
+            pfunc->regex = NULL;
+        }
+        for (size_t i = 0; i < pfunc->arg_count; i++) {
+            if (pfunc->arg[i].regex != NULL) {
+                pcre2_code_free(pfunc->arg[i].regex);
+                pfunc->arg[i].regex = NULL;
+            }
         }
     }
     led_regex_free();
@@ -181,6 +184,9 @@ int led_init_opt(const char* arg) {
             case 'U':
                 led.opt.file_out_unchanged = TRUE;
                 break;
+            case 'X':
+                led.opt.exec = TRUE;
+                break;
             default:
                 led_assert(FALSE, LED_ERR_ARG, "Unknown option: -%c", arg[opti]);
             }
@@ -189,49 +195,55 @@ int led_init_opt(const char* arg) {
     return rc;
 }
 
-int led_init_func(const char* arg) {
-    int is_func = led_str_match("^[a-z0-9_]+:.*$", arg);
-    if (is_func) {
+int led_init_func(char* arg) {
+    int is_func = led_str_match("^[a-z0-9_]+/.*$", arg);
+    if (is_func) {        
+        // check if additional func can be defined
+        led_assert(led.func_count < LED_FUNC_MAX, LED_ERR_ARG, "Maximum functions reached %d", LED_FUNC_MAX );
+
         // search for function
-        int isep =  led_char_pos_str(':', arg);
+        const char* fname = arg;
+        arg =  led_str_cut(arg, '/');
+        int ifunc = led.func_count++;
+        led_fn_struct* pfunc = &led.func_list[ifunc];
         led_debug("Funcion table max: %d", led_fn_table_size());
-        for (led.fn_id = 0; led.fn_id < led_fn_table_size(); led.fn_id++) {
-            led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-            if (led_str_equal_len(arg, fn_desc->short_name, isep) || led_str_equal_len(arg, fn_desc->long_name, isep)) {
-                led_debug("Function found: %d", led.fn_id);
+        for (pfunc->id = 0; pfunc->id < led_fn_table_size(); pfunc->id++) {
+            led_fn_desc_struct* pfn_desc = led_fn_table_descriptor(pfunc->id);
+            if (led_str_equal(fname, pfn_desc->short_name) || led_str_equal(fname, pfn_desc->long_name)) {
+                led_debug("Function found: %d", pfunc->id);
                 break;
             }
         }
+
         // check if func is usable
-        led_assert(led.fn_id < led_fn_table_size(), LED_ERR_ARG, "Unknown function in: %s", arg);
-        led_assert(led_fn_table_descriptor(led.fn_id)->impl != NULL, LED_ERR_ARG, "Function not yet implemented in: %s", led_fn_table_descriptor(led.fn_id)->long_name);
+        led_assert(pfunc->id < led_fn_table_size(), LED_ERR_ARG, "Unknown function: %s", fname);
+        led_assert(led_fn_table_descriptor(pfunc->id)->impl != NULL, LED_ERR_ARG, "Function not yet implemented in: %s", led_fn_table_descriptor(pfunc->id)->long_name);
 
         // compile zone regex if given
-        const char* rxstr = arg + isep + 1;
+        const char* rxstr = arg;
+        arg =  led_str_cut(arg, '/');
         if (rxstr[0] != '\0') {
             led_debug("Regex found: %s", rxstr);
-            led.fn_regex = led_regex_compile(rxstr);
+            pfunc->regex = led_regex_compile(rxstr);
         }
         else {
             led_debug("Regex NOT found, fixed to ^.*$");
-            led.fn_regex = led_regex_compile("^.*$");
+            pfunc->regex = led_regex_compile("^.*$");
+        }
+
+        // store func arguments
+        while(*arg != '\0') {
+            const char* farg = arg;
+            arg =  led_str_cut(arg, '/');
+            // check if additional func arg can be defined
+            led_assert(pfunc->arg_count < LED_FARG_MAX, LED_ERR_ARG, "Maximum function argments reached %d", LED_FARG_MAX );
+            led_debug("Function arguement found: %s", farg);
+            int ifarg = pfunc->arg_count++;
+            pfunc->arg[ifarg].str = farg;
+            pfunc->arg[ifarg].len = strlen(farg);
         }
     }
     return is_func;
-}
-
-int led_init_func_arg(const char* arg) {
-    int rc = !led.fn_arg[LED_FARG_MAX - 1].str;
-    if (rc) {
-        for (size_t i = 0; i < LED_FARG_MAX; i++) {
-            if (!led.fn_arg[i].str) {
-                led.fn_arg[i].str = arg;
-                led.fn_arg[i].len = strlen(arg);
-                break;
-            }
-        }
-    }
-    return rc;
 }
 
 int led_init_sel(const char* arg) {
@@ -270,63 +282,67 @@ int led_init_sel(const char* arg) {
 }
 
 void led_init_config() {
-    led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-    led_debug("Configure function: %s (%d)", fn_desc->long_name, led.fn_id);
+    for (size_t ifunc = 0; ifunc < led.func_count; ifunc++) {
+        led_fn_struct* pfunc = &led.func_list[ifunc];
 
-    const char* format = fn_desc->args_fmt;
-    for (int i=0; i < LED_FARG_MAX && format[i]; i++) {
-        if (format[i] == 'R') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing regex\n%s", i+1, fn_desc->help_format);
-            led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
-            led_debug("function arg %i: regex found", i+1);
-        }
-        else if (format[i] == 'r') {
-            if (led.fn_arg[i].str) {
-                led.fn_arg[i].regex = led_regex_compile(led.fn_arg[i].str);
+        led_fn_desc_struct* pfn_desc = led_fn_table_descriptor(pfunc->id);
+        led_debug("Configure function: %s (%d)", pfn_desc->long_name, pfunc->id);
+
+        const char* format = pfn_desc->args_fmt;
+        for (size_t i=0; i < pfunc->arg_count && format[i]; i++) {
+            if (format[i] == 'R') {
+                led_assert(pfunc->arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing regex\n%s", i+1, pfn_desc->help_format);
+                pfunc->arg[i].regex = led_regex_compile(pfunc->arg[i].str);
                 led_debug("function arg %i: regex found", i+1);
             }
-        }
-        else if (format[i] == 'N') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing number\n%s", i+1, fn_desc->help_format);
-            led.fn_arg[i].val = atol(led.fn_arg[i].str);
-            led_debug("function arg %i: numeric found: %li", i+1, led.fn_arg[i].val);
-            // additionally compute the positive unsigned value to help
-            led.fn_arg[i].uval = led.fn_arg[i].val < 0 ? (size_t)(-led.fn_arg[i].val) : (size_t)led.fn_arg[i].val;
-        }
-        else if (format[i] == 'n') {
-            if (led.fn_arg[i].str) {
-                led.fn_arg[i].val = atol(led.fn_arg[i].str);
-                led_debug("function arg %i: numeric found: %li", i+1, led.fn_arg[i].val);
+            else if (format[i] == 'r') {
+                if (pfunc->arg[i].str) {
+                    pfunc->arg[i].regex = led_regex_compile(pfunc->arg[i].str);
+                    led_debug("function arg %i: regex found", i+1);
+                }
+            }
+            else if (format[i] == 'N') {
+                led_assert(pfunc->arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing number\n%s", i+1, pfn_desc->help_format);
+                pfunc->arg[i].val = atol(pfunc->arg[i].str);
+                led_debug("function arg %i: numeric found: %li", i+1, pfunc->arg[i].val);
                 // additionally compute the positive unsigned value to help
-                led.fn_arg[i].uval = led.fn_arg[i].val < 0 ? (size_t)(-led.fn_arg[i].val) : (size_t)led.fn_arg[i].val;
+                pfunc->arg[i].uval = pfunc->arg[i].val < 0 ? (size_t)(-pfunc->arg[i].val) : (size_t)pfunc->arg[i].val;
             }
-        }
-        else if (format[i] == 'P') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing number\n%s", i+1, fn_desc->help_format);
-            led.fn_arg[i].val = atol(led.fn_arg[i].str);
-            led_assert(led.fn_arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive number\n%s", i+1, fn_desc->help_format);
-            led.fn_arg[i].uval = (size_t)led.fn_arg[i].val;
-            led_debug("function arg %i: positive numeric found: %lu", i+1, led.fn_arg[i].uval);
-        }
-        else if (format[i] == 'p') {
-            if (led.fn_arg[i].str) {
-                led.fn_arg[i].val = atol(led.fn_arg[i].str);
-                led_assert(led.fn_arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive numboptioptier\n%s", i+1, fn_desc->help_format);
-                led.fn_arg[i].uval = (size_t)led.fn_arg[i].val;
-                led_debug("function arg %i: positive numeric found: %lu", i+1, led.fn_arg[i].uval);
+            else if (format[i] == 'n') {
+                if (pfunc->arg[i].str) {
+                    pfunc->arg[i].val = atol(pfunc->arg[i].str);
+                    led_debug("function arg %i: numeric found: %li", i+1, pfunc->arg[i].val);
+                    // additionally compute the positive unsigned value to help
+                    pfunc->arg[i].uval = pfunc->arg[i].val < 0 ? (size_t)(-pfunc->arg[i].val) : (size_t)pfunc->arg[i].val;
+                }
             }
-        }
-        else if (format[i] == 'S') {
-            led_assert(led.fn_arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing string\n%s", i+1, fn_desc->help_format);
-            led_debug("function arg %i: string found: %s", i+1, led.fn_arg[i].str);
-        }
-        else if (format[i] == 's') {
-            if (led.fn_arg[i].str) {
-                led_debug("function arg %i: string found: %s", i+1, led.fn_arg[i].str);
+            else if (format[i] == 'P') {
+                led_assert(pfunc->arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing number\n%s", i+1, pfn_desc->help_format);
+                pfunc->arg[i].val = atol(pfunc->arg[i].str);
+                led_assert(pfunc->arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive number\n%s", i+1, pfn_desc->help_format);
+                pfunc->arg[i].uval = (size_t)pfunc->arg[i].val;
+                led_debug("function arg %i: positive numeric found: %lu", i+1, pfunc->arg[i].uval);
             }
-        }
-        else {
-            led_assert(TRUE, LED_ERR_ARG, "function arg %i: bad internal format (%s)", i+1, format);
+            else if (format[i] == 'p') {
+                if (pfunc->arg[i].str) {
+                    pfunc->arg[i].val = atol(pfunc->arg[i].str);
+                    led_assert(pfunc->arg[i].val >= 0, LED_ERR_ARG, "function arg %i: not a positive numboptioptier\n%s", i+1, pfn_desc->help_format);
+                    pfunc->arg[i].uval = (size_t)pfunc->arg[i].val;
+                    led_debug("function arg %i: positive numeric found: %lu", i+1, pfunc->arg[i].uval);
+                }
+            }
+            else if (format[i] == 'S') {
+                led_assert(pfunc->arg[i].str != NULL, LED_ERR_ARG, "function arg %i: missing string\n%s", i+1, pfn_desc->help_format);
+                led_debug("function arg %i: string found: %s", i+1, pfunc->arg[i].str);
+            }
+            else if (format[i] == 's') {
+                if (pfunc->arg[i].str) {
+                    led_debug("function arg %i: string found: %s", i+1, pfunc->arg[i].str);
+                }
+            }
+            else {
+                led_assert(TRUE, LED_ERR_ARG, "function arg %i: bad internal format (%s)", i+1, format);
+            }
         }
     }
 }
@@ -343,23 +359,23 @@ void led_init(int argc, char* argv[]) {
 
     int arg_section = 0;
     for (int argi=1; argi < argc; argi++) {
-        const char* arg = argv[argi];
+        char* arg = argv[argi];
 
         if (arg_section == ARGS_SEC_FILES) {
             led.file_names = argv + argi;
             led.file_count = argc - argi;
+            led_debug("Init arg is file %s", arg);
         }
         else if (arg_section < ARGS_SEC_FILES && led_init_opt(arg)) {
             if (led.opt.file_in) arg_section = ARGS_SEC_FILES;
+            led_debug("Init arg is opt %s", arg);
         }
-        else if (arg_section == ARGS_SEC_FUNCT && led_init_func_arg(arg)) {
-
-        }
-        else if (arg_section < ARGS_SEC_FUNCT && led_init_func(arg)) {
+        else if (arg_section <= ARGS_SEC_FUNCT && led_init_func(arg)) {
             arg_section = ARGS_SEC_FUNCT;
+            led_debug("Init arg is func %s", arg);
         }
         else if (arg_section == ARGS_SEC_SELECT && led_init_sel(arg)) {
-
+            led_debug("Init arg is part of selector %s", arg);
         }
         else {
             led_assert(FALSE, LED_ERR_ARG, "Unknown or wrong argument: %s (%s section)", arg, LED_SEC_TABLE[arg_section]);
@@ -367,7 +383,7 @@ void led_init(int argc, char* argv[]) {
     }
 
     // if a process function is not defined show only selected
-    led.opt.output_selected = led.opt.output_selected || led.fn_id == 0;
+    led.opt.output_selected = led.opt.output_selected || led.func_count == 0;
 
     // pre-configure the processor command
     led_init_config();
@@ -432,16 +448,16 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
     fprintf(stderr, "| %-4s| %-19s| %-9s| %-49s| %-39s|\n", "Id", "Name", "Short", "Description", "Format");
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
     for (size_t i = 0; i < led_fn_table_size(); i++) {
-        led_fn_struct* fn_desc = led_fn_table_descriptor(i);
-        if (!fn_desc->impl) fprintf(stderr, "\e[90m");
+        led_fn_desc_struct* pfn_desc = led_fn_table_descriptor(i);
+        if (!pfn_desc->impl) fprintf(stderr, "\e[90m");
         fprintf(stderr, "| %-4lu| %-19s| %-9s| %-49s| %-39s|\n",
             i,
-            fn_desc->long_name,
-            fn_desc->short_name,
-            fn_desc->help_desc,
-            fn_desc->help_format
+            pfn_desc->long_name,
+            pfn_desc->short_name,
+            pfn_desc->help_desc,
+            pfn_desc->help_format
        );
-        if (!fn_desc->impl) fprintf(stderr, "\e[0m");
+        if (!pfn_desc->impl) fprintf(stderr, "\e[0m");
     }
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);
 }
@@ -685,18 +701,26 @@ int led_process_selector() {
     return ready;
 }
 
-void led_process_function() {
+void led_process_functions() {
     led_debug("Process line ready (len=%d)", led.line_prep.len);
-    led_fn_struct* fn_desc = led_fn_table_descriptor(led.fn_id);
-    if (led_line_defined(&led.line_prep) && led_line_selected(&led.line_prep)) {
-        led.report.line_match_count++;
-        led_debug("Process function %s", fn_desc->long_name);
-        (fn_desc->impl)();
-    }
-    else if (!led.opt.output_selected) {
-        led_debug("Copy unselected to dest");
-        led_line_copy(&led.line_write, &led.line_prep);
-    }
+        if (led_line_defined(&led.line_prep) && led_line_selected(&led.line_prep)) {
+            if (led.func_count)
+                for (size_t ifunc = 0; ifunc < led.func_count; ifunc++) {
+                    led_fn_struct* pfunc = &led.func_list[ifunc];
+                    led_fn_desc_struct* pfn_desc = led_fn_table_descriptor(pfunc->id);
+                    led.report.line_match_count++;
+                    led_debug("Process function %s", pfn_desc->long_name);
+                    (pfn_desc->impl)(pfunc);
+                    led_line_copy(&led.line_prep, &led.line_write);
+                }
+            else
+                led_line_copy(&led.line_write, &led.line_prep);
+        }
+        else if (!led.opt.output_selected) {
+            led_debug("Copy unselected to dest");
+            led_line_copy(&led.line_write, &led.line_prep);
+        }
+
     led_line_reset(&led.line_prep);
     led_debug("Result line dest (len=%d)", led.line_write.len);
 }
@@ -725,7 +749,7 @@ int main(int argc, char* argv[]) {
             do {
                 isline = led_process_read();
                 if (led_process_selector()) {
-                    led_process_function();
+                    led_process_functions();
                     led_process_write();
                 }
             } while(isline);

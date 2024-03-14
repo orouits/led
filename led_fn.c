@@ -10,14 +10,14 @@
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
 
-int led_zone_pre_process() {
+int led_zone_pre_process(led_fn_struct* pfunc) {
     int rc;
     led_line_init(&led.line_write);
 
-    if (led.fn_regex != NULL) {
+    if (pfunc->regex != NULL) {
         led.line_prep.zone_start = led.line_prep.len;
         led.line_prep.zone_stop = led.line_prep.len;
-        rc = led_regex_match_offset(led.fn_regex, led.line_prep.str, led.line_prep.len, &led.line_prep.zone_start, &led.line_prep.zone_stop);
+        rc = led_regex_match_offset(pfunc->regex, led.line_prep.str, led.line_prep.len, &led.line_prep.zone_start, &led.line_prep.zone_stop);
     }
     else {
         led.line_prep.zone_start = 0;
@@ -37,22 +37,18 @@ void led_zone_post_process() {
 // LED functions
 //-----------------------------------------------
 
-void led_fn_impl_none() {
-    led_line_copy(&led.line_write, &led.line_prep);
-}
-
-void led_fn_impl_substitute() {
+void led_fn_impl_substitute(led_fn_struct* pfunc) {
     PCRE2_SIZE len = LED_BUF_MAX;
     int rc = pcre2_substitute(
-                led.fn_regex,
+                pfunc->regex,
                 (PCRE2_UCHAR8*)led.line_prep.str,
                 led.line_prep.len,
                 0,
                 PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
                 NULL,
                 NULL,
-                (PCRE2_UCHAR8*)led.fn_arg[0].str,
-                led.fn_arg[0].len,
+                (PCRE2_UCHAR8*)pfunc->arg[0].str,
+                pfunc->arg[0].len,
                 (PCRE2_UCHAR8*)led.line_write.buf,
                 &len);
     led_assert_pcre(rc);
@@ -60,8 +56,8 @@ void led_fn_impl_substitute() {
     led.line_write.len = len;
 }
 
-void led_fn_impl_remove() {
-    led_zone_pre_process();
+void led_fn_impl_delete(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start == 0 && led.line_prep.zone_stop == led.line_prep.len)
         // delete all the line if it all match
@@ -71,26 +67,26 @@ void led_fn_impl_remove() {
         led_zone_post_process();
 }
 
-void led_fn_impl_remove_blank() {
+void led_fn_impl_delete_blank(led_fn_struct* pfunc) {
     if (led.line_prep.str[0] == '\0' || led_regex_match(LED_REGEX_BLANK_LINE, led.line_prep.str, led.line_prep.len))
         led_line_reset(&led.line_write);
     else
         led_line_copy(&led.line_write, &led.line_prep);
 }
 
-void led_fn_impl_range_sel() {
+void led_fn_impl_range_sel(led_fn_struct* pfunc) {
     led_line_init(&led.line_write);
 
-    if (led.fn_arg[0].len) {
-        long val = led.fn_arg[0].val;
-        size_t uval = led.fn_arg[0].uval;
+    if (pfunc->arg[0].len) {
+        long val = pfunc->arg[0].val;
+        size_t uval = pfunc->arg[0].uval;
         if (val > 0)
             led.line_prep.zone_start = uval > led.line_prep.len ? led.line_prep.len : uval;
         else
             led.line_prep.zone_start = uval > led.line_prep.len ? 0 : led.line_prep.len - uval;
     }
-    if (led.fn_arg[1].len) {
-        size_t uval = led.fn_arg[1].uval;
+    if (pfunc->arg[1].len) {
+        size_t uval = pfunc->arg[1].uval;
         led.line_prep.zone_stop = led.line_prep.zone_start + uval > led.line_prep.len ? led.line_prep.len : led.line_prep.zone_start + uval;
     }
     else
@@ -99,10 +95,10 @@ void led_fn_impl_range_sel() {
     led_line_append_zone(&led.line_write, &led.line_prep);
 }
 
-void led_fn_impl_range_unsel() {
-    if (led.fn_arg[0].len) {
-        long val = led.fn_arg[0].val;
-        size_t uval = led.fn_arg[0].uval;
+void led_fn_impl_range_unsel(led_fn_struct* pfunc) {
+    if (pfunc->arg[0].len) {
+        long val = pfunc->arg[0].val;
+        size_t uval = pfunc->arg[0].uval;
         if (val > 0) {
             led.line_prep.zone_start = uval > led.line_prep.len ? led.line_prep.len : uval;
         }
@@ -110,8 +106,8 @@ void led_fn_impl_range_unsel() {
             led.line_prep.zone_start = uval > led.line_prep.len ? 0 : led.line_prep.len - uval;
         }
     }
-    if (led.fn_arg[1].len) {
-        size_t uval = (size_t)led.fn_arg[1].val;
+    if (pfunc->arg[1].len) {
+        size_t uval = (size_t)pfunc->arg[1].val;
         led.line_prep.zone_stop = led.line_prep.zone_start + uval > led.line_prep.len ? led.line_prep.len : led.line_prep.zone_start + uval;
     }
     else
@@ -121,29 +117,29 @@ void led_fn_impl_range_unsel() {
     led_line_append_after_zone(&led.line_write, &led.line_prep);
 }
 
-void led_fn_impl_translate() {
-    led_zone_pre_process();
+void led_fn_impl_translate(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
         char c = led.line_prep.str[i];
         size_t j;
-        for (j=0; j<led.fn_arg[0].len; j++) {
-            if (led.fn_arg[0].str[j] == c) {
-                if (j < led.fn_arg[1].len)
-                    led_line_append_char(&led.line_write, led.fn_arg[1].str[j]);
+        for (j=0; j<pfunc->arg[0].len; j++) {
+            if (pfunc->arg[0].str[j] == c) {
+                if (j < pfunc->arg[1].len)
+                    led_line_append_char(&led.line_write, pfunc->arg[1].str[j]);
                 break;
             }
         }
 
         /* output only if no substitution has been done */
-        if (j == led.fn_arg[0].len)
+        if (j == pfunc->arg[0].len)
             led_line_append_char(&led.line_write, led.line_prep.str[i]);
     }
     led_zone_post_process();
 }
 
-void led_fn_impl_case_lower() {
-    led_zone_pre_process();
+void led_fn_impl_case_lower(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++)
         led_line_append_char(&led.line_write, tolower(led.line_prep.str[i]));
@@ -151,8 +147,8 @@ void led_fn_impl_case_lower() {
     led_zone_post_process();
 }
 
-void led_fn_impl_case_upper() {
-    led_zone_pre_process();
+void led_fn_impl_case_upper(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++)
         led_line_append_char(&led.line_write, toupper(led.line_prep.str[i]));
@@ -160,8 +156,8 @@ void led_fn_impl_case_upper() {
     led_zone_post_process();
 }
 
-void led_fn_impl_case_first() {
-    led_zone_pre_process();
+void led_fn_impl_case_first(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     led_line_append_char(&led.line_write, toupper(led.line_prep.str[led.line_prep.zone_start]));
     for (size_t i=led.line_prep.zone_start+1; i<led.line_prep.zone_stop; i++)
@@ -170,8 +166,8 @@ void led_fn_impl_case_first() {
     led_zone_post_process();
 }
 
-void led_fn_impl_case_camel() {
-    led_zone_pre_process();
+void led_fn_impl_case_camel(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     int wasword = FALSE;
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
@@ -187,20 +183,20 @@ void led_fn_impl_case_camel() {
     led_zone_post_process();
 }
 
-void led_fn_impl_insert() {
-    led_line_append_str_len(&led.line_write, led.fn_arg[0].str, led.fn_arg[0].len);
+void led_fn_impl_insert(led_fn_struct* pfunc) {
+    led_line_append_str_len(&led.line_write, pfunc->arg[0].str, pfunc->arg[0].len);
     led_line_append_char(&led.line_write, '\n');
     led_line_append(&led.line_write, &led.line_prep);
 }
 
-void led_fn_impl_append() {
+void led_fn_impl_append(led_fn_struct* pfunc) {
     led_line_append(&led.line_write, &led.line_prep);
     led_line_append_char(&led.line_write, '\n');
-    led_line_append_str_len(&led.line_write, led.fn_arg[0].str, led.fn_arg[0].len);
+    led_line_append_str_len(&led.line_write, pfunc->arg[0].str, pfunc->arg[0].len);
 }
 
-void led_fn_impl_quote_base(char q) {
-    led_zone_pre_process();
+void led_fn_impl_quote_base(led_fn_struct* pfunc, char q) {
+    led_zone_pre_process(pfunc);
 
     if (! (led.line_prep.str[led.line_prep.zone_start] == q && led.line_prep.str[led.line_prep.zone_stop - 1] == q) ) {
         led_debug("quote active");
@@ -214,13 +210,13 @@ void led_fn_impl_quote_base(char q) {
     led_zone_post_process();
 }
 
-void led_fn_impl_quote_simple() { led_fn_impl_quote_base('\''); }
-void led_fn_impl_quote_double() { led_fn_impl_quote_base('"'); }
-void led_fn_impl_quote_back() { led_fn_impl_quote_base('`'); }
+void led_fn_impl_quote_simple(led_fn_struct* pfunc) { led_fn_impl_quote_base(pfunc, '\''); }
+void led_fn_impl_quote_double(led_fn_struct* pfunc) { led_fn_impl_quote_base(pfunc, '"'); }
+void led_fn_impl_quote_back(led_fn_struct* pfunc) { led_fn_impl_quote_base(pfunc, '`'); }
 
-void led_fn_impl_quote_remove() {
+void led_fn_impl_quote_remove(led_fn_struct* pfunc) {
     const char* QUOTES="'\"`";
-    led_zone_pre_process();
+    led_zone_pre_process(pfunc);
 
     char q = QUOTES[0];
     for(size_t i = 0; q != '\0'; i++, q = QUOTES[i]) {
@@ -237,8 +233,8 @@ void led_fn_impl_quote_remove() {
     led_zone_post_process();
 }
 
-void led_fn_impl_trim() {
-    led_zone_pre_process();
+void led_fn_impl_trim(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     size_t str_start = led.line_prep.zone_start;
     size_t str_stop = led.line_prep.zone_stop;
@@ -253,8 +249,8 @@ void led_fn_impl_trim() {
     led_zone_post_process();
 }
 
-void led_fn_impl_trim_left() {
-    led_zone_pre_process();
+void led_fn_impl_trim_left(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     size_t str_start = led.line_prep.zone_start;
     for (; str_start < led.line_prep.zone_stop; str_start++) {
@@ -265,8 +261,8 @@ void led_fn_impl_trim_left() {
     led_zone_post_process();
 }
 
-void led_fn_impl_trim_right() {
-    led_zone_pre_process();
+void led_fn_impl_trim_right(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     size_t str_stop = led.line_prep.zone_stop;
     for (; str_stop > led.line_prep.zone_start; str_stop--)
@@ -276,8 +272,8 @@ void led_fn_impl_trim_right() {
     led_zone_post_process();
 }
 
-void led_fn_impl_base64_encode() {
-    led_zone_pre_process();
+void led_fn_impl_base64_encode(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     base64_encodestate base64_state;
 	size_t count = 0;
@@ -291,8 +287,8 @@ void led_fn_impl_base64_encode() {
     led_zone_post_process();
 }
 
-void led_fn_impl_base64_decode() {
-    led_zone_pre_process();
+void led_fn_impl_base64_decode(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
 	base64_decodestate base64_state;
 	size_t count = 0;
@@ -305,8 +301,8 @@ void led_fn_impl_base64_decode() {
     led_zone_post_process();
 }
 
-void led_fn_impl_url_encode() {
-    led_zone_pre_process();
+void led_fn_impl_url_encode(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     const char *HEX = "0123456789ABCDEF";
     char pcbuf[4] = "%00";
@@ -325,8 +321,8 @@ void led_fn_impl_url_encode() {
     led_zone_post_process();
 }
 
-void led_fn_impl_path_canonical() {
-    led_zone_pre_process();
+void led_fn_impl_realpath(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     char c = led.line_prep.buf[led.line_prep.zone_stop]; // temporary save this char for realpath function
     led.line_prep.buf[led.line_prep.zone_stop] = '\0';
@@ -342,8 +338,8 @@ void led_fn_impl_path_canonical() {
     led_zone_post_process();
 }
 
-void led_fn_impl_path_dir() {
-    led_zone_pre_process();
+void led_fn_impl_dirname(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     const char* dir = dirname(led.line_prep.str + led.line_prep.zone_start);
     if (dir != NULL) led_line_append_str(&led.line_write, dir);
@@ -352,8 +348,8 @@ void led_fn_impl_path_dir() {
     led_zone_post_process();
 }
 
-void led_fn_impl_path_file() {
-    led_zone_pre_process();
+void led_fn_impl_basename(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     const char* fname = basename(led.line_prep.str + led.line_prep.zone_start);
     if (fname != NULL) led_line_append_str(&led.line_write, fname);
@@ -362,8 +358,8 @@ void led_fn_impl_path_file() {
     led_zone_post_process();
 }
 
-void led_fn_impl_revert() {
-    led_zone_pre_process();
+void led_fn_impl_revert(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_stop; i > led.line_prep.zone_start; i--)
         led_line_append_char(&led.line_write, led.line_prep.buf[i - 1]);
@@ -371,9 +367,9 @@ void led_fn_impl_revert() {
     led_zone_post_process();
 }
 
-void led_fn_impl_field_base(const char* field_sep) {
-    led_zone_pre_process();
-    size_t field_n = led.fn_arg[0].uval;
+void led_fn_impl_field_base(led_fn_struct* pfunc, const char* field_sep) {
+    led_zone_pre_process(pfunc);
+    size_t field_n = pfunc->arg[0].uval;
     size_t n = 0;
     int was_sep = TRUE;
     size_t str_start = led.line_prep.zone_start;
@@ -398,20 +394,20 @@ void led_fn_impl_field_base(const char* field_sep) {
     led_zone_post_process();
 }
 
-void led_fn_impl_field() { led_fn_impl_field_base( led.fn_arg[1].str); }
-void led_fn_impl_field_csv() { led_fn_impl_field_base(",;"); }
-void led_fn_impl_field_space() { led_fn_impl_field_base(" \t\n"); }
-void led_fn_impl_field_mixed() { led_fn_impl_field_base(",; \t\n"); }
+void led_fn_impl_field(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, pfunc->arg[1].str); }
+void led_fn_impl_field_csv(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, ",;"); }
+void led_fn_impl_field_space(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, " \t\n"); }
+void led_fn_impl_field_mixed(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, ",; \t\n"); }
 
-void led_fn_impl_join() {
+void led_fn_impl_join(led_fn_struct* pfunc) {
    for (size_t i = 0; i < led.line_prep.len; i++) {
         char c = led.line_prep.str[i];
         if ( c != '\n') led_line_append_char(&led.line_write, c);
    }
 }
 
-void led_fn_impl_split_base(const char* field_sep) {
-    led_zone_pre_process();
+void led_fn_impl_split_base(led_fn_struct* pfunc, const char* field_sep) {
+    led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
         char c = led.line_prep.str[i];
@@ -422,13 +418,13 @@ void led_fn_impl_split_base(const char* field_sep) {
     led_zone_post_process();
 }
 
-void led_fn_impl_split() { led_fn_impl_split_base(led.fn_arg[0].str); }
-void led_fn_impl_split_space() { led_fn_impl_split_base(" \t\n"); }
-void led_fn_impl_split_csv() { led_fn_impl_split_base(",;"); }
-void led_fn_impl_split_mixed() { led_fn_impl_split_base(",; \t\n"); }
+void led_fn_impl_split(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, pfunc->arg[0].str); }
+void led_fn_impl_split_space(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, " \t\n"); }
+void led_fn_impl_split_csv(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, ",;"); }
+void led_fn_impl_split_mixed(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, ",; \t\n"); }
 
-void led_fn_impl_randomize_base(const char* charset, size_t len) {
-    led_zone_pre_process();
+void led_fn_impl_randomize_base(led_fn_struct* pfunc, const char* charset, size_t len) {
+    led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
         char c = charset[rand() % len];
@@ -444,37 +440,37 @@ const char randomize_table_alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEF
 const char randomize_table_hexa[] = "0123456789ABCDEF";
 const char randomize_table_mixed[] = "0123456789-_/=!:;,~#$*?%abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-void led_fn_impl_randomize_num() { led_fn_impl_randomize_base(randomize_table_num, sizeof randomize_table_num - 1); }
-void led_fn_impl_randomize_alpha() { led_fn_impl_randomize_base(randomize_table_alpha, sizeof randomize_table_alpha -1); }
-void led_fn_impl_randomize_alnum() { led_fn_impl_randomize_base(randomize_table_alnum, sizeof randomize_table_alnum - 1); }
-void led_fn_impl_randomize_hexa() { led_fn_impl_randomize_base(randomize_table_hexa, sizeof randomize_table_hexa - 1); }
-void led_fn_impl_randomize_mixed() { led_fn_impl_randomize_base(randomize_table_mixed, sizeof randomize_table_mixed - 1); }
+void led_fn_impl_randomize_num(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_num, sizeof randomize_table_num - 1); }
+void led_fn_impl_randomize_alpha(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_alpha, sizeof randomize_table_alpha -1); }
+void led_fn_impl_randomize_alnum(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_alnum, sizeof randomize_table_alnum - 1); }
+void led_fn_impl_randomize_hexa(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_hexa, sizeof randomize_table_hexa - 1); }
+void led_fn_impl_randomize_mixed(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_mixed, sizeof randomize_table_mixed - 1); }
 
-void led_fn_impl_execute() {
-    led_zone_pre_process();
+// void led_fn_impl_execute(led_fn_struct* pfunc) {
+//     led_zone_pre_process(pfunc);
 
-    if (led.line_prep.zone_start < led.line_prep.zone_stop) {
-        led_line_struct cmd;
-        led_line_init(&cmd);
-        led_line_append_str_len(&cmd, led.fn_arg[0].str, led.fn_arg[0].len);
-        if (cmd.len > 0) led_line_append_char(&cmd, ' ');
-        led_line_append_str_len(&cmd, led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start);
-        FILE *fp = popen(cmd.str, "r");
-        led_assert(fp != NULL, LED_ERR_ARG, "Command error");
+//     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
+//         led_line_struct cmd;
+//         led_line_init(&cmd);
+//         led_line_append_str_len(&cmd, pfunc->arg[0].str, pfunc->arg[0].len);
+//         if (cmd.len > 0) led_line_append_char(&cmd, ' ');
+//         led_line_append_str_len(&cmd, led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start);
+//         FILE *fp = popen(cmd.str, "r");
+//         led_assert(fp != NULL, LED_ERR_ARG, "Command error");
 
-        char output[4096];
-        while (fgets(output, sizeof output, fp) != NULL) {
-            led_line_append_str(&led.line_write, output);
-        }
-        led_line_unappend_char(&led.line_write, '\n');
-        pclose(fp);
-    }
+//         char output[4096];
+//         while (fgets(output, sizeof output, fp) != NULL) {
+//             led_line_append_str(&led.line_write, output);
+//         }
+//         led_line_unappend_char(&led.line_write, '\n');
+//         pclose(fp);
+//     }
 
-    led_zone_post_process();
-}
+//     led_zone_post_process();
+// }
 
-void led_fn_impl_fname_lower() {
-    led_zone_pre_process();
+void led_fn_impl_fname_lower(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         size_t iname = led.line_prep.zone_start;
@@ -499,8 +495,8 @@ void led_fn_impl_fname_lower() {
     led_zone_post_process();
 }
 
-void led_fn_impl_fname_upper() {
-    led_zone_pre_process();
+void led_fn_impl_fname_upper(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         size_t iname = led.line_prep.zone_start;
@@ -524,8 +520,8 @@ void led_fn_impl_fname_upper() {
     led_zone_post_process();
 }
 
-void led_fn_impl_fname_camel() {
-    led_zone_pre_process();
+void led_fn_impl_fname_camel(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
         size_t iname = led.line_prep.zone_start;
@@ -555,10 +551,10 @@ void led_fn_impl_fname_camel() {
     led_zone_post_process();
 }
 
-void led_fn_impl_generate() {
-    led_zone_pre_process();
-    size_t n = led.fn_arg[1].uval > 0 ? led.line_prep.zone_start + led.fn_arg[1].uval : led.line_prep.zone_stop;
-    char c = led.fn_arg[0].str[0];
+void led_fn_impl_generate(led_fn_struct* pfunc) {
+    led_zone_pre_process(pfunc);
+    size_t n = pfunc->arg[1].uval > 0 ? led.line_prep.zone_start + pfunc->arg[1].uval : led.line_prep.zone_stop;
+    char c = pfunc->arg[0].str[0];
 
     for (size_t i = led.line_prep.zone_start; i < n; i++) {
         led_line_append_char(&led.line_write, c);
@@ -567,60 +563,58 @@ void led_fn_impl_generate() {
     led_zone_post_process();
 }
 
-led_fn_struct LED_FN_TABLE[] = {
-    { "nn", "none", &led_fn_impl_none, "", "No processing", "none:" },
-    { "sub", "substitute", &led_fn_impl_substitute, "S", "Substitute", "substitute:<regex> <replace>" },
-    { "exe", "execute", &led_fn_impl_execute, "S", "Execute", "execute:<regex> <command>" },
-    { "rm", "remove", &led_fn_impl_remove, "", "Remove line", "remove:" },
-    { "rmb", "remove_blank", &led_fn_impl_remove_blank, "", "Remove blank/empty lines", "remove_blank:" },
-    { "ins", "insert", &led_fn_impl_insert, "Sp", "Insert line", "insert: <string> [N]" },
-    { "app", "append", &led_fn_impl_append, "Sp", "Append line", "append: <string> [N]" },
-    { "rns", "range_sel", &led_fn_impl_range_sel, "Np", "Range select", "range_sel: <start> [count]" },
-    { "rnu", "range_unsel", &led_fn_impl_range_unsel, "Np", "Range unselect", "range_unsel: <start> [count]" },
-    { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "translate: <chars> <chars>" },
-    { "csl", "case_lower", &led_fn_impl_case_lower, "", "Case to lower", "case_lower:" },
-    { "csu", "case_upper", &led_fn_impl_case_upper, "", "Case to upper", "case_upper:" },
-    { "csf", "case_first", &led_fn_impl_case_first, "", "Case first upper", "case_first:" },
-    { "csc", "case_camel", &led_fn_impl_case_camel, "", "Case to camel style", "case_camel:" },
-    { "qts", "quote_simple", &led_fn_impl_quote_simple, "", "Quote simple", "quote_simple:" },
-    { "qtd", "quote_double", &led_fn_impl_quote_double, "", "Quote double", "quote_double:" },
-    { "qtb", "quote_back", &led_fn_impl_quote_back, "", "Quote back", "quote_back:" },
-    { "qtr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "quote_remove:" },
-    { "sp", "split", &led_fn_impl_split, "S", "Split using chars", "split: <chars> [regex]" },
-    { "spc", "split_csv", &led_fn_impl_split_csv, "", "Split using comma", "split: [regex]" },
-    { "sps", "split_space", &led_fn_impl_split_space, "", "Split using space", "split: [regex]" },
-    { "spm", "split_mixed", &led_fn_impl_split_mixed, "", "Split using comma and space", "split: [regex]" },
-    { "jn", "join", &led_fn_impl_join, "", "Join lines (only with pack mode)", "join:" },
-    { "tm", "trim", &led_fn_impl_trim, "", "Trim", "trim:" },
-    { "tml", "trim_left", &led_fn_impl_trim_left, "", "Trim left", "trim_left:" },
-    { "tmr", "trim_right", &led_fn_impl_trim_right, "", "Trim right", "trim_right:" },
-    { "rv", "revert", &led_fn_impl_revert, "", "Revert", "revert:" },
-    { "fld", "field", &led_fn_impl_field, "PSp", "Extract field with separator chars", "field: <N> <sep> <count>" },
-    { "fls", "field_space", &led_fn_impl_field_space, "Pp", "Extract field separated by space", "field_space: <N> <count>" },
-    { "flc", "field_csv", &led_fn_impl_field_csv, "Pp", "Extract field separated by comma", "field_csv: <N> <count>" },
-    { "flm", "field_mixed", &led_fn_impl_field_mixed, "Pp", "Extract field separated by space or comma", "field_mixed: <N> <count>" },
-    { "b64e", "base64_encode", &led_fn_impl_base64_encode, "", "Encode base64", "base64_encode:" },
-    { "b64d", "base64_decode", &led_fn_impl_base64_decode, "", "Decode base64", "base64_decode:" },
-    { "urle", "url_encode", &led_fn_impl_url_encode, "", "Encode URL", "url_encode:" },
-    { "phc", "path_canonical", &led_fn_impl_path_canonical, "", "Convert to canonical path", "path_canonical:" },
-    { "phd", "path_dir", &led_fn_impl_path_dir, "", "Extract last dir of the path", "path_dir:" },
-    { "phf", "path_file", &led_fn_impl_path_file, "", "Extract file of the path", "path_file:" },
-    { "fnl", "fname_lower", &led_fn_impl_fname_lower, "", "simplify file name using lower case", "fname_lower:" },
-    { "fnu", "fname_upper", &led_fn_impl_fname_upper, "", "simplify file name using upper case", "fname_upper:" },
-    { "fnc", "fname_camel", &led_fn_impl_fname_camel, "", "simplify file name using camel case", "fname_camel:" },
-    { "rzn", "randomize_num", &led_fn_impl_randomize_num, "", "Randomize numeric values", "randomize_num:" },
-    { "rza", "randomize_alpha", &led_fn_impl_randomize_alpha, "", "Randomize alpha values", "randomize_alpha:" },
-    { "rzan", "randomize_alnum", &led_fn_impl_randomize_alnum, "", "Randomize alpha numeric values", "randomize_alnum:" },
-    { "rzh", "randomize_hexa", &led_fn_impl_randomize_hexa, "", "Randomize alpha numeric values", "randomize_hexa:" },
-    { "rzm", "randomize_mixed", &led_fn_impl_randomize_mixed, "", "Randomize alpha numeric and custom chars", "randomize_mixed:" },
-    { "gen", "generate", &led_fn_impl_generate, "Sp", "Generate chars", "generate: <char> [N]" },
+led_fn_desc_struct LED_FN_TABLE[] = {
+    { "s", "substitute", &led_fn_impl_substitute, "S", "Substitute", "substitute/[regex]/replace" },
+    { "d", "delete", &led_fn_impl_delete, "", "Delete line", "delete/" },
+    { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "insert//<string>[/N]" },
+    { "a", "append", &led_fn_impl_append, "Sp", "Append line", "append//<string>[/N]" },
+    { "db", "delete_blank", &led_fn_impl_delete_blank, "", "Delete blank/empty lines", "remove_blank/" },
+    { "rns", "range_sel", &led_fn_impl_range_sel, "Np", "Range select", "range_sel/start[/count]" },
+    { "rnu", "range_unsel", &led_fn_impl_range_unsel, "Np", "Range unselect", "range_unsel/[regex]/start[/count]" },
+    { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "translate/[regex]/chars/chars" },
+    { "csl", "case_lower", &led_fn_impl_case_lower, "", "Case to lower", "case_lower/[regex]" },
+    { "csu", "case_upper", &led_fn_impl_case_upper, "", "Case to upper", "case_upper/[regex]" },
+    { "csf", "case_first", &led_fn_impl_case_first, "", "Case first upper", "case_first/[regex]" },
+    { "csc", "case_camel", &led_fn_impl_case_camel, "", "Case to camel style", "case_camel/[regex]" },
+    { "qts", "quote_simple", &led_fn_impl_quote_simple, "", "Quote simple", "quote_simple/[regex]" },
+    { "qtd", "quote_double", &led_fn_impl_quote_double, "", "Quote double", "quote_double/[regex]" },
+    { "qtb", "quote_back", &led_fn_impl_quote_back, "", "Quote back", "quote_back/[regex]" },
+    { "qtr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "quote_remove/[regex]" },
+    { "sp", "split", &led_fn_impl_split, "S", "Split using chars", "split/[regex]/chars" },
+    { "spc", "split_csv", &led_fn_impl_split_csv, "", "Split using comma", "split/[regex]" },
+    { "sps", "split_space", &led_fn_impl_split_space, "", "Split using space", "split/[regex]" },
+    { "spm", "split_mixed", &led_fn_impl_split_mixed, "", "Split using comma and space", "split/[regex]" },
+    { "jn", "join", &led_fn_impl_join, "", "Join lines (only with pack mode)", "join/" },
+    { "tm", "trim", &led_fn_impl_trim, "", "Trim", "trim/[regex]" },
+    { "tml", "trim_left", &led_fn_impl_trim_left, "", "Trim left", "trim_left/[regex]" },
+    { "tmr", "trim_right", &led_fn_impl_trim_right, "", "Trim right", "trim_right/[regex]" },
+    { "rv", "revert", &led_fn_impl_revert, "", "Revert", "revert/[regex]" },
+    { "fld", "field", &led_fn_impl_field, "PSp", "Extract field with separator chars", "field/[regex]/N/sep[/count]" },
+    { "fls", "field_space", &led_fn_impl_field_space, "Pp", "Extract field separated by space", "field_space/[regex]/N[/count]" },
+    { "flc", "field_csv", &led_fn_impl_field_csv, "Pp", "Extract field separated by comma", "field_csv/N[/count]" },
+    { "flm", "field_mixed", &led_fn_impl_field_mixed, "Pp", "Extract field separated by space or comma", "field_mixed/[regex]N[/count]" },
+    { "b64e", "base64_encode", &led_fn_impl_base64_encode, "", "Encode base64", "base64_encode/[regex]" },
+    { "b64d", "base64_decode", &led_fn_impl_base64_decode, "", "Decode base64", "base64_decode/[regex]" },
+    { "urle", "url_encode", &led_fn_impl_url_encode, "", "Encode URL", "url_encode/[regex]" },
+    { "rp", "realpath", &led_fn_impl_realpath, "", "Convert to real path (canonical)", "realpath/[regex]" },
+    { "dn", "dirname", &led_fn_impl_dirname, "", "Extract last dir of the path", "dirname/[regex]" },
+    { "bn", "basename", &led_fn_impl_basename, "", "Extract file of the path", "basename/[regex]" },
+    { "fnl", "fname_lower", &led_fn_impl_fname_lower, "", "simplify file name using lower case", "fname_lower/" },
+    { "fnu", "fname_upper", &led_fn_impl_fname_upper, "", "simplify file name using upper case", "fname_upper/" },
+    { "fnc", "fname_camel", &led_fn_impl_fname_camel, "", "simplify file name using camel case", "fname_camel/" },
+    { "rzn", "randomize_num", &led_fn_impl_randomize_num, "", "Randomize numeric values", "randomize_num/" },
+    { "rza", "randomize_alpha", &led_fn_impl_randomize_alpha, "", "Randomize alpha values", "randomize_alpha/" },
+    { "rzan", "randomize_alnum", &led_fn_impl_randomize_alnum, "", "Randomize alpha numeric values", "randomize_alnum/" },
+    { "rzh", "randomize_hexa", &led_fn_impl_randomize_hexa, "", "Randomize alpha numeric values", "randomize_hexa/" },
+    { "rzm", "randomize_mixed", &led_fn_impl_randomize_mixed, "", "Randomize alpha numeric and custom chars", "randomize_mixed/" },
+    { "gen", "generate", &led_fn_impl_generate, "Sp", "Generate chars", "generate/<char>[/N]" },
 };
 
-#define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_struct)
+#define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_desc_struct)
 
-led_fn_struct* led_fn_table_descriptor(size_t fn_id) {
-    led_assert(fn_id < LED_FN_TABLE_MAX, LED_ERR_INTERNAL, "Function index out of table");
-    return LED_FN_TABLE + fn_id;
+led_fn_desc_struct* led_fn_table_descriptor(size_t id) {
+    led_assert(id < LED_FN_TABLE_MAX, LED_ERR_INTERNAL, "Function index out of table");
+    return LED_FN_TABLE + id;
 }
 
 size_t led_fn_table_size() {

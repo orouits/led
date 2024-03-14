@@ -22,6 +22,7 @@
 
 #define LED_SEL_MAX 2
 #define LED_FARG_MAX 3
+#define LED_FUNC_MAX 10
 #define LED_BUF_MAX 0x8000
 #define LED_FNAME_MAX 0x1000
 #define LED_MSG_MAX 0x1000
@@ -44,6 +45,20 @@ typedef struct {
 } led_line_struct;
 
 typedef struct {
+    size_t id;
+    pcre2_code* regex;
+
+    struct {
+        const char* str;
+        size_t len;
+        long val;
+        size_t uval;
+        pcre2_code* regex;
+    } arg[LED_FARG_MAX];
+    size_t arg_count;
+} led_fn_struct;
+
+typedef struct {
     // options
     struct {
         int help;
@@ -60,6 +75,7 @@ typedef struct {
         int file_out;
         int file_out_unchanged;
         int file_out_extn;
+        int exec;
         const char* file_out_ext;
         const char* file_out_dir;
         const char* file_out_path;
@@ -82,21 +98,11 @@ typedef struct {
         int inboundary;
     } sel;
 
-    // processor function Id
-    size_t fn_id;
-    pcre2_code* fn_regex;
-
-    struct {
-        const char* str;
-        size_t len;
-        long val;
-        size_t uval;
-        pcre2_code* regex;
-    } fn_arg[LED_FARG_MAX];
+    led_fn_struct func_list[LED_FUNC_MAX];
+    size_t func_count;
 
     struct {
         size_t line_match_count;
-
         size_t file_in_count;
         size_t file_out_count;
         size_t file_match_count;
@@ -157,7 +163,7 @@ size_t led_line_search_last(led_line_struct* pline, char c, size_t start, size_t
 // LED function management
 //-----------------------------------------------
 
-typedef void (*led_fn_impl)();
+typedef void (*led_fn_impl)(led_fn_struct*);
 
 typedef struct {
     const char* short_name;
@@ -166,11 +172,11 @@ typedef struct {
     const char* args_fmt;
     const char* help_desc;
     const char* help_format;
-} led_fn_struct;
+} led_fn_desc_struct;
 
 void led_fn_config();
 
-led_fn_struct* led_fn_table_descriptor(size_t fn_id);
+led_fn_desc_struct* led_fn_table_descriptor(size_t fn_id);
 size_t led_fn_table_size();
 
 //-----------------------------------------------
@@ -193,6 +199,7 @@ char* led_str_cpy(char* dest, const char* src, int maxlen);
 char* led_str_app(char* dest, const char* src, int maxlen);
 char* led_str_trunc(char* dest, int size);
 char* led_str_trim(char* str);
+char* led_str_cut(char *str, char c);
 int led_str_isempty(char* str);
 int led_str_equal(const char* str1, const char* str2);
 int led_str_equal_len(const char* str1, const char* str2, int len);

@@ -62,6 +62,15 @@ int led_char_pos_str(char c, const char* str) {
     return pos;
 }
 
+char* led_str_cut(char* str, char c) {
+    char* next = str;
+    while (*next != '\0') {
+        if (*next == c ) { *next = '\0'; next++; break; }
+        next++;
+    }
+    return next;
+}
+
 pcre2_code* LED_REGEX_BLANK_LINE = NULL;
 
 void led_regex_init() {

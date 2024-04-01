@@ -79,7 +79,7 @@ pcre2_code* LED_REGEX_REGISTER = NULL;
 
 void led_regex_init() {
     if (LED_REGEX_BLANK_LINE == NULL) LED_REGEX_BLANK_LINE = led_regex_compile("^\\s*$");
-    if (LED_REGEX_REGISTER == NULL) LED_REGEX_REGISTER = led_regex_compile("\\$R");
+    if (LED_REGEX_REGISTER == NULL) LED_REGEX_REGISTER = led_regex_compile("\\$R[0-9]?");
 }
 
 void led_regex_free() {

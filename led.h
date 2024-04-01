@@ -26,6 +26,7 @@
 #define LED_BUF_MAX 0x8000
 #define LED_FNAME_MAX 0x1000
 #define LED_MSG_MAX 0x1000
+#define LED_REG_MAX 10
 
 #define LED_RGX_NO_MATCH 0
 #define LED_RGX_STR_MATCH 1
@@ -37,7 +38,7 @@
 
 typedef struct {
     char* str;
-    char buf[LED_BUF_MAX];
+    char buf[LED_BUF_MAX+1];
     size_t len;
     size_t zone_start;
     size_t zone_stop;
@@ -47,9 +48,10 @@ typedef struct {
 typedef struct {
     size_t id;
     pcre2_code* regex;
+    char tmp_buf[LED_BUF_MAX+1];
 
     struct {
-        const char* str;
+        char* str;
         size_t len;
         long val;
         size_t uval;
@@ -128,7 +130,7 @@ typedef struct {
     led_line_struct line_prep;
     led_line_struct line_write;
 
-    led_line_struct line_reg;
+    led_line_struct line_reg[LED_REG_MAX];
 
     PCRE2_UCHAR8 buf_message[LED_MSG_MAX+1];
 

@@ -76,39 +76,42 @@ cat file.txt | led abc 10 <processor> -p
 
 ```
 
-### The processor
+### The processor section
 
-- `processor := function:[zone_regex] args ...`
+The processor section is composed of 1 or N functions. Each function is a separate shell argument.
 
-in many cases `zone_regex` is used to identify a zone where the function is applied in the line.
+- `function/[regex][/arg1][/arg2]... function/[regex][/arg1][/arg2]...`
 
-- not defined => all the line (.*)
-    - it allows to make opreation on the full line
-- defined => only the matching zone
-    - it allows to make operations on a sub part of the line
-- define with 1 capture block (...) => only the captured zone
-    - it allows to make operations on a sub part of the line with a better matching
+if the processor is not defined, led just output lines selected by the selector
 
-#### sub|substitute function
+The `regex` is used to identify a zone where the function is applied in the line. It is always the first argument but can be empty.
+- if regex is empty 
+    - `function/` `function//arg1` 
+    - the default regex is used (.*)
+    - it allows to apply the operation on the whole line
+- if defined 
+    - `function/Abc.+/` `function/Abc.+/arg1` 
+    - it allows to apply the operation on the mathing zone only
+- if defined with capture block (...)
+    - it allows to apply the operation on the first capture zone only for better context matching
 
-The `sub|substitute:` function allows to substitute string from a regex.
+Each function has a short name and a long name
+- the argement separator can be replaced by `:` instead of `/` to solve character escaping. 
+
+Argments follows the regex.
+
+#### s|substitute function
+
+The `s|substitute:` function allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`sub|substitute:[regex] <replace>`
+`s|substitute/[regex]/replace[/opt]`
 
 - regex: the search regex string
 - replace: the replace string
-
-#### exe|execute function
-
-The `exe|execute:` function allows to substitute string from a regex and execute it.
-
-`exe|execute:[regex] <command>`
-
-- regex = the search regex string
-- command: the replace string to be executed as a command with arguments
+- opts: character sequence of PCRE2 options (ge...) 
 
 #### rm|remove function
 

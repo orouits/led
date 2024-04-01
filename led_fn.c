@@ -35,28 +35,55 @@ void led_zone_post_process() {
 //-----------------------------------------------
 
 void led_fn_impl_register(led_fn_struct* pfunc) {
-    led_zone_pre_process(pfunc);
-    led_line_init(&led.line_reg);
-    led_line_append_zone(&led.line_reg, &led.line_prep);
-    led_line_append_zone(&led.line_write, &led.line_prep);
-    led_zone_post_process();
-    led_debug("Register: len=%d", led.line_reg.len);
+    // register is a passtrough function, line stays unchanged
+    led_line_copy(&led.line_write, &led.line_prep);
+
+    if (pfunc->regex) {
+        pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(pfunc->regex, NULL);
+        int rc = pcre2_match(pfunc->regex, (PCRE2_SPTR)led.line_prep.str, led.line_prep.len, 0, 0, match_data, NULL);
+        led_debug("match_count %d ", rc);
+        for (int ir = 0; ir < rc && ir < LED_REG_MAX; ir++) {
+            PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+            int iv = ir * 2;
+            led_debug("match_offset values %d %d", ovector[iv], ovector[iv+1]);
+            led_line_init(&led.line_reg[ir]);
+            led_line_append_str_start_stop(&led.line_reg[ir], led.line_prep.str, ovector[iv], ovector[iv+1]);
+            led_debug("register value %d (%s)", ir, led.line_reg[ir].str);
+        }
+        pcre2_match_data_free(match_data);
+    }
+    else {
+        led_line_copy(&led.line_reg[0], &led.line_prep);
+    }
 }
 
 void led_fn_impl_substitute(led_fn_struct* pfunc) {
-    led_debug("Try to replace $R in arg (len=%d)", pfunc->arg[0].len);
-    led_line_struct sub_line;
-    led_line_init(&sub_line);
-
-    size_t zone_start;
-    size_t zone_stop;
-    if (led_regex_match_offset(LED_REGEX_REGISTER, pfunc->arg[0].str, pfunc->arg[0].len, &zone_start, &zone_stop)) {
-        led_line_append_str_start_stop(&sub_line, pfunc->arg[0].str, 0, zone_start);
-        led_line_append(&sub_line,&led.line_reg);
-        led_line_append_str_start_stop(&sub_line, pfunc->arg[0].str, zone_stop, pfunc->arg[0].len);
+    if ( ! pfunc->arg[2].str ) {
+        led_debug("Replace registers in substitute string (len=%d) %s", pfunc->arg[0].len, pfunc->arg[0].str);
+        // store the substitute line into unused 3rd arg.
+        pfunc->arg[2].str = pfunc->tmp_buf;
+        pfunc->arg[2].len = 0;
+        for (size_t i = 0; i < pfunc->arg[0].len; i++) {
+            if (pfunc->arg[2].len == LED_BUF_MAX)
+                break;
+            if (led_str_equal_len(pfunc->arg[0].str + i, "$R", 2)) {
+                size_t in = i+2;
+                size_t ir = 0;
+                if (in < pfunc->arg[0].len && pfunc->arg[0].str[in] >= '0' && pfunc->arg[0].str[in] <= '9')
+                    ir = pfunc->arg[0].str[in++] - '0';
+                led_debug("Replace register %d found at %d", ir, i);
+                for (size_t j=0; j < led.line_reg[ir].len && pfunc->arg[2].len < LED_BUF_MAX; j++) {
+                    pfunc->arg[2].str[pfunc->arg[2].len++] = led.line_reg[ir].str[j];
+                }
+                i = in-1;
+            }
+            else {
+                pfunc->arg[2].str[pfunc->arg[2].len++] = pfunc->arg[0].str[i];
+            }
+        }
+        pfunc->arg[2].str[pfunc->arg[2].len] = '\0';
+        led_debug("Substitute line (len=%d) %s", pfunc->arg[2].len, pfunc->arg[2].str);
     }
-    else
-        led_line_append_str_len(&sub_line, pfunc->arg[0].str, pfunc->arg[0].len);
 
     led_debug("Substitute prep line (len=%d)", led.line_prep.len);
     PCRE2_SIZE len = LED_BUF_MAX;
@@ -68,8 +95,8 @@ void led_fn_impl_substitute(led_fn_struct* pfunc) {
                 PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
                 NULL,
                 NULL,
-                (PCRE2_UCHAR8*)sub_line.str,
-                sub_line.len,
+                (PCRE2_UCHAR8*)pfunc->arg[2].str,
+                pfunc->arg[2].len,
                 (PCRE2_UCHAR8*)led.line_write.buf,
                 &len);
     led_assert_pcre(rc);
@@ -566,18 +593,18 @@ led_fn_desc_struct LED_FN_TABLE[] = {
     { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "i//<string>[/N]" },
     { "a", "append", &led_fn_impl_append, "Sp", "Append line", "a//<string>[/N]" },
     { "db", "delete_blank", &led_fn_impl_delete_blank, "", "Delete blank/empty lines", "db/" },
-    { "rns", "range_sel", &led_fn_impl_range_sel, "Np", "Range select", "range_sel/start[/count]" },
-    { "rnu", "range_unsel", &led_fn_impl_range_unsel, "Np", "Range unselect", "range_unsel/[regex]/start[/count]" },
-    { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "translate/[regex]/chars/chars" },
+    { "rns", "range_sel", &led_fn_impl_range_sel, "Np", "Range select", "rns/start[/count]" },
+    { "rnu", "range_unsel", &led_fn_impl_range_unsel, "Np", "Range unselect", "rnu/[regex]/start[/count]" },
+    { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "tr/[regex]/chars/chars" },
     { "cl", "case_lower", &led_fn_impl_case_lower, "", "Case to lower", "cl/[regex]" },
     { "cu", "case_upper", &led_fn_impl_case_upper, "", "Case to upper", "cu/[regex]" },
     { "cf", "case_first", &led_fn_impl_case_first, "", "Case first upper", "cf/[regex]" },
     { "cc", "case_camel", &led_fn_impl_case_camel, "", "Case to camel style", "cc/[regex]" },
-    { "qs", "quote_simple", &led_fn_impl_quote_simple, "", "Quote simple", "qs/[regex]" },
+    { "qt", "quote_simple", &led_fn_impl_quote_simple, "", "Quote simple", "q/[regex]" },
     { "qd", "quote_double", &led_fn_impl_quote_double, "", "Quote double", "qd/[regex]" },
     { "qb", "quote_back", &led_fn_impl_quote_back, "", "Quote back", "qb/[regex]" },
-    { "qr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "qr/[regex]" },
-    { "sp", "split", &led_fn_impl_split, "S", "Split using chars", "split/[regex]/chars" },
+    { "qr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "qr/[regex]/chars" },
+    { "sp", "split", &led_fn_impl_split, "", "Split using characters", "split/[regex]/chars" },
     { "spc", "split_csv", &led_fn_impl_split_csv, "", "Split using comma", "split/[regex]" },
     { "sps", "split_space", &led_fn_impl_split_space, "", "Split using space", "split/[regex]" },
     { "spm", "split_mixed", &led_fn_impl_split_mixed, "", "Split using comma and space", "split/[regex]" },

@@ -2,7 +2,6 @@
 
 #include <b64/cencode.h>
 #include <b64/cdecode.h>
-#include <libgen.h>
 
 //-----------------------------------------------
 // LED functions utilities
@@ -10,104 +9,121 @@
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
 
-int led_zone_pre_process(led_fn_struct* pfunc) {
-    int rc;
+int led_zone_pre_process(led_fn_t* pfunc) {
     led_line_init(&led.line_write);
 
-    if (pfunc->regex != NULL)
-        rc = led_line_match(&led.line_prep, pfunc->regex);
-    else {
-        led.line_prep.zone_start = 0;
-        led.line_prep.zone_stop = led.line_prep.len;
-        rc = LED_RGX_STR_MATCH;
-    }
+    led.line_prep.zone_start = led.line_prep.zone_stop = lstr_len(&led.line_prep.sval);
+    int rc = lstr_match_offset(&led.line_prep.sval, pfunc->regex, &led.line_prep.zone_start, &led.line_prep.zone_stop);
 
-    if (!led.opt.output_match) led_line_append_before_zone(&led.line_write, &led.line_prep);
+    if (!led.opt.output_match)
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, 0, led.line_prep.zone_start);
+
     return rc;
 }
 
 void led_zone_post_process() {
-    if (!led.opt.output_match) led_line_append_after_zone(&led.line_write, &led.line_prep);
+    if (!led.opt.output_match)
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, led.line_prep.zone_stop, led.line_prep.sval.len);
 }
 
 //-----------------------------------------------
 // LED functions
 //-----------------------------------------------
 
-void led_fn_impl_register(led_fn_struct* pfunc) {
+void led_fn_impl_register(led_fn_t* pfunc) {
     // register is a passtrough function, line stays unchanged
-    led_line_copy(&led.line_write, &led.line_prep);
+    led_line_cpy(&led.line_write, &led.line_prep);
 
-    if (pfunc->regex) {
-        pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(pfunc->regex, NULL);
-        int rc = pcre2_match(pfunc->regex, (PCRE2_SPTR)led.line_prep.str, led.line_prep.len, 0, 0, match_data, NULL);
-        led_debug("match_count %d ", rc);
+    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(pfunc->regex, NULL);
+    int rc = pcre2_match(pfunc->regex, (PCRE2_SPTR)lstr_str(&led.line_prep.sval), lstr_len(&led.line_prep.sval), 0, 0, match_data, NULL);
+    PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+    led_debug("match_count %d ", rc);
+
+    if (pfunc->arg_count > 0) {
+        // usecase with fixed register ID argument
+        size_t ir = pfunc->arg[0].uval;
+        led_assert(ir < LED_REG_MAX, LED_ERR_ARG, "Register ID %lu exeed maximum register ID %d", ir, LED_REG_MAX-1);
+        if( rc > 0) {
+            int iv = (rc - 1) * 2;
+            led_debug("match_offset values %d %d", ovector[iv], ovector[iv+1]);
+            led_line_init(&led.line_reg[ir]);
+            lstr_app_start_stop(&led.line_reg[ir].sval, &led.line_prep.sval, ovector[iv], ovector[iv+1]);
+            led_debug("register value %d (%s)", ir, lstr_str(&led.line_reg[ir].sval));
+        }
+    }
+    else {
+        // usecase with unfixed register ID, catch all groups and distribute into registers, R0 is the global matching zone
         for (int ir = 0; ir < rc && ir < LED_REG_MAX; ir++) {
-            PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
             int iv = ir * 2;
             led_debug("match_offset values %d %d", ovector[iv], ovector[iv+1]);
             led_line_init(&led.line_reg[ir]);
-            led_line_append_str_start_stop(&led.line_reg[ir], led.line_prep.str, ovector[iv], ovector[iv+1]);
-            led_debug("register value %d (%s)", ir, led.line_reg[ir].str);
+            lstr_app_start_stop(&led.line_reg[ir].sval, &led.line_prep.sval, ovector[iv], ovector[iv+1]);
+            led_debug("register value %d (%s)", ir, lstr_str(&led.line_reg[ir].sval));
         }
-        pcre2_match_data_free(match_data);
+    }
+    pcre2_match_data_free(match_data);
+}
+
+void led_fn_impl_register_recall(led_fn_t* pfunc) {
+    size_t ir = pfunc->arg_count > 0 ? pfunc->arg[0].uval : 0;
+    led_assert(ir < LED_REG_MAX, LED_ERR_ARG, "Register ID %lu exeed maximum register ID %d", ir, LED_REG_MAX-1);
+
+    if (led_line_isinit(&led.line_reg[ir])) {
+        led.line_reg[ir].zone_start = led.line_reg[ir].zone_stop = lstr_len(&led.line_reg[ir].sval);
+        lstr_match_offset(&led.line_reg[ir].sval, pfunc->regex, &led.line_reg[ir].zone_start, &led.line_reg[ir].zone_stop);
+        led_line_init(&led.line_write);
+        lstr_app_start_stop(&led.line_write.sval, &led.line_reg[ir].sval, led.line_reg[ir].zone_start, led.line_reg[ir].zone_stop);
     }
     else {
-        led_line_copy(&led.line_reg[0], &led.line_prep);
+        // no change to current line if register is not init
+        led_line_cpy(&led.line_write, &led.line_prep);
     }
 }
 
-void led_fn_impl_substitute(led_fn_struct* pfunc) {
-    if ( ! pfunc->arg[2].str ) {
-        led_debug("Replace registers in substitute string (len=%d) %s", pfunc->arg[0].len, pfunc->arg[0].str);
-        // store the substitute line into unused 3rd arg.
-        pfunc->arg[2].str = pfunc->tmp_buf;
-        pfunc->arg[2].len = 0;
-        for (size_t i = 0; i < pfunc->arg[0].len; i++) {
-            if (pfunc->arg[2].len == LED_BUF_MAX)
-                break;
-            if (led_str_equal_len(pfunc->arg[0].str + i, "$R", 2)) {
-                size_t in = i+2;
-                size_t ir = 0;
-                if (in < pfunc->arg[0].len && pfunc->arg[0].str[in] >= '0' && pfunc->arg[0].str[in] <= '9')
-                    ir = pfunc->arg[0].str[in++] - '0';
-                led_debug("Replace register %d found at %d", ir, i);
-                for (size_t j=0; j < led.line_reg[ir].len && pfunc->arg[2].len < LED_BUF_MAX; j++) {
-                    pfunc->arg[2].str[pfunc->arg[2].len++] = led.line_reg[ir].str[j];
-                }
-                i = in-1;
-            }
-            else {
-                pfunc->arg[2].str[pfunc->arg[2].len++] = pfunc->arg[0].str[i];
-            }
+void led_fn_impl_substitute(led_fn_t* pfunc) {
+    lstr_decl(rsval, LED_BUF_MAX);
+    led_debug("Replace registers in substitute string (len=%d) %s", lstr_len(&pfunc->arg[0].sval), lstr_str(&pfunc->arg[0].sval));
+
+    for (size_t i = 0; i < lstr_len(&pfunc->arg[0].sval); i++) {
+        if (lstr_isfull(&rsval)) break;
+        if (lstr_startswith_str_at(&pfunc->arg[0].sval, "$R", i)) {
+            size_t ir = 0;
+            size_t in = i+2; // position of of register ID if given.
+            if ( in < lstr_len(&pfunc->arg[0].sval) && lstr_char_at(&pfunc->arg[0].sval, in) >= '0' && lstr_char_at(&pfunc->arg[0].sval, in) <= '9' )
+                ir = lstr_char_at(&pfunc->arg[0].sval, in++) - '0';
+            else
+                in--; // only $R is given, no ID, adjust "in".
+            led_debug("Replace register %d found at %d", ir, i);
+            lstr_app(&rsval, &led.line_reg[ir].sval);
+            i = in; // position "i" at end of register mark
         }
-        pfunc->arg[2].str[pfunc->arg[2].len] = '\0';
-        led_debug("Substitute line (len=%d) %s", pfunc->arg[2].len, pfunc->arg[2].str);
+        else {
+            lstr_app_char(&rsval, lstr_char_at(&pfunc->arg[0].sval, i));
+        }
     }
 
-    led_debug("Substitute prep line (len=%d)", led.line_prep.len);
-    PCRE2_SIZE len = LED_BUF_MAX;
+    led_debug("Substitute prep line (len=%d) to rsval (len=%d)", lstr_len(&led.line_prep.sval), lstr_len(&rsval));
+    PCRE2_SIZE len = sizeof(led.line_write.buf);
     int rc = pcre2_substitute(
                 pfunc->regex,
-                (PCRE2_UCHAR8*)led.line_prep.str,
-                led.line_prep.len,
+                (PCRE2_UCHAR8*)lstr_str(&led.line_prep.sval),
+                lstr_len(&led.line_prep.sval),
                 0,
                 PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
                 NULL,
                 NULL,
-                (PCRE2_UCHAR8*)pfunc->arg[2].str,
-                pfunc->arg[2].len,
+                (PCRE2_UCHAR8*)lstr_str(&rsval),
+                lstr_len(&rsval),
                 (PCRE2_UCHAR8*)led.line_write.buf,
                 &len);
     led_assert_pcre(rc);
-    led.line_write.str = led.line_write.buf;
-    led.line_write.len = len;
+    lstr_init_buf(&led.line_write.sval,led.line_write.buf);
 }
 
-void led_fn_impl_delete(led_fn_struct* pfunc) {
+void led_fn_impl_delete(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    if (led.line_prep.zone_start == 0 && led.line_prep.zone_stop == led.line_prep.len)
+    if (led.line_prep.zone_start == 0 && led.line_prep.zone_stop == lstr_len(&led.line_prep.sval))
         // delete all the line if it all match
         led_line_reset(&led.line_write);
     else
@@ -115,115 +131,115 @@ void led_fn_impl_delete(led_fn_struct* pfunc) {
         led_zone_post_process();
 }
 
-void led_fn_impl_delete_blank(led_fn_struct* pfunc) {
-    if (led.line_prep.str[0] == '\0' || led_regex_match(LED_REGEX_BLANK_LINE, led.line_prep.str, led.line_prep.len))
+void led_fn_impl_delete_blank(led_fn_t*) {
+    if (lstr_isempty(&led.line_prep.sval) || lstr_isblank(&led.line_prep.sval))
         led_line_reset(&led.line_write);
     else
-        led_line_copy(&led.line_write, &led.line_prep);
+        lstr_cpy(&led.line_write.sval, &led.line_prep.sval);
 }
 
-void led_fn_impl_range_sel(led_fn_struct* pfunc) {
+void led_fn_impl_range_sel(led_fn_t* pfunc) {
     led_line_init(&led.line_write);
 
-    if (pfunc->arg[0].len) {
+    if (lstr_iscontent(&pfunc->arg[0].sval)) {
         long val = pfunc->arg[0].val;
         size_t uval = pfunc->arg[0].uval;
         if (val > 0)
-            led.line_prep.zone_start = uval > led.line_prep.len ? led.line_prep.len : uval;
+            led.line_prep.zone_start = uval > lstr_len(&led.line_prep.sval) ? lstr_len(&led.line_prep.sval) : uval;
         else
-            led.line_prep.zone_start = uval > led.line_prep.len ? 0 : led.line_prep.len - uval;
+            led.line_prep.zone_start = uval > lstr_len(&led.line_prep.sval) ? 0 : lstr_len(&led.line_prep.sval) - uval;
     }
-    if (pfunc->arg[1].len) {
+    if (lstr_iscontent(&pfunc->arg[1].sval)) {
         size_t uval = pfunc->arg[1].uval;
-        led.line_prep.zone_stop = led.line_prep.zone_start + uval > led.line_prep.len ? led.line_prep.len : led.line_prep.zone_start + uval;
+        led.line_prep.zone_stop = led.line_prep.zone_start + uval > lstr_len(&led.line_prep.sval) ? lstr_len(&led.line_prep.sval) : led.line_prep.zone_start + uval;
     }
     else
-        led.line_prep.zone_stop = led.line_prep.len;
+        led.line_prep.zone_stop = lstr_len(&led.line_prep.sval);
 
     led_line_append_zone(&led.line_write, &led.line_prep);
 }
 
-void led_fn_impl_range_unsel(led_fn_struct* pfunc) {
-    if (pfunc->arg[0].len) {
+void led_fn_impl_range_unsel(led_fn_t* pfunc) {
+    if (lstr_iscontent(&pfunc->arg[0].sval)) {
         long val = pfunc->arg[0].val;
         size_t uval = pfunc->arg[0].uval;
         if (val > 0) {
-            led.line_prep.zone_start = uval > led.line_prep.len ? led.line_prep.len : uval;
+            led.line_prep.zone_start = uval > lstr_len(&led.line_prep.sval) ? lstr_len(&led.line_prep.sval) : uval;
         }
         else {
-            led.line_prep.zone_start = uval > led.line_prep.len ? 0 : led.line_prep.len - uval;
+            led.line_prep.zone_start = uval > lstr_len(&led.line_prep.sval) ? 0 : lstr_len(&led.line_prep.sval) - uval;
         }
     }
-    if (pfunc->arg[1].len) {
+    if (lstr_iscontent(&pfunc->arg[1].sval)) {
         size_t uval = (size_t)pfunc->arg[1].val;
-        led.line_prep.zone_stop = led.line_prep.zone_start + uval > led.line_prep.len ? led.line_prep.len : led.line_prep.zone_start + uval;
+        led.line_prep.zone_stop = led.line_prep.zone_start + uval > lstr_len(&led.line_prep.sval) ? lstr_len(&led.line_prep.sval) : led.line_prep.zone_start + uval;
     }
     else
-        led.line_prep.zone_stop = led.line_prep.len;
+        led.line_prep.zone_stop = lstr_len(&led.line_prep.sval);
 
     led_line_append_before_zone(&led.line_write, &led.line_prep);
     led_line_append_after_zone(&led.line_write, &led.line_prep);
 }
 
-void led_fn_impl_translate(led_fn_struct* pfunc) {
+void led_fn_impl_translate(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
-        char c = led.line_prep.str[i];
+    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
+        char c = lstr_char_at(&led.line_prep.sval, i);
         size_t j;
-        for (j=0; j<pfunc->arg[0].len; j++) {
-            if (pfunc->arg[0].str[j] == c) {
-                if (j < pfunc->arg[1].len)
-                    led_line_append_char(&led.line_write, pfunc->arg[1].str[j]);
+        for (j = 0; j < lstr_len(&pfunc->arg[0].sval); j++) {
+            if (lstr_char_at(&pfunc->arg[0].sval, j) == c) {
+                if (j < lstr_len(&pfunc->arg[1].sval))
+                    lstr_app_char(&led.line_write.sval, lstr_char_at(&pfunc->arg[1].sval, j));
                 break;
             }
         }
 
         /* output only if no substitution has been done */
-        if (j == pfunc->arg[0].len)
-            led_line_append_char(&led.line_write, led.line_prep.str[i]);
+        if (j == lstr_len(&pfunc->arg[0].sval))
+            lstr_app_char(&led.line_write.sval, c);
     }
     led_zone_post_process();
 }
 
-void led_fn_impl_case_lower(led_fn_struct* pfunc) {
+void led_fn_impl_case_lower(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++)
-        led_line_append_char(&led.line_write, tolower(led.line_prep.str[i]));
+        lstr_app_char(&led.line_write.sval, tolower(lstr_char_at(&led.line_prep.sval, i)));
 
     led_zone_post_process();
 }
 
-void led_fn_impl_case_upper(led_fn_struct* pfunc) {
+void led_fn_impl_case_upper(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++)
-        led_line_append_char(&led.line_write, toupper(led.line_prep.str[i]));
+        lstr_app_char(&led.line_write.sval, toupper(lstr_char_at(&led.line_prep.sval, i)));
 
     led_zone_post_process();
 }
 
-void led_fn_impl_case_first(led_fn_struct* pfunc) {
+void led_fn_impl_case_first(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    led_line_append_char(&led.line_write, toupper(led.line_prep.str[led.line_prep.zone_start]));
-    for (size_t i=led.line_prep.zone_start+1; i<led.line_prep.zone_stop; i++)
-        led_line_append_char(&led.line_write, tolower(led.line_prep.str[i]));
+    lstr_app_char(&led.line_write.sval, toupper(lstr_char_at(&led.line_prep.sval, led.line_prep.zone_start)));
+    for (size_t i = led.line_prep.zone_start + 1; i<led.line_prep.zone_stop; i++)
+        lstr_app_char(&led.line_write.sval, tolower(lstr_char_at(&led.line_prep.sval, i)));
 
     led_zone_post_process();
 }
 
-void led_fn_impl_case_camel(led_fn_struct* pfunc) {
+void led_fn_impl_case_camel(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     int wasword = FALSE;
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
-        int c = led.line_prep.str[i];
+        int c = lstr_char_at(&led.line_prep.sval, i);
         int isword = isalnum(c) || c == '_';
         if (isword) {
-            if (wasword) led_line_append_char(&led.line_write, tolower(c));
-            else led_line_append_char(&led.line_write, toupper(c));
+            if (wasword) lstr_app_char(&led.line_write.sval, tolower(c));
+            else lstr_app_char(&led.line_write.sval, toupper(c));
         }
         wasword = isword;
     }
@@ -231,26 +247,26 @@ void led_fn_impl_case_camel(led_fn_struct* pfunc) {
     led_zone_post_process();
 }
 
-void led_fn_impl_insert(led_fn_struct* pfunc) {
-    led_line_append_str_len(&led.line_write, pfunc->arg[0].str, pfunc->arg[0].len);
-    led_line_append_char(&led.line_write, '\n');
-    led_line_append(&led.line_write, &led.line_prep);
+void led_fn_impl_insert(led_fn_t* pfunc) {
+    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
+    lstr_app_char(&led.line_write.sval, '\n');
+    lstr_app(&led.line_write.sval, &led.line_prep.sval);
 }
 
-void led_fn_impl_append(led_fn_struct* pfunc) {
-    led_line_append(&led.line_write, &led.line_prep);
-    led_line_append_char(&led.line_write, '\n');
-    led_line_append_str_len(&led.line_write, pfunc->arg[0].str, pfunc->arg[0].len);
+void led_fn_impl_append(led_fn_t* pfunc) {
+    lstr_app(&led.line_write.sval, &led.line_prep.sval);
+    lstr_app_char(&led.line_write.sval, '\n');
+    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
 }
 
-void led_fn_impl_quote_base(led_fn_struct* pfunc, char q) {
+void led_fn_impl_quote_base(led_fn_t* pfunc, char q) {
     led_zone_pre_process(pfunc);
 
-    if (! (led.line_prep.str[led.line_prep.zone_start] == q && led.line_prep.str[led.line_prep.zone_stop - 1] == q) ) {
+    if (! (lstr_char_at(&led.line_prep.sval, led.line_prep.zone_start) == q && lstr_char_at(&led.line_prep.sval, led.line_prep.zone_stop - 1) == q) ) {
         led_debug("quote active");
-        led_line_append_char(&led.line_write, q);
+        lstr_app_char(&led.line_write.sval, q);
         led_line_append_zone(&led.line_write, &led.line_prep);
-        led_line_append_char(&led.line_write, q);
+        lstr_app_char(&led.line_write.sval, q);
     }
     else
         led_line_append_zone(&led.line_write, &led.line_prep);
@@ -258,22 +274,22 @@ void led_fn_impl_quote_base(led_fn_struct* pfunc, char q) {
     led_zone_post_process();
 }
 
-void led_fn_impl_quote_simple(led_fn_struct* pfunc) { led_fn_impl_quote_base(pfunc, '\''); }
-void led_fn_impl_quote_double(led_fn_struct* pfunc) { led_fn_impl_quote_base(pfunc, '"'); }
-void led_fn_impl_quote_back(led_fn_struct* pfunc) { led_fn_impl_quote_base(pfunc, '`'); }
+void led_fn_impl_quote_simple(led_fn_t* pfunc) { led_fn_impl_quote_base(pfunc, '\''); }
+void led_fn_impl_quote_double(led_fn_t* pfunc) { led_fn_impl_quote_base(pfunc, '"'); }
+void led_fn_impl_quote_back(led_fn_t* pfunc) { led_fn_impl_quote_base(pfunc, '`'); }
 
-void led_fn_impl_quote_remove(led_fn_struct* pfunc) {
+void led_fn_impl_quote_remove(led_fn_t* pfunc) {
     const char* QUOTES="'\"`";
     led_zone_pre_process(pfunc);
 
     char q = QUOTES[0];
     for(size_t i = 0; q != '\0'; i++, q = QUOTES[i]) {
-        if (led.line_prep.str[led.line_prep.zone_start] == q && led.line_prep.str[led.line_prep.zone_stop - 1] == q) break;
+        if (lstr_char_at(&led.line_prep.sval, led.line_prep.zone_start) == q && lstr_char_at(&led.line_prep.sval, led.line_prep.zone_stop - 1) == q) break;
     }
 
     if (q) {
         led_debug("quotes found: %c", q);
-        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start+1, led.line_prep.zone_stop-1);
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, led.line_prep.zone_start + 1, led.line_prep.zone_stop - 1);
     }
     else
         led_line_append_zone(&led.line_write, &led.line_prep);
@@ -281,102 +297,115 @@ void led_fn_impl_quote_remove(led_fn_struct* pfunc) {
     led_zone_post_process();
 }
 
-void led_fn_impl_trim(led_fn_struct* pfunc) {
+void led_fn_impl_trim(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     size_t str_start = led.line_prep.zone_start;
     size_t str_stop = led.line_prep.zone_stop;
     for (; str_start < led.line_prep.zone_stop; str_start++) {
-        if (!isspace(led.line_prep.str[str_start])) break;
+        if (!isspace(lstr_char_at(&led.line_prep.sval, str_start))) break;
     }
     for (; str_stop > str_start; str_stop--) {
-        if (!isspace(led.line_prep.str[str_stop - 1])) break;
+        if (!isspace(lstr_char_at(&led.line_prep.sval, str_stop - 1))) break;
     }
-    led_line_append_str_start_stop(&led.line_write, led.line_prep.str, str_start, str_stop);
+    lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, str_start, str_stop);
 
     led_zone_post_process();
 }
 
-void led_fn_impl_trim_left(led_fn_struct* pfunc) {
+void led_fn_impl_trim_left(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     size_t str_start = led.line_prep.zone_start;
     for (; str_start < led.line_prep.zone_stop; str_start++) {
-        if (!isspace(led.line_prep.str[str_start])) break;
+        if (!isspace(lstr_char_at(&led.line_prep.sval, str_start))) break;
     }
-    led_line_append_str_start_stop(&led.line_write, led.line_prep.str, str_start, led.line_prep.zone_stop);
+    lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, str_start, led.line_prep.zone_stop);
 
     led_zone_post_process();
 }
 
-void led_fn_impl_trim_right(led_fn_struct* pfunc) {
+void led_fn_impl_trim_right(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     size_t str_stop = led.line_prep.zone_stop;
     for (; str_stop > led.line_prep.zone_start; str_stop--)
-        if (!isspace(led.line_prep.str[str_stop - 1])) break;
-    led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, str_stop);
+        if (!isspace(lstr_char_at(&led.line_prep.sval, str_stop - 1))) break;
+    lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, led.line_prep.zone_start, str_stop);
 
     led_zone_post_process();
 }
 
-void led_fn_impl_base64_encode(led_fn_struct* pfunc) {
+void led_fn_impl_base64_encode(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
+    char b64buf[LED_BUF_MAX];
     base64_encodestate base64_state;
 	size_t count = 0;
 
 	base64_init_encodestate(&base64_state);
-	count = base64_encode_block(led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start, led.line_write.buf + led.line_write.len, &base64_state);
-	count += base64_encode_blockend(led.line_write.buf + led.line_write.len + count, &base64_state);
-    led.line_write.len += count - 1; // remove newline
-    led.line_write.str[led.line_write.len] = '\0';
+	count = base64_encode_block(
+        lstr_str_at(&led.line_prep.sval, led.line_prep.zone_start),
+        led.line_prep.zone_stop - led.line_prep.zone_start,
+        b64buf,
+        &base64_state);
+	count += base64_encode_blockend(
+        b64buf + count,
+        &base64_state);
+    // remove newline and final 0
+    b64buf[count - 1] = '\0';
 
+    lstr_app_str(&led.line_write.sval, b64buf);
     led_zone_post_process();
 }
 
-void led_fn_impl_base64_decode(led_fn_struct* pfunc) {
+void led_fn_impl_base64_decode(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
+    char b64buf[LED_BUF_MAX];
 	base64_decodestate base64_state;
 	size_t count = 0;
 
 	base64_init_decodestate(&base64_state);
-	count = base64_decode_block(led.line_prep.str + led.line_prep.zone_start, led.line_prep.zone_stop - led.line_prep.zone_start, led.line_write.buf + led.line_write.len, &base64_state);
-    led.line_write.len += count;
-    led.line_write.str[led.line_write.len] = '\0';
+	count = base64_decode_block(
+        lstr_str_at(&led.line_prep.sval, led.line_prep.zone_start),
+        led.line_prep.zone_stop - led.line_prep.zone_start,
+        b64buf,
+        &base64_state);
+    b64buf[count] = '\0';
 
+    lstr_app_str(&led.line_write.sval, b64buf);
     led_zone_post_process();
 }
 
-void led_fn_impl_url_encode(led_fn_struct* pfunc) {
+void led_fn_impl_url_encode(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     const char *HEX = "0123456789ABCDEF";
     char pcbuf[4] = "%00";
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
-        char c = led.line_prep.str[i];
+        char c = lstr_char_at(&led.line_prep.sval, i);
         if (isalnum(c))
-            led_line_append_char(&led.line_write, c);
+            lstr_app_char(&led.line_write.sval, c);
         else {
             pcbuf[1] = HEX[(c >> 4) & 0x0F];
             pcbuf[2] = HEX[c & 0x0F];
-            led_line_append_str(&led.line_write, pcbuf);
+            lstr_app_str(&led.line_write.sval, pcbuf);
         }
     }
 
     led_zone_post_process();
 }
 
-void led_fn_impl_realpath(led_fn_struct* pfunc) {
+void led_fn_impl_realpath(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     char c = led.line_prep.buf[led.line_prep.zone_stop]; // temporary save this char for realpath function
     led.line_prep.buf[led.line_prep.zone_stop] = '\0';
-    if (realpath(led.line_prep.str + led.line_prep.zone_start, led.line_write.buf + led.line_write.len) != NULL ) {
+    if (realpath(lstr_str_at(&led.line_prep.sval, led.line_prep.zone_start), led.line_write.buf + lstr_len(&led.line_write.sval)) != NULL ) {
         led.line_prep.buf[led.line_prep.zone_stop] = c;
-        led.line_write.len = strlen(led.line_write.str);
+        lstr_init_buf(&led.line_write.sval, led.line_write.buf);
     }
     else {
         led.line_prep.buf[led.line_prep.zone_stop] = c;
@@ -386,36 +415,37 @@ void led_fn_impl_realpath(led_fn_struct* pfunc) {
     led_zone_post_process();
 }
 
-void led_fn_impl_dirname(led_fn_struct* pfunc) {
+void led_fn_impl_dirname(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    const char* dir = dirname(led.line_prep.str + led.line_prep.zone_start);
-    if (dir != NULL) led_line_append_str(&led.line_write, dir);
+    const char* dir = dirname(lstr_str_at(&led.line_prep.sval, led.line_prep.zone_start));
+    if (dir != NULL) lstr_app_str(&led.line_write.sval, dir);
     else led_line_append_zone(&led.line_write, &led.line_prep);
 
     led_zone_post_process();
 }
 
-void led_fn_impl_basename(led_fn_struct* pfunc) {
+void led_fn_impl_basename(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    const char* fname = basename(led.line_prep.str + led.line_prep.zone_start);
-    if (fname != NULL) led_line_append_str(&led.line_write, fname);
+    const char* fname = basename(lstr_str_at(&led.line_prep.sval, led.line_prep.zone_start));
+    if (fname != NULL) lstr_app_str(&led.line_write.sval, fname);
     else led_line_append_zone(&led.line_write, &led.line_prep);
 
     led_zone_post_process();
 }
 
-void led_fn_impl_revert(led_fn_struct* pfunc) {
+void led_fn_impl_revert(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_stop; i > led.line_prep.zone_start; i--)
-        led_line_append_char(&led.line_write, led.line_prep.buf[i - 1]);
+        lstr_app_char(&led.line_write.sval, lstr_char_at(&led.line_prep.sval, i - 1));
 
     led_zone_post_process();
 }
 
-void led_fn_impl_field_base(led_fn_struct* pfunc, const char* field_sep) {
+void led_fn_impl_field_base(led_fn_t* pfunc, const char* field_sep) {
+    lstr_decl_str(sepsval, field_sep);
     led_zone_pre_process(pfunc);
     size_t field_n = pfunc->arg[0].uval;
     size_t n = 0;
@@ -423,7 +453,7 @@ void led_fn_impl_field_base(led_fn_struct* pfunc, const char* field_sep) {
     size_t str_start = led.line_prep.zone_start;
     size_t str_stop = led.line_prep.zone_stop;
     for (; str_start < led.line_prep.zone_stop; str_start++ ) {
-        int is_sep = led_char_in_str(led.line_prep.str[str_start], field_sep);
+        int is_sep = lstr_ischar(&sepsval, lstr_char_at(&led.line_prep.sval, str_start));
         if (was_sep && !is_sep) {
             n++;
             if (n == field_n) break;
@@ -433,49 +463,50 @@ void led_fn_impl_field_base(led_fn_struct* pfunc, const char* field_sep) {
     if (n == field_n) {
         was_sep = FALSE;
         for (str_stop = str_start; str_stop < led.line_prep.zone_stop; str_stop++ ) {
-            int is_sep = led_char_in_str(led.line_prep.str[str_stop], field_sep);
+            int is_sep = lstr_ischar(&sepsval, lstr_char_at(&led.line_prep.sval, str_stop));
             if (!was_sep && is_sep) break;
         }
-        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, str_start, str_stop);
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, str_start, str_stop);
     }
 
     led_zone_post_process();
 }
 
-void led_fn_impl_field(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, pfunc->arg[1].str); }
-void led_fn_impl_field_csv(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, ",;"); }
-void led_fn_impl_field_space(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, " \t\n"); }
-void led_fn_impl_field_mixed(led_fn_struct* pfunc) { led_fn_impl_field_base(pfunc, ",; \t\n"); }
+void led_fn_impl_field(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, lstr_str(&pfunc->arg[1].sval)); }
+void led_fn_impl_field_csv(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, ",;"); }
+void led_fn_impl_field_space(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, " \t\n"); }
+void led_fn_impl_field_mixed(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, ",; \t\n"); }
 
-void led_fn_impl_join(led_fn_struct* pfunc) {
-   for (size_t i = 0; i < led.line_prep.len; i++) {
-        char c = led.line_prep.str[i];
-        if ( c != '\n') led_line_append_char(&led.line_write, c);
+void led_fn_impl_join(led_fn_t*) {
+   for (size_t i = 0; i < lstr_len(&led.line_prep.sval); i++) {
+        char c = lstr_char_at(&led.line_prep.sval, i);
+        if ( c != '\n') lstr_app_char(&led.line_write.sval, c);
    }
 }
 
-void led_fn_impl_split_base(led_fn_struct* pfunc, const char* field_sep) {
+void led_fn_impl_split_base(led_fn_t* pfunc, const char* field_sep) {
+    lstr_decl_str(sepsval, field_sep);
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
-        char c = led.line_prep.str[i];
-        if ( led_char_in_str(c, field_sep) ) c = '\n';
-        led_line_append_char(&led.line_write, c);
+        char c = lstr_char_at(&led.line_prep.sval, i);
+        if ( lstr_ischar(&sepsval, c) ) c = '\n';
+        lstr_app_char(&led.line_write.sval, c);
     }
     led_zone_post_process();
 }
 
-void led_fn_impl_split(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, pfunc->arg[0].str); }
-void led_fn_impl_split_space(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, " \t\n"); }
-void led_fn_impl_split_csv(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, ",;"); }
-void led_fn_impl_split_mixed(led_fn_struct* pfunc) { led_fn_impl_split_base(pfunc, ",; \t\n"); }
+void led_fn_impl_split(led_fn_t* pfunc) { led_fn_impl_split_base(pfunc, lstr_str(&pfunc->arg[0].sval)); }
+void led_fn_impl_split_space(led_fn_t* pfunc) { led_fn_impl_split_base(pfunc, " \t\n"); }
+void led_fn_impl_split_csv(led_fn_t* pfunc) { led_fn_impl_split_base(pfunc, ",;"); }
+void led_fn_impl_split_mixed(led_fn_t* pfunc) { led_fn_impl_split_base(pfunc, ",; \t\n"); }
 
-void led_fn_impl_randomize_base(led_fn_struct* pfunc, const char* charset, size_t len) {
+void led_fn_impl_randomize_base(led_fn_t* pfunc, const char* charset, size_t len) {
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
         char c = charset[rand() % len];
-        led_line_append_char(&led.line_write, c);
+        lstr_app_char(&led.line_write.sval, c);
     }
 
     led_zone_post_process();
@@ -487,84 +518,87 @@ const char randomize_table_alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEF
 const char randomize_table_hexa[] = "0123456789ABCDEF";
 const char randomize_table_mixed[] = "0123456789-_/=!:;,~#$*?%abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-void led_fn_impl_randomize_num(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_num, sizeof randomize_table_num - 1); }
-void led_fn_impl_randomize_alpha(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_alpha, sizeof randomize_table_alpha -1); }
-void led_fn_impl_randomize_alnum(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_alnum, sizeof randomize_table_alnum - 1); }
-void led_fn_impl_randomize_hexa(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_hexa, sizeof randomize_table_hexa - 1); }
-void led_fn_impl_randomize_mixed(led_fn_struct* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_mixed, sizeof randomize_table_mixed - 1); }
+void led_fn_impl_randomize_num(led_fn_t* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_num, sizeof randomize_table_num - 1); }
+void led_fn_impl_randomize_alpha(led_fn_t* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_alpha, sizeof randomize_table_alpha -1); }
+void led_fn_impl_randomize_alnum(led_fn_t* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_alnum, sizeof randomize_table_alnum - 1); }
+void led_fn_impl_randomize_hexa(led_fn_t* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_hexa, sizeof randomize_table_hexa - 1); }
+void led_fn_impl_randomize_mixed(led_fn_t* pfunc) { led_fn_impl_randomize_base(pfunc, randomize_table_mixed, sizeof randomize_table_mixed - 1); }
 
-void led_fn_impl_fname_lower(led_fn_struct* pfunc) {
+size_t led_fn_helper_fname_pos() {
+    size_t iname = lstr_rfind_char_start_stop(&led.line_prep.sval, '/', led.line_prep.zone_start, led.line_prep.zone_stop);
+    if (iname == lstr_len(&led.line_prep.sval)) iname = led.line_prep.zone_start;
+    else iname++;
+    led_debug("led_fn_helper_fname_pos iname: %u %s", iname, lstr_str_at(&led.line_prep.sval, iname));
+    return iname;
+}
+
+void led_fn_impl_fname_lower(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
-        size_t iname = led.line_prep.zone_start;
-        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
-            if (led.line_prep.str[i] == '/') iname = i+1;
-        size_t iextdot = led.line_prep.zone_stop;
-        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
-            if (led.line_prep.str[i] == '.') iextdot = i;
+        size_t iname = led_fn_helper_fname_pos();
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, led.line_prep.zone_start, iname);
 
-        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
         for (; iname < led.line_prep.zone_stop; iname++) {
-            char c = led.line_prep.str[iname];
+            char c = lstr_char_at(&led.line_prep.sval, iname);
             if (isalnum(c))
-                led_line_append_char(&led.line_write, tolower(c));
-            else if (iname == iextdot)
-                led_line_append_char(&led.line_write, '.');
-            else if (isalnum(led_line_last_char(&led.line_write)))
-                led_line_append_char(&led.line_write, '_');
+                lstr_app_char(&led.line_write.sval, tolower(c));
+            else if (c == '.') {
+                if (isalnum(lstr_last_char(&led.line_write.sval))) lstr_app_char(&led.line_write.sval, c);
+                else lstr_set_last_char(&led.line_write.sval, c);
+            }
+            else {
+                if (isalnum(lstr_last_char(&led.line_write.sval))) lstr_app_char(&led.line_write.sval, '_');
+            }
         }
     }
     led_zone_post_process();
 }
 
-void led_fn_impl_fname_upper(led_fn_struct* pfunc) {
+void led_fn_impl_fname_upper(led_fn_t* pfunc) {
+    led_debug("led_fn_impl_fname_upper");
     led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
-        size_t iname = led.line_prep.zone_start;
-        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
-            if (led.line_prep.str[i] == '/') iname = i+1;
-        size_t iextdot = led.line_prep.zone_stop;
-        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
-            if (led.line_prep.str[i] == '.') iextdot = i;
+        size_t iname = led_fn_helper_fname_pos();
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, led.line_prep.zone_start, iname);
 
-        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
         for (; iname < led.line_prep.zone_stop; iname++) {
-            char c = led.line_prep.str[iname];
+            char c = lstr_char_at(&led.line_prep.sval, iname);
             if (isalnum(c))
-                led_line_append_char(&led.line_write, toupper(c));
-            else if (iname == iextdot)
-                led_line_append_char(&led.line_write, '.');
-            else if (isalnum(led_line_last_char(&led.line_write)))
-                led_line_append_char(&led.line_write, '_');
+                lstr_app_char(&led.line_write.sval, toupper(c));
+            else if (c == '.') {
+                if (isalnum(lstr_last_char(&led.line_write.sval))) lstr_app_char(&led.line_write.sval, c);
+                else lstr_set_last_char(&led.line_write.sval, c);
+            }
+            else {
+                if (isalnum(lstr_last_char(&led.line_write.sval))) lstr_app_char(&led.line_write.sval, '_');
+            }
         }
     }
     led_zone_post_process();
 }
 
-void led_fn_impl_fname_camel(led_fn_struct* pfunc) {
+void led_fn_impl_fname_camel(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     if (led.line_prep.zone_start < led.line_prep.zone_stop) {
-        size_t iname = led.line_prep.zone_start;
-        for (size_t i = iname; i < led.line_prep.zone_stop; i++)
-            if (led.line_prep.str[i] == '/') iname = i+1;
+        size_t iname = led_fn_helper_fname_pos();
+        lstr_app_start_stop(&led.line_write.sval, &led.line_prep.sval, led.line_prep.zone_start, iname);
 
-        led_line_append_str_start_stop(&led.line_write, led.line_prep.str, led.line_prep.zone_start, iname);
         int wasword = TRUE;
         int isfirst = TRUE;
         for (; iname < led.line_prep.zone_stop; iname++) {
-            char c = led.line_prep.str[iname];
-            if (c == '.') {
-                led_line_append_char(&led.line_write, c);
+            char c = lstr_char_at(&led.line_prep.sval, iname);
+            if (isalnum(lstr_last_char(&led.line_write.sval)) && c == '.') {
+                lstr_app_char(&led.line_write.sval, c);
                 isfirst = TRUE;
             }
             else {
                 int isword = isalnum(c);
                 if (isword) {
-                    if (wasword || isfirst) led_line_append_char(&led.line_write, tolower(c));
-                    else led_line_append_char(&led.line_write, toupper(c));
+                    if (wasword || isfirst) lstr_app_char(&led.line_write.sval, tolower(c));
+                    else lstr_app_char(&led.line_write.sval, toupper(c));
                     isfirst = FALSE;
                 }
                 wasword = isword;
@@ -574,20 +608,21 @@ void led_fn_impl_fname_camel(led_fn_struct* pfunc) {
     led_zone_post_process();
 }
 
-void led_fn_impl_generate(led_fn_struct* pfunc) {
+void led_fn_impl_generate(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
     size_t n = pfunc->arg[1].uval > 0 ? led.line_prep.zone_start + pfunc->arg[1].uval : led.line_prep.zone_stop;
-    char c = pfunc->arg[0].str[0];
+    char c = lstr_first_char(&pfunc->arg[0].sval);
 
     for (size_t i = led.line_prep.zone_start; i < n; i++) {
-        led_line_append_char(&led.line_write, c);
+        lstr_app_char(&led.line_write.sval, c);
     }
 
     led_zone_post_process();
 }
 
-led_fn_desc_struct LED_FN_TABLE[] = {
-    { "r", "register", &led_fn_impl_register, "", "Register", "r/[regex]" },
+led_fn_desc_t LED_FN_TABLE[] = {
+    { "r", "register", &led_fn_impl_register, "p", "Register line content", "r/[regex][/N]" },
+    { "rr", "register_recall", &led_fn_impl_register_recall, "p", "Register recall to line", "r/[regex][/N]" },
     { "s", "substitute", &led_fn_impl_substitute, "Ss", "Substitute", "s/[regex]/replace[/opts]" },
     { "d", "delete", &led_fn_impl_delete, "", "Delete line", "d/" },
     { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "i//<string>[/N]" },
@@ -634,9 +669,9 @@ led_fn_desc_struct LED_FN_TABLE[] = {
     { "gen", "generate", &led_fn_impl_generate, "Sp", "Generate chars", "generate/<char>[/N]" },
 };
 
-#define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_desc_struct)
+#define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_desc_t)
 
-led_fn_desc_struct* led_fn_table_descriptor(size_t id) {
+led_fn_desc_t* led_fn_table_descriptor(size_t id) {
     led_assert(id < LED_FN_TABLE_MAX, LED_ERR_INTERNAL, "Function index out of table");
     return LED_FN_TABLE + id;
 }

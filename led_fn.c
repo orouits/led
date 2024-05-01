@@ -398,6 +398,37 @@ void led_fn_impl_url_encode(led_fn_t* pfunc) {
     led_zone_post_process();
 }
 
+void led_fn_impl_shell_encode(led_fn_t* pfunc) {
+    led_zone_pre_process(pfunc);
+
+    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
+        char c = lstr_char_at(&led.line_prep.sval, i);
+        if (isalnum(c))
+            lstr_app_char(&led.line_write.sval, c);
+        else {
+            lstr_app_char(&led.line_write.sval, '\\');
+            lstr_app_char(&led.line_write.sval, c);
+        }
+    }
+
+    led_zone_post_process();
+}
+
+void led_fn_impl_shell_decode(led_fn_t* pfunc) {
+    led_zone_pre_process(pfunc);
+
+    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
+        int wasesc = FALSE;
+        char c = lstr_char_at(&led.line_prep.sval, i);
+        if (!wasesc && c == '\\')
+            wasesc = TRUE;
+        else
+            lstr_app_char(&led.line_write.sval, c);
+    }
+
+    led_zone_post_process();
+}
+
 void led_fn_impl_realpath(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
@@ -655,6 +686,8 @@ led_fn_desc_t LED_FN_TABLE[] = {
     { "b64e", "base64_encode", &led_fn_impl_base64_encode, "", "Encode base64", "base64_encode/[regex]" },
     { "b64d", "base64_decode", &led_fn_impl_base64_decode, "", "Decode base64", "base64_decode/[regex]" },
     { "urle", "url_encode", &led_fn_impl_url_encode, "", "Encode URL", "url_encode/[regex]" },
+    { "she", "shell_encode", &led_fn_impl_shell_encode, "", "Shell encode", "shell_encode/[regex]" },
+    { "shd", "shell_decode", &led_fn_impl_shell_decode, "", "Shell decode", "shell_decode/[regex]" },
     { "rp", "realpath", &led_fn_impl_realpath, "", "Convert to real path (canonical)", "realpath/[regex]" },
     { "dn", "dirname", &led_fn_impl_dirname, "", "Extract last dir of the path", "dirname/[regex]" },
     { "bn", "basename", &led_fn_impl_basename, "", "Extract file of the path", "basename/[regex]" },
@@ -666,6 +699,8 @@ led_fn_desc_t LED_FN_TABLE[] = {
     { "rzan", "randomize_alnum", &led_fn_impl_randomize_alnum, "", "Randomize alpha numeric values", "randomize_alnum/" },
     { "rzh", "randomize_hexa", &led_fn_impl_randomize_hexa, "", "Randomize alpha numeric values", "randomize_hexa/" },
     { "rzm", "randomize_mixed", &led_fn_impl_randomize_mixed, "", "Randomize alpha numeric and custom chars", "randomize_mixed/" },
+    { "b64e", "base64_encode", &led_fn_impl_base64_encode, "", "Encode base64", "base64_encode/[regex]" },
+    { "b64d", "base64_decode", &led_fn_impl_base64_decode, "", "Decode base64", "base64_decode/[regex]" },
     { "gen", "generate", &led_fn_impl_generate, "Sp", "Generate chars", "generate/<char>[/N]" },
 };
 

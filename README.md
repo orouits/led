@@ -33,7 +33,9 @@ When led is used only with the selector, it is equivalent to grep with a similar
 Example:
 
 `cat <file> | grep Test`
+
 is equivalent to:
+
 `cat <file> | led Test`
 
 #### syntax:
@@ -86,12 +88,14 @@ if the processor is not defined, led just output lines selected by the selector
 
 The `regex` is used to identify a zone where the function is applied in the line. It is always the first argument but can be empty.
 - if regex is empty
-    - `function/` `function//arg1`
+    - `function/`
+    - `function//arg1`
     - the default regex is used (.*)
     - it allows to apply the operation on the whole line
 - if defined
-    - `function/Abc.+/` `function/Abc.+/arg1`
-    - it allows to apply the operation on the mathing zone only
+    - `function/Abc.+/`
+    - `function/Abc.+/arg1`
+    - it allows to apply the operation on the mathing zone or first capture zone (if defined) only.
 - if defined with capture block (...)
     - it allows to apply the operation on the first capture zone only for better context matching
 
@@ -117,7 +121,7 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
 
 Remove line
 
-`rm|remove`
+`rm|remove/`
 
 #### ins|insert function
 
@@ -142,6 +146,7 @@ Append replaced line(s)
 Extract a range of characters in the line
 
 `rn|range/[regex]/N[/C]`
+
 `rnn|rangenot/[regex]/N[/C]`
 
 - N: from column, relative to the end of line if N is negative
@@ -163,8 +168,11 @@ Translate characters string of a matching regex.
 Convert to various case
 
 `csl|case_lower/[regex]`
+
 `csu|case_upper/[regex]`
+
 `csf|case_first/[regex]`
+
 `csc|case_camel/[regex]`
 
 #### quote functions
@@ -172,14 +180,19 @@ Convert to various case
 Quote and unquote if needed.
 
 `qt|quote_simple/[regex]`
+
 `qtd|quote_double/[regex]`
+
 `qtb|quote_back/[regex]`
+
 `qtr|quote_remove/[regex]`
 
 #### trim functions
 
 `tm|trim/[regex]`
+
 `tml|trim_left/[regex]`
+
 `tmr|trim_right/[regex]`
 
 #### split functions
@@ -211,8 +224,11 @@ revert the char order of the line
  Extract fields of a line.
 
 `fl|field/[regex]/<N>/<sep_chars>`
+
 `flc|field_csv/[regex]/<N>`
+
 `fls|field_space/[regex]/<N>`
+
 `flm|field_mixed/[regex]/<N>`
 
 - N: extract the Nth field, by default the first one.
@@ -231,6 +247,7 @@ revert the char order of the line
  This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
 `b64e|base64_encode/[regex]`
+
 `b64d|base64_decode/[regex]`
 
 #### urlencode function
@@ -244,6 +261,7 @@ revert the char order of the line
  Escape chars for shell executions.
 
 `she|shell_escape/[regex]`
+
 `shu|shell_unescape/[regex]`
 
 #### path functions
@@ -251,7 +269,9 @@ revert the char order of the line
 Modify path in a line.
 
 `rp|realpath/[regex]`
+
 `dn|dirname/[regex]`
+
 `bn|basename/[regex]`
 
 #### file name functions
@@ -259,8 +279,11 @@ Modify path in a line.
 Modify file name in a line, path prefix is not modified.
 
 `fnl|fname_lower/[regex]`
+
 `fnu|fname_upper/[regex]`
+
 `fnc|fname_camel/[regex]`
+
 `fns|fname_snake/[regex]`
 
 #### randomize functions
@@ -268,9 +291,13 @@ Modify file name in a line, path prefix is not modified.
 Generate randomized characters
 
 `rzn|randomize_num/[regex]`
+
 `rza|randomize_alpha/[regex]`
+
 `rzan|randomize_alnum/[regex]`
+
 `rzh|randomize_hexa/[regex]`
+
 `rzm|randomize_mixed/[regex]`
 
 #### Generate chars function
@@ -293,7 +320,9 @@ A register can be used into a substitue replace string with using `$R[N]` notati
 - N: the regex capture is copied int the given register ID
 
 `r/` => all the line into R0
+
 `r//1` => all the line into R1
+
 `r/(\w+),(\w+)/` => all the matching zone into R0, first capture into R1, second captureinto R2
 
 ## Invocation

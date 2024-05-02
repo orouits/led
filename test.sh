@@ -11,7 +11,7 @@ TEST=${1:-all}
 
 echo -e "\ncleanup data:"
 
-rm -rf $TEST_DIR/files_*
+rm -rf $TEST_DIR/*
 mkdir -p $TEST_DIR/files_in
 mkdir -p $TEST_DIR/files_out
 

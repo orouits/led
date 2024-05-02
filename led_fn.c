@@ -420,7 +420,7 @@ void led_fn_impl_url_encode(led_fn_t* pfunc) {
 
 const char fname_stdchar_table[] = "/._-~:=%";
 
-void led_fn_impl_shell_encode(led_fn_t* pfunc) {
+void led_fn_impl_shell_escape(led_fn_t* pfunc) {
     lstr_decl_str(table, fname_stdchar_table);
     led_zone_pre_process(pfunc);
 
@@ -437,7 +437,7 @@ void led_fn_impl_shell_encode(led_fn_t* pfunc) {
     led_zone_post_process();
 }
 
-void led_fn_impl_shell_decode(led_fn_t* pfunc) {
+void led_fn_impl_shell_unescape(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
@@ -701,12 +701,11 @@ void led_fn_impl_generate(led_fn_t* pfunc) {
 }
 
 led_fn_desc_t LED_FN_TABLE[] = {
-    { "r", "register", &led_fn_impl_register, "p", "Register line content", "r/[regex][/N]" },
-    { "rr", "register_recall", &led_fn_impl_register_recall, "p", "Register recall to line", "r/[regex][/N]" },
     { "s", "substitute", &led_fn_impl_substitute, "Ss", "Substitute", "s/[regex]/replace[/opts]" },
     { "d", "delete", &led_fn_impl_delete, "", "Delete line", "d/" },
     { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "i//<string>[/N]" },
     { "a", "append", &led_fn_impl_append, "Sp", "Append line", "a//<string>[/N]" },
+    { "j", "join", &led_fn_impl_join, "", "Join lines (only with pack mode)", "j/" },
     { "db", "delete_blank", &led_fn_impl_delete_blank, "", "Delete blank/empty lines", "db/" },
     { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "tr/[regex]/chars/chars" },
     { "cl", "case_lower", &led_fn_impl_case_lower, "", "Case to lower", "cl/[regex]" },
@@ -715,27 +714,26 @@ led_fn_desc_t LED_FN_TABLE[] = {
     { "cc", "case_camel", &led_fn_impl_case_camel, "", "Case to camel style", "cc/[regex]" },
     { "cs", "case_snake", &led_fn_impl_case_snake, "", "Case to snake style", "cs/[regex]" },
     { "qt", "quote_simple", &led_fn_impl_quote_simple, "", "Quote simple", "qt/[regex]" },
-    { "qd", "quote_double", &led_fn_impl_quote_double, "", "Quote double", "qd/[regex]" },
-    { "qb", "quote_back", &led_fn_impl_quote_back, "", "Quote back", "qb/[regex]" },
-    { "qr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "qr/[regex]" },
+    { "qtd", "quote_double", &led_fn_impl_quote_double, "", "Quote double", "qd/[regex]" },
+    { "qtb", "quote_back", &led_fn_impl_quote_back, "", "Quote back", "qb/[regex]" },
+    { "qtr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "qr/[regex]" },
     { "sp", "split", &led_fn_impl_split, "", "Split using characters", "sp/[regex]/chars" },
     { "spc", "split_csv", &led_fn_impl_split_csv, "", "Split using comma", "spc/[regex]" },
     { "sps", "split_space", &led_fn_impl_split_space, "", "Split using space", "sps/[regex]" },
     { "spm", "split_mixed", &led_fn_impl_split_mixed, "", "Split using comma and space", "spm/[regex]" },
-    { "jn", "join", &led_fn_impl_join, "", "Join lines (only with pack mode)", "jn/" },
     { "tm", "trim", &led_fn_impl_trim, "", "Trim", "tm/[regex]" },
     { "tml", "trim_left", &led_fn_impl_trim_left, "", "Trim left", "tml/[regex]" },
     { "tmr", "trim_right", &led_fn_impl_trim_right, "", "Trim right", "tmr/[regex]" },
     { "rv", "revert", &led_fn_impl_revert, "", "Revert", "rv/[regex]" },
     { "fld", "field", &led_fn_impl_field, "PSp", "Extract field with separator chars", "fld/[regex]/N/sep[/count]" },
     { "fls", "field_space", &led_fn_impl_field_space, "Pp", "Extract field separated by space", "fls/[regex]/N[/count]" },
-    { "flc", "field_csv", &led_fn_impl_field_csv, "Pp", "Extract field separated by comma", "flc/N[/count]" },
-    { "flm", "field_mixed", &led_fn_impl_field_mixed, "Pp", "Extract field separated by space or comma", "flm/[regex]N[/count]" },
+    { "flc", "field_csv", &led_fn_impl_field_csv, "Pp", "Extract field separated by comma", "flc/[regex]/N[/count]" },
+    { "flm", "field_mixed", &led_fn_impl_field_mixed, "Pp", "Extract field separated by space or comma", "flm/[regex]/N[/count]" },
     { "b64e", "base64_encode", &led_fn_impl_base64_encode, "", "Encode base64", "b64e/[regex]" },
     { "b64d", "base64_decode", &led_fn_impl_base64_decode, "", "Decode base64", "b64d/[regex]" },
     { "urle", "url_encode", &led_fn_impl_url_encode, "", "Encode URL", "urle/[regex]" },
-    { "she", "shell_encode", &led_fn_impl_shell_encode, "", "Shell encode", "she/[regex]" },
-    { "shd", "shell_decode", &led_fn_impl_shell_decode, "", "Shell decode", "shd/[regex]" },
+    { "she", "shell_escape", &led_fn_impl_shell_escape, "", "Shell encode", "she/[regex]" },
+    { "shu", "shell_unescape", &led_fn_impl_shell_unescape, "", "Shell decode", "shu/[regex]" },
     { "rp", "realpath", &led_fn_impl_realpath, "", "Convert to real path (canonical)", "rp/[regex]" },
     { "dn", "dirname", &led_fn_impl_dirname, "", "Extract last dir of the path", "dn/[regex]" },
     { "bn", "basename", &led_fn_impl_basename, "", "Extract file of the path", "bn/[regex]" },
@@ -748,9 +746,11 @@ led_fn_desc_t LED_FN_TABLE[] = {
     { "rzan", "randomize_alnum", &led_fn_impl_randomize_alnum, "", "Randomize alpha numeric values", "rzan/[regex]" },
     { "rzh", "randomize_hexa", &led_fn_impl_randomize_hexa, "", "Randomize alpha numeric values", "rzh/[regex]" },
     { "rzm", "randomize_mixed", &led_fn_impl_randomize_mixed, "", "Randomize alpha numeric and custom chars", "rzm/[regex]" },
-    { "gen", "generate", &led_fn_impl_generate, "Sp", "Generate chars", "generate/<char>[/N]" },
-    { "rns", "range_sel", &led_fn_impl_range_sel, "Np", "Range select", "rns/start[/count]" },
+    { "gen", "generate", &led_fn_impl_generate, "Sp", "Generate chars", "gen/[regex]/<char>[/N]" },
+    { "rn", "range_sel", &led_fn_impl_range_sel, "Np", "Range select", "rn/[regex]/start[/count]" },
     { "rnu", "range_unsel", &led_fn_impl_range_unsel, "Np", "Range unselect", "rnu/[regex]/start[/count]" },
+    { "r", "register", &led_fn_impl_register, "p", "Register line content", "r/[regex][/N]" },
+    { "rr", "register_recall", &led_fn_impl_register_recall, "p", "Register recall to line", "rr/[regex][/N]" },
 };
 
 #define LED_FN_TABLE_MAX sizeof(LED_FN_TABLE)/sizeof(led_fn_desc_t)

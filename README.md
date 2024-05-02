@@ -85,24 +85,24 @@ The processor section is composed of 1 or N functions. Each function is a separa
 if the processor is not defined, led just output lines selected by the selector
 
 The `regex` is used to identify a zone where the function is applied in the line. It is always the first argument but can be empty.
-- if regex is empty 
-    - `function/` `function//arg1` 
+- if regex is empty
+    - `function/` `function//arg1`
     - the default regex is used (.*)
     - it allows to apply the operation on the whole line
-- if defined 
-    - `function/Abc.+/` `function/Abc.+/arg1` 
+- if defined
+    - `function/Abc.+/` `function/Abc.+/arg1`
     - it allows to apply the operation on the mathing zone only
 - if defined with capture block (...)
     - it allows to apply the operation on the first capture zone only for better context matching
 
 Each function has a short name and a long name
-- the argement separator can be replaced by `:` instead of `/` to solve character escaping. 
+- the argement separator can be replaced by `:` instead of `/` to solve character escaping.
 
 Argments follows the regex.
 
 #### s|substitute function
 
-The `s|substitute:` function allows to substitute string from a regex.
+The `s|substitute` function allows to substitute string from a regex.
 
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
@@ -111,19 +111,19 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
 
 - regex: the search regex string
 - replace: the replace string
-- opts: character sequence of PCRE2 options (ge...) 
+- opts: character sequence of PCRE2 options (ge...)
 
 #### rm|remove function
 
 Remove line
 
-`rm|remove:`
+`rm|remove`
 
 #### ins|insert function
 
 Insert replaced line(s)
 
-`ins|insert:[regex] <replace> [N]`
+`ins|insert/[regex]/<replace>[/N]`
 
 - replace: the replaced string to insert before line
 - N: number of line inserted, default 1
@@ -132,7 +132,7 @@ Insert replaced line(s)
 
 Append replaced line(s)
 
-`app|append:[regex] <replace> [N]`
+`app|append/[regex]/<replace>[/N]`
 
 - replace: the replaced string to append after line
 - N: number of line appended, default 1
@@ -141,8 +141,8 @@ Append replaced line(s)
 
 Extract a range of characters in the line
 
-`rn|range:[regex] N [C]`
-`rnn|rangenot:[regex] N [C]`
+`rn|range/[regex]/N[/C]`
+`rnn|rangenot/[regex]/N[/C]`
 
 - N: from column, relative to the end of line if N is negative
 - C: character count, 1 by default
@@ -152,7 +152,7 @@ Extract a range of characters in the line
 
 Translate characters string of a matching regex.
 
-`tr:|translate:[regex] <schars> <dchars>`
+`tr|translate/[regex]/<src_chars>/<dst_chars>`
 
 - schars: a sequence of source characters to be replaced by dest characters
 - dchars: a sequence of dest characters
@@ -162,58 +162,58 @@ Translate characters string of a matching regex.
 
 Convert to various case
 
-`csl|caselower:[regex]`
-`csu|caseupper:[regex]`
-`csf|casefirst:[regex]`
-`csc|casecamel:[regex]`
+`csl|case_lower/[regex]`
+`csu|case_upper/[regex]`
+`csf|case_first/[regex]`
+`csc|case_camel/[regex]`
 
 #### quote functions
 
 Quote and unquote if needed.
 
-`qts|quotesimple:[regex]`
-`qtd|quotedouble:[regex]`
-`qtb|quoteback:[regex]`
-`qtr|quoteremove:[regex]`
+`qt|quote_simple/[regex]`
+`qtd|quote_double/[regex]`
+`qtb|quote_back/[regex]`
+`qtr|quote_remove/[regex]`
 
 #### trim functions
 
-`tm|trim:[regex]`
-`tml|trimleft:[regex]`
-`tmr|trimright:[regex]`
+`tm|trim/[regex]`
+`tml|trim_left/[regex]`
+`tmr|trim_right/[regex]`
 
 #### split functions
 
  split line with given separators
 
-`sp|split:[regex] <sep_chars>`
+`sp|split/[regex]/<sep_chars>`
 
 split line with comma separators
 
-`spc|split_csv:[regex]`
+`spc|split_csv/[regex]`
 
 split line with space separators
 
-`sps|split_space:[regex]`
+`sps|split_space/[regex]`
 
 split line with space and comma separators
 
-`spm|split_mixed:[regex]`
+`spm|split_mixed/[regex]`
 
 #### revert function
 
 revert the char order of the line
 
-`rv|revert:[regex]`
+`rv|revert/[regex]`
 
 #### field functions
 
  Extract fields of a line.
 
-`fl|field:[regex] <N> <sep_chars>`
-`flc|field_csv:[regex] <N>`
-`fls|field_space:[regex] <N>`
-`flm|field_mixed:[regex] <N>`
+`fl|field/[regex]/<N>/<sep_chars>`
+`flc|field_csv/[regex]/<N>`
+`fls|field_space/[regex]/<N>`
+`flm|field_mixed/[regex]/<N>`
 
 - N: extract the Nth field, by default the first one.
 - sep: separator chars
@@ -223,56 +223,78 @@ revert the char order of the line
  Join lines.
  This function needs selector `pack` mode to transmit all lines in the same buffer.
 
-`jn|join:`
+`j|join`
 
 #### base64 encoding functions
 
  encode/decode lines.
  This function can work with selector `block` mode to encrypt a block of lines or a whole file.
 
-`b64e|base64_encode:[regex]`
-`b64d|base64_decode:[regex]`
+`b64e|base64_encode/[regex]`
+`b64d|base64_decode/[regex]`
 
 #### urlencode function
 
  URL encode line or part of line.
 
-`urc|urlencode:[regex]`
+`urle|url_encode/[regex]`
+
+#### shel escape / unescape functions
+
+ Escape chars for shell executions.
+
+`she|shell_escape/[regex]`
+`shu|shell_unescape/[regex]`
 
 #### path functions
 
 Modify path in a line.
 
-`phc|path_canonical:[regex]`
-`phd|path_dir:[regex]`
-`phf|path_file:[regex]`
+`rp|realpath/[regex]`
+`dn|dirname/[regex]`
+`bn|basename/[regex]`
 
 #### file name functions
 
-Modify file name in a line.
+Modify file name in a line, path prefix is not modified.
 
-`fnl|fname_lower:[regex]`
-`fnu|fname_upper:[regex]`
-`fnc|fname_camel:[regex]`
+`fnl|fname_lower/[regex]`
+`fnu|fname_upper/[regex]`
+`fnc|fname_camel/[regex]`
+`fns|fname_snake/[regex]`
 
 #### randomize functions
 
 Generate randomized characters
 
-`rzn|randomize_num:[regex]`
-`rza|randomize_alpha:[regex]`
-`rzan|randomize_alnum:[regex]`
-`rzh|randomize_hexa:[regex]`
-`rzm|randomize_mixed:[regex]`
+`rzn|randomize_num/[regex]`
+`rza|randomize_alpha/[regex]`
+`rzan|randomize_alnum/[regex]`
+`rzh|randomize_hexa/[regex]`
+`rzm|randomize_mixed/[regex]`
 
 #### Generate chars function
 
 Generate randomized characters
 
-`gen|generate:[regex] <char> [N]`
+`gen|generate/[regex]/<char>[/N]`
 
 - char: the character to repeat
 - N: char count, default is 1
+
+#### Register function
+
+Registering line or part of line into one or more temporary registers (0 to 9)
+A register can be used into a substitue replace string with using `$R[N]` notation.
+
+`r|register/[regex][/N]`
+
+- without N: each capture of the regex is copied into subsequent register IDs
+- N: the regex capture is copied int the given register ID
+
+`r/` => all the line into R0
+`r//1` => all the line into R1
+`r/(\w+),(\w+)/` => all the matching zone into R0, first capture into R1, second captureinto R2
 
 ## Invocation
 
@@ -347,15 +369,18 @@ On value (see -e):
 
 ## "sed" like for simple substitute
 
-`led sub:<regex> <replace> -f file.txt`
+`led s/<regex>/<replace> -f file.txt`
 
-`cat file.txt | led sub:<regex> <replace> > file-changed.txt`
+`cat file.txt | led s/<regex>/<replace> > file-changed.txt`
 
-change inplace:
+change in-place:
 
-`led sub:<regex> <replace> -F -f file.txt`
-
+`led s/<regex>/<replace> -F -f file.txt`
 
 ## massive multi change inplace:
 
-` ls *.txt | led sub:<regex> <replace> -F -f | led sub:<regex> <replace> -F -f | ...`
+`ls *.txt | led s/<regex>/<replace> s/<regex>/<replace>  ... -F -f`
+
+## massive execution (rename files in camel case)
+
+`find /path/to/dir -type f | led she/ r/ shd/ fnc/ 's//$R $0'`

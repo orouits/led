@@ -94,7 +94,12 @@ void led_fn_impl_substitute(led_fn_t* pfunc) {
             else
                 in--; // only $R is given, no ID, adjust "in".
             led_debug("Replace register %d found at %d", ir, i);
-            lstr_app(&rsval, &led.line_reg[ir].sval);
+            for (size_t i = 0; i < lstr_len(&led.line_reg[ir].sval); i++) {
+                char c = lstr_char_at(&led.line_reg[ir].sval, i);
+                if (c == '\\') // double anti slash to make it a true character
+                    lstr_app_char(&rsval, c);
+                lstr_app_char(&rsval, c);
+            }
             i = in; // position "i" at end of register mark
         }
         else {
@@ -398,12 +403,15 @@ void led_fn_impl_url_encode(led_fn_t* pfunc) {
     led_zone_post_process();
 }
 
+const char fname_stdchar_table[] = "/._-~:=%";
+
 void led_fn_impl_shell_encode(led_fn_t* pfunc) {
+    lstr_decl_str(table, fname_stdchar_table);
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
         char c = lstr_char_at(&led.line_prep.sval, i);
-        if (isalnum(c))
+        if (isalnum(c) || lstr_ischar(&table, c))
             lstr_app_char(&led.line_write.sval, c);
         else {
             lstr_app_char(&led.line_write.sval, '\\');

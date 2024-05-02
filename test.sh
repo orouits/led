@@ -61,6 +61,10 @@ EXISTING LINE 1
 EXISTING LINE 2
 EOT
 
+mkdir -p $TEST_DIR/files_to_mv
+touch $TEST_DIR/files_to_mv/file1\ to\'\ mv.txt
+touch $TEST_DIR/files_to_mv/file2\ to\'\ mv.txt
+
 echo -e "\ntest = $TEST"
 
 if [[ $TEST == 1 || $TEST == all ]]; then
@@ -118,6 +122,12 @@ if [[ $TEST == 12 || $TEST == all ]]; then
     ls $TEST_DIR/files_in/* | led -v r// fnu// 's//$R $0/'
 fi
 
+if [[ $TEST == 13 || $TEST == all ]]; then
+    echo -e "\ntest 13:"
+    ls $TEST_DIR/files_to_mv/* | led -v she// r// shd// fnc// 's//mv $R $0/' -X
+fi
+
 echo -e "\nfiles:"
 ls -1 $TEST_DIR/files_in/*
 ls -1 $TEST_DIR/files_out/*
+ls -1 $TEST_DIR/files_to_mv/*

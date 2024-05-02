@@ -23,6 +23,8 @@ input text lines >> select lines >> process lines >> output text lines
 
 There is only one selector and one processor function per led call. **led**. do not implement a complex transformation language as **sed**. To achieve multiple transformation, just use pipes power with multiple led calls.
 
+//TODO fully support UTF8
+
 ### The selector
 
 the selector allows to apply the line processor on selected lines of the input text.
@@ -132,6 +134,8 @@ Insert replaced line(s)
 - replace: the replaced string to insert before line
 - N: number of line inserted, default 1
 
+//TODO user regex and substitution
+
 #### app|append function
 
 Append replaced line(s)
@@ -140,6 +144,8 @@ Append replaced line(s)
 
 - replace: the replaced string to append after line
 - N: number of line appended, default 1
+
+//TODO user regex and substitution
 
 #### rn|range functions
 

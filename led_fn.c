@@ -143,6 +143,20 @@ void led_fn_impl_delete_blank(led_fn_t*) {
         lstr_cpy(&led.line_write.sval, &led.line_prep.sval);
 }
 
+// TODO use regex with substitute
+void led_fn_impl_insert(led_fn_t* pfunc) {
+    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
+    lstr_app_char(&led.line_write.sval, '\n');
+    lstr_app(&led.line_write.sval, &led.line_prep.sval);
+}
+
+// TODO use regex with substitute
+void led_fn_impl_append(led_fn_t* pfunc) {
+    lstr_app(&led.line_write.sval, &led.line_prep.sval);
+    lstr_app_char(&led.line_write.sval, '\n');
+    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
+}
+
 void led_fn_impl_range_sel(led_fn_t* pfunc) {
     led_line_init(&led.line_write);
 
@@ -265,18 +279,6 @@ void led_fn_impl_case_snake(led_fn_t* pfunc) {
     }
 
     led_zone_post_process();
-}
-
-void led_fn_impl_insert(led_fn_t* pfunc) {
-    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
-    lstr_app_char(&led.line_write.sval, '\n');
-    lstr_app(&led.line_write.sval, &led.line_prep.sval);
-}
-
-void led_fn_impl_append(led_fn_t* pfunc) {
-    lstr_app(&led.line_write.sval, &led.line_prep.sval);
-    lstr_app_char(&led.line_write.sval, '\n');
-    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
 }
 
 void led_fn_impl_quote_base(led_fn_t* pfunc, char q) {

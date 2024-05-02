@@ -703,8 +703,8 @@ void led_fn_impl_generate(led_fn_t* pfunc) {
 led_fn_desc_t LED_FN_TABLE[] = {
     { "s", "substitute", &led_fn_impl_substitute, "Ss", "Substitute", "s/[regex]/replace[/opts]" },
     { "d", "delete", &led_fn_impl_delete, "", "Delete line", "d/" },
-    { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "i//<string>[/N]" },
-    { "a", "append", &led_fn_impl_append, "Sp", "Append line", "a//<string>[/N]" },
+    { "i", "insert", &led_fn_impl_insert, "Sp", "Insert line", "i/[regex]/<string>[/N]" },
+    { "a", "append", &led_fn_impl_append, "Sp", "Append line", "a/[regex]/<string>[/N]" },
     { "j", "join", &led_fn_impl_join, "", "Join lines (only with pack mode)", "j/" },
     { "db", "delete_blank", &led_fn_impl_delete_blank, "", "Delete blank/empty lines", "db/" },
     { "tr", "translate", &led_fn_impl_translate, "SS", "Translate", "tr/[regex]/chars/chars" },

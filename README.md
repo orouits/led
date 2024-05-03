@@ -327,6 +327,21 @@ A register can be used into a substitue replace string with using `$R[N]` notati
 
 `r/(\w+),(\w+)/` => all the matching zone into R0, first capture into R1, second captureinto R2
 
+#### Register recall function
+
+Copy (recall) a register value (or part of the value) to line
+
+`rr|register_recall/[regex][/N]`
+
+- `[regex]`: regex to copy only a part of register value
+- `N`: the register ID to be copied, 0 if not defined.
+
+`rr/` => R0 copied to the current line
+
+`rr//1` => R1 copied to the current line
+
+`rr/=(\w+)/1` => first catched group of R1 copied to the current line
+
 ## Invocation
 
 3 way to invoque led:

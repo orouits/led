@@ -80,7 +80,7 @@ void led_fn_impl_register_recall(led_fn_t* pfunc) {
     }
 }
 
-void led_fn_impl_substitute(led_fn_t* pfunc) {
+void led_fn_helper_substitute(led_fn_t* pfunc, lstr* sinput, lstr* soutput) {
     lstr_decl(rsval, LED_BUF_MAX);
     led_debug("Replace registers in substitute string (len=%d) %s", lstr_len(&pfunc->arg[0].sval), lstr_str(&pfunc->arg[0].sval));
 
@@ -107,22 +107,26 @@ void led_fn_impl_substitute(led_fn_t* pfunc) {
         }
     }
 
-    led_debug("Substitute prep line (len=%d) to rsval (len=%d)", lstr_len(&led.line_prep.sval), lstr_len(&rsval));
-    PCRE2_SIZE len = sizeof(led.line_write.buf);
+    led_debug("Substitute input line (len=%d) to rsval (len=%d)", lstr_len(sinput), lstr_len(&rsval));
+    PCRE2_SIZE len = lstr_size(soutput);
     int rc = pcre2_substitute(
                 pfunc->regex,
-                (PCRE2_UCHAR8*)lstr_str(&led.line_prep.sval),
-                lstr_len(&led.line_prep.sval),
+                (PCRE2_UCHAR8*)lstr_str(sinput),
+                lstr_len(sinput),
                 0,
                 PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
                 NULL,
                 NULL,
                 (PCRE2_UCHAR8*)lstr_str(&rsval),
                 lstr_len(&rsval),
-                (PCRE2_UCHAR8*)led.line_write.buf,
+                (PCRE2_UCHAR8*)lstr_str(soutput),
                 &len);
     led_assert_pcre(rc);
-    lstr_init_buf(&led.line_write.sval,led.line_write.buf);
+    soutput->len = len;
+}
+
+void led_fn_impl_substitute(led_fn_t* pfunc) {
+    led_fn_helper_substitute(pfunc, &led.line_prep.sval, lstr_init_buf(&led.line_write.sval,led.line_write.buf));
 }
 
 void led_fn_impl_delete(led_fn_t* pfunc) {
@@ -143,18 +147,30 @@ void led_fn_impl_delete_blank(led_fn_t*) {
         lstr_cpy(&led.line_write.sval, &led.line_prep.sval);
 }
 
-// TODO use regex with substitute
 void led_fn_impl_insert(led_fn_t* pfunc) {
-    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
-    lstr_app_char(&led.line_write.sval, '\n');
+    lstr_decl(newline, LED_BUF_MAX);
+    led_fn_helper_substitute(pfunc, &led.line_prep.sval, &newline);
+
+    lstr_init_buf(&led.line_write.sval,led.line_write.buf);
+    size_t n = pfunc->arg_count > 1 ? pfunc->arg[1].uval : 1;
+    for (size_t i = 0; i < n; i++) {
+        lstr_app(&led.line_write.sval, &newline);
+        lstr_app_char(&led.line_write.sval, '\n');
+    }
     lstr_app(&led.line_write.sval, &led.line_prep.sval);
 }
 
-// TODO use regex with substitute
 void led_fn_impl_append(led_fn_t* pfunc) {
-    lstr_app(&led.line_write.sval, &led.line_prep.sval);
-    lstr_app_char(&led.line_write.sval, '\n');
-    lstr_app(&led.line_write.sval, &pfunc->arg[0].sval);
+    lstr_decl(newline, LED_BUF_MAX);
+    led_fn_helper_substitute(pfunc, &led.line_prep.sval, &newline);
+
+    lstr_init_buf(&led.line_write.sval,led.line_write.buf);
+    lstr_cpy(&led.line_write.sval, &led.line_prep.sval);
+    size_t n = pfunc->arg_count > 1 ? pfunc->arg[1].uval : 1;
+    for (size_t i = 0; i < n; i++) {
+        lstr_app_char(&led.line_write.sval, '\n');
+        lstr_app(&led.line_write.sval, &newline);;
+    }
 }
 
 void led_fn_impl_range_sel(led_fn_t* pfunc) {

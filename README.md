@@ -134,8 +134,6 @@ Insert replaced line(s)
 - replace: the replaced string to insert before line
 - N: number of line inserted, default 1
 
-//TODO user regex and substitution
-
 #### app|append function
 
 Append replaced line(s)
@@ -144,8 +142,6 @@ Append replaced line(s)
 
 - replace: the replaced string to append after line
 - N: number of line appended, default 1
-
-//TODO user regex and substitution
 
 #### rn|range functions
 

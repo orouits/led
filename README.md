@@ -8,11 +8,11 @@ It aims to cover in one tool common text search/replace/process functions that c
 
 The **led** command line arguments is composed of section in the folling order:
 
-`led [SELECTOR] [PROCESSOR] [-opts...] [-f] [FILES...]`
+`led [SELECTOR] [PROCESSORS] [-opts...] [-f] [FILES...]`
 
-`cat [FILES...] | led [SELECTOR] [PROCESSOR] [-opts...]`
+`cat [FILES...] | led [SELECTOR] [PROCESSORS] [-opts...]`
 
-`ls [DIR] | led [SELECTOR] [PROCESSOR] [-opts...] -f`
+`ls [DIR] | led [SELECTOR] [PROCESSORS] [-opts...] -f`
 
 The options can be anywhere before -f option
 The section recognition (selector, processor) depends on the arguments format and content.
@@ -429,4 +429,4 @@ change in-place:
 
 ## massive execution (rename files in camel case)
 
-`find /path/to/dir -type f | led she/ r/ shd/ fnc/ 's//$R $0'`
+`find /path/to/dir -type f | led she/ r/ shu/ fnc/ 's//$R $0'`

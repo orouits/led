@@ -124,7 +124,7 @@ fi
 
 if [[ $TEST == 13 || $TEST == all ]]; then
     echo -e "\ntest 13:"
-    ls $TEST_DIR/files_to_mv/* | led -v she// r// shd// fnc// 's//mv $R $0/' -X
+    ls $TEST_DIR/files_to_mv/* | led -v she// r// shu// fnc// 's//mv $R $0/' -X
 fi
 
 echo -e "\nfiles:"

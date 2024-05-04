@@ -37,291 +37,291 @@ typedef struct {
     char* str;
     size_t len;
     size_t size;
-} lstr;
+} led_str_t;
 
-#define lstr_init_buf(VAR,BUF) lstr_init(VAR,BUF,sizeof(BUF))
-#define lstr_init_str(VAR,STR) lstr_init(VAR,(char*)STR,0)
+#define led_str_init_buf(VAR,BUF) led_str_init(VAR,BUF,sizeof(BUF))
+#define led_str_init_str(VAR,STR) led_str_init(VAR,(char*)STR,0)
 
-#define lstr_decl_str(VAR,STR) \
-    lstr VAR; \
-    lstr_init_str(&VAR,STR)
+#define led_str_decl_str(VAR,STR) \
+    led_str_t VAR; \
+    led_str_init_str(&VAR,STR)
 
-#define lstr_decl(VAR,LEN) \
-    lstr VAR; \
+#define led_str_decl(VAR,LEN) \
+    led_str_t VAR; \
     char VAR##_buf[LEN]; \
     VAR##_buf[0] = '\0'; \
-    lstr_init_buf(&VAR,VAR##_buf)
+    led_str_init_buf(&VAR,VAR##_buf)
 
-#define lstr_decl_cpy(VAR,SRC) \
-    lstr VAR; \
+#define led_str_decl_cpy(VAR,SRC) \
+    led_str_t VAR; \
     char VAR##_buf[SRC.len]; \
-    lstr_init(&VAR,VAR##_buf,SRC.len); \
-    lstr_cpy(&VAR, &SRC)
+    led_str_init(&VAR,VAR##_buf,SRC.len); \
+    led_str_cpy(&VAR, &SRC)
 
-inline size_t lstr_len(lstr* sval) {
-    return sval->len;
+inline size_t led_str_len(led_str_t* lstr) {
+    return lstr->len;
 }
 
-inline char* lstr_str(lstr* sval) {
-    return sval->str;
+inline char* led_str_str(led_str_t* lstr) {
+    return lstr->str;
 }
 
-inline size_t lstr_size(lstr* sval) {
-    return sval->size;
+inline size_t led_str_size(led_str_t* lstr) {
+    return lstr->size;
 }
 
-inline int lstr_isinit(lstr* sval) {
-    return sval->str != NULL;
+inline int led_str_isinit(led_str_t* lstr) {
+    return lstr->str != NULL;
 }
 
-inline int lstr_isempty(lstr* sval) {
-    return lstr_isinit(sval) && sval->len == 0;
+inline int led_str_isempty(led_str_t* lstr) {
+    return led_str_isinit(lstr) && lstr->len == 0;
 }
 
-inline int lstr_iscontent(lstr* sval) {
-    return lstr_isinit(sval) && sval->len > 0;
+inline int led_str_iscontent(led_str_t* lstr) {
+    return led_str_isinit(lstr) && lstr->len > 0;
 }
 
-inline int lstr_isfull(lstr* sval) {
-    return lstr_isinit(sval) && sval->len + 1 == sval->size;
+inline int led_str_isfull(led_str_t* lstr) {
+    return led_str_isinit(lstr) && lstr->len + 1 == lstr->size;
 }
 
-inline lstr* lstr_reset(lstr* sval) {
-    memset(sval, 0, sizeof(*sval));
-    return sval;
+inline led_str_t* led_str_reset(led_str_t* lstr) {
+    memset(lstr, 0, sizeof(*lstr));
+    return lstr;
 }
 
-inline lstr* lstr_init(lstr* sval, char* buf, size_t size) {
-    sval->str = buf;
-    if (!sval->str) {
-        sval->len = 0;
-        sval->size = 0;
+inline led_str_t* led_str_init(led_str_t* lstr, char* buf, size_t size) {
+    lstr->str = buf;
+    if (!lstr->str) {
+        lstr->len = 0;
+        lstr->size = 0;
     }
     else {
-        sval->len = strlen(buf);
-        sval->size = size > 0 ? size : sval->len + 1;
+        lstr->len = strlen(buf);
+        lstr->size = size > 0 ? size : lstr->len + 1;
     }
-    return sval;
+    return lstr;
 }
 
-inline lstr* lstr_empty(lstr* sval) {
-    sval->str[0] = '\0';
-    sval->len = 0;
-    return sval;
+inline led_str_t* led_str_empty(led_str_t* lstr) {
+    lstr->str[0] = '\0';
+    lstr->len = 0;
+    return lstr;
 }
 
-inline lstr* lstr_clone(lstr* sval, lstr* src) {
-    sval->str = src->str;
-    sval->len = src->len;
-    sval->size = src->size;
-    return sval;
+inline led_str_t* led_str_clone(led_str_t* lstr, led_str_t* lstr_src) {
+    lstr->str = lstr_src->str;
+    lstr->len = lstr_src->len;
+    lstr->size = lstr_src->size;
+    return lstr;
 }
 
-inline lstr* lstr_cpy(lstr* sval, lstr* src) {
-    for(sval->len = 0; sval->len < src->len && sval->len + 1 < sval->size; sval->len++)
-        sval->str[sval->len] = src->str[sval->len];
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_cpy(led_str_t* lstr, led_str_t* lstr_src) {
+    for(lstr->len = 0; lstr->len < lstr_src->len && lstr->len + 1 < lstr->size; lstr->len++)
+        lstr->str[lstr->len] = lstr_src->str[lstr->len];
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_cpy_chars(lstr* sval, const char* str) {
-    for(sval->len=0; str[sval->len] && sval->len+1 < sval->size; sval->len++)
-        sval->str[sval->len]=str[sval->len];
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_cpy_chars(led_str_t* lstr, const char* str) {
+    for(lstr->len=0; str[lstr->len] && lstr->len+1 < lstr->size; lstr->len++)
+        lstr->str[lstr->len]=str[lstr->len];
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_app(lstr* sval, lstr* src) {
-    for(size_t i = 0; i<src->len && sval->len+1 < sval->size; i++, sval->len++)
-        sval->str[sval->len] = src->str[i];
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_app(led_str_t* lstr, led_str_t* lstr_src) {
+    for(size_t i = 0; i<lstr_src->len && lstr->len+1 < lstr->size; i++, lstr->len++)
+        lstr->str[lstr->len] = lstr_src->str[i];
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_app_str(lstr* sval, const char* str) {
-    for(size_t i = 0; str[i] && sval->len+1 < sval->size; i++, sval->len++)
-        sval->str[sval->len] = str[i];
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_app_str(led_str_t* lstr, const char* str) {
+    for(size_t i = 0; str[i] && lstr->len+1 < lstr->size; i++, lstr->len++)
+        lstr->str[lstr->len] = str[i];
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_app_start_len(lstr* sval, lstr* src, size_t start, size_t len) {
-    for(size_t i = start; i < start+len && src->str[i] && sval->len+1 < sval->size; i++, sval->len++)
-        sval->str[sval->len] = src->str[i];
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_app_start_len(led_str_t* lstr, led_str_t* lstr_src, size_t start, size_t len) {
+    for(size_t i = start; i < start+len && lstr_src->str[i] && lstr->len+1 < lstr->size; i++, lstr->len++)
+        lstr->str[lstr->len] = lstr_src->str[i];
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_app_start_stop(lstr* sval, lstr* src, size_t start, size_t stop) {
-    for(size_t i = start; i < stop && src->str[i] && sval->len+1 < sval->size; i++, sval->len++)
-        sval->str[sval->len] = src->str[i];
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_app_start_stop(led_str_t* lstr, led_str_t* lstr_src, size_t start, size_t stop) {
+    for(size_t i = start; i < stop && lstr_src->str[i] && lstr->len+1 < lstr->size; i++, lstr->len++)
+        lstr->str[lstr->len] = lstr_src->str[i];
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_app_char(lstr* sval, const char c) {
-    if (sval->len+1 < sval->size) {
-        sval->str[sval->len++] = c;
-        sval->str[sval->len] = '\0';
+inline led_str_t* led_str_app_char(led_str_t* lstr, const char c) {
+    if (lstr->len+1 < lstr->size) {
+        lstr->str[lstr->len++] = c;
+        lstr->str[lstr->len] = '\0';
     }
-    return sval;
+    return lstr;
 }
 
-inline lstr* lstr_set_char_at(lstr* sval, const char c, size_t i) {
-    if (sval->len > i) sval->str[i] = c;
-    return sval;
+inline led_str_t* led_str_set_char_at(led_str_t* lstr, const char c, size_t i) {
+    if (lstr->len > i) lstr->str[i] = c;
+    return lstr;
 }
 
-inline lstr* lstr_set_last_char(lstr* sval, const char c) {
-    if (sval->len > 0) sval->str[sval->len - 1] = c;
-    return sval;
+inline led_str_t* led_str_set_last_char(led_str_t* lstr, const char c) {
+    if (lstr->len > 0) lstr->str[lstr->len - 1] = c;
+    return lstr;
 }
 
-inline lstr* lstr_set_first_char(lstr* sval, const char c) {
-    if (sval->len > 0) sval->str[0] = c;
-    return sval;
+inline led_str_t* led_str_set_first_char(led_str_t* lstr, const char c) {
+    if (lstr->len > 0) lstr->str[0] = c;
+    return lstr;
 }
 
-inline lstr* lstr_unapp_char(lstr* sval, const char c) {
-    if (sval->len > 0 && sval->str[sval->len-1] == c) {
-        sval->len--;
-        sval->str[sval->len] = '\0';
+inline led_str_t* led_str_unapp_char(led_str_t* lstr, const char c) {
+    if (lstr->len > 0 && lstr->str[lstr->len-1] == c) {
+        lstr->len--;
+        lstr->str[lstr->len] = '\0';
     }
-    return sval;
+    return lstr;
 }
 
-inline lstr* lstr_trunk(lstr* sval, size_t len) {
-    if (len < sval->len) {
-        sval->len = len;
-        sval->str[sval->len] = '\0';
+inline led_str_t* led_str_trunk(led_str_t* lstr, size_t len) {
+    if (len < lstr->len) {
+        lstr->len = len;
+        lstr->str[lstr->len] = '\0';
     }
-    return sval;
+    return lstr;
 }
 
-inline lstr* lstr_trunk_end(lstr* sval, size_t len) {
-    if (len <= sval->len) {
-        sval->len -= len;
-        sval->str[sval->len] = '\0';
+inline led_str_t* led_str_trunk_end(led_str_t* lstr, size_t len) {
+    if (len <= lstr->len) {
+        lstr->len -= len;
+        lstr->str[lstr->len] = '\0';
     }
-    return sval;
+    return lstr;
 }
 
-inline lstr* lstr_rtrim(lstr* sval) {
-    while(sval->len > 0 && isspace(sval->str[sval->len-1])) sval->len--;
-    sval->str[sval->len] = '\0';
-    return sval;
+inline led_str_t* led_str_rtrim(led_str_t* lstr) {
+    while(lstr->len > 0 && isspace(lstr->str[lstr->len-1])) lstr->len--;
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_ltrim(lstr* sval) {
+inline led_str_t* led_str_ltrim(led_str_t* lstr) {
     size_t i=0,j=0;
-    for(; i < sval->len && isspace(sval->str[i]); i++);
-    for(; i < sval->len; i++,j++)
-        sval->str[j] = sval->str[i];
-    sval->len = j;
-    sval->str[sval->len] = '\0';
-    return sval;
+    for(; i < lstr->len && isspace(lstr->str[i]); i++);
+    for(; i < lstr->len; i++,j++)
+        lstr->str[j] = lstr->str[i];
+    lstr->len = j;
+    lstr->str[lstr->len] = '\0';
+    return lstr;
 }
 
-inline lstr* lstr_trim(lstr* sval) {
-    return lstr_ltrim(lstr_rtrim(sval));
+inline led_str_t* led_str_trim(led_str_t* lstr) {
+    return led_str_ltrim(led_str_rtrim(lstr));
 }
 
-inline lstr* lstr_cut_next(lstr* sval, char c, lstr* stok) {
-    lstr_clone(stok, sval);
-    for(size_t i = 0; i < sval->len; i++)
-        if (sval->str[i] == c) {
+inline led_str_t* led_str_cut_next(led_str_t* lstr, char c, led_str_t* stok) {
+    led_str_clone(stok, lstr);
+    for(size_t i = 0; i < lstr->len; i++)
+        if (lstr->str[i] == c) {
             stok->len = i;
             stok->str[i++] = '\0';
-            sval->len -= i;
-            sval->str += i;
-            return sval;
+            lstr->len -= i;
+            lstr->str += i;
+            return lstr;
         }
-    stok->len = sval->len;
-    sval->str = sval->str + sval->len;
-    sval->len = 0;
-    return sval;
+    stok->len = lstr->len;
+    lstr->str = lstr->str + lstr->len;
+    lstr->len = 0;
+    return lstr;
 }
 
-inline char lstr_char_at(lstr* sval, size_t idx) {
-    return sval->str[idx];
+inline char led_str_char_at(led_str_t* lstr, size_t idx) {
+    return lstr->str[idx];
 }
 
-inline char lstr_first_char(lstr* sval) {
-    return sval->str[0];
+inline char led_str_first_char(led_str_t* lstr) {
+    return lstr->str[0];
 }
 
-inline char lstr_last_char(lstr* sval) {
-    if (sval->len == 0) return '\0';
-    return sval->str[sval->len - 1];
+inline char led_str_last_char(led_str_t* lstr) {
+    if (lstr->len == 0) return '\0';
+    return lstr->str[lstr->len - 1];
 }
 
-inline char* lstr_str_at(lstr* sval, size_t idx) {
-    return sval->str + idx;
+inline char* led_str_str_at(led_str_t* lstr, size_t idx) {
+    return lstr->str + idx;
 }
 
-inline int lstr_equal(lstr* sval1, lstr* sval2) {
+inline int led_str_equal(led_str_t* sval1, led_str_t* sval2) {
     return sval1->len == sval2->len && strcmp(sval1->str, sval2->str) == 0;
 }
 
-inline int lstr_equal_str(lstr* sval, const char* str) {
-    return strcmp(sval->str, str) == 0;
+inline int led_str_equal_str(led_str_t* lstr, const char* str) {
+    return strcmp(lstr->str, str) == 0;
 }
 
-inline int lstr_equal_str_at(lstr* sval, const char* str, size_t i) {
-    if ( i > sval->len ) return FALSE;
-    return strcmp(sval->str + i, str) == 0;
+inline int led_str_equal_str_at(led_str_t* lstr, const char* str, size_t i) {
+    if ( i > lstr->len ) return FALSE;
+    return strcmp(lstr->str + i, str) == 0;
 }
 
-inline int lstr_startswith(lstr* sval1, lstr* sval2) {
+inline int led_str_startswith(led_str_t* sval1, led_str_t* sval2) {
     size_t i = 0;
     for (; i < sval1->len && sval2->str[i] && sval1->str[i] == sval2->str[i]; i++);
     return sval2->str[i] == '\0';
 }
 
-inline int lstr_startswith_at(lstr* sval1, lstr* sval2, size_t start) {
+inline int led_str_startswith_at(led_str_t* sval1, led_str_t* sval2, size_t start) {
     size_t i = 0;
     for (; start < sval1->len && sval2->str[i] && sval1->str[start] == sval2->str[i]; i++, start++);
     return sval2->str[i] == '\0';
 }
 
-inline int lstr_startswith_str(lstr* sval, const char* str) {
+inline int led_str_startswith_str(led_str_t* lstr, const char* str) {
     size_t i = 0;
-    for (; i < sval->len && str[i] && sval->str[i] == str[i]; i++);
+    for (; i < lstr->len && str[i] && lstr->str[i] == str[i]; i++);
     return str[i] == '\0';
 }
 
-inline int lstr_startswith_str_at(lstr* sval, const char* str, size_t start) {
+inline int led_str_startswith_str_at(led_str_t* lstr, const char* str, size_t start) {
     size_t i = 0;
-    for (; start < sval->len && str[i] && sval->str[start] == str[i]; i++, start++);
+    for (; start < lstr->len && str[i] && lstr->str[start] == str[i]; i++, start++);
     return str[i] == '\0';
 }
 
-inline size_t lstr_find_char_start_stop(lstr* sval, char c, size_t start, size_t stop) {
+inline size_t led_str_find_char_start_stop(led_str_t* lstr, char c, size_t start, size_t stop) {
     for(size_t i = start; i < stop; i++)
-        if (sval->str[i] == c) return i;
-    return sval->len;
+        if (lstr->str[i] == c) return i;
+    return lstr->len;
 }
 
-inline size_t lstr_find_char(lstr* sval, char c) {
-    return lstr_find_char_start_stop(sval, c, 0, sval->len);
+inline size_t led_str_find_char(led_str_t* lstr, char c) {
+    return led_str_find_char_start_stop(lstr, c, 0, lstr->len);
 }
 
-inline size_t lstr_rfind_char_start_stop(lstr* sval, char c, size_t start, size_t stop) {
+inline size_t led_str_rfind_char_start_stop(led_str_t* lstr, char c, size_t start, size_t stop) {
     size_t i = stop;
     while( i > start )
-        if (sval->str[--i] == c) return i;
-    return sval->len;
+        if (lstr->str[--i] == c) return i;
+    return lstr->len;
 }
 
-inline size_t lstr_rfind_char(lstr* sval, char c) {
-    return lstr_rfind_char_start_stop(sval, c, 0, sval->len);
+inline size_t led_str_rfind_char(led_str_t* lstr, char c) {
+    return led_str_rfind_char_start_stop(lstr, c, 0, lstr->len);
 }
 
-inline int lstr_ischar(lstr* sval, char c) {
-    return lstr_find_char(sval, c) < sval->len;
+inline int led_str_ischar(led_str_t* lstr, char c) {
+    return led_str_find_char(lstr, c) < lstr->len;
 }
 
-inline int lstr_find(lstr* sval1, lstr* sval2) {
+inline int led_str_find(led_str_t* sval1, led_str_t* sval2) {
     size_t i=0, j=0;
     for(; i < sval1->len && sval2->str[j]; i++)
         if (sval1->str[i] == sval2->str[j]) j++;
@@ -329,18 +329,18 @@ inline int lstr_find(lstr* sval1, lstr* sval2) {
     return sval2->str[j] ? sval1->len: i - j;
 }
 
-inline lstr* lstr_basename(lstr* sval) {
-    sval->str = basename(sval->str);
-    sval->len = strlen(sval->str);
-    sval->size = sval->len + 1;
-    return sval;
+inline led_str_t* led_str_basename(led_str_t* lstr) {
+    lstr->str = basename(lstr->str);
+    lstr->len = strlen(lstr->str);
+    lstr->size = lstr->len + 1;
+    return lstr;
 }
 
-inline lstr* lstr_dirname(lstr* sval) {
-    sval->str = basename(sval->str);
-    sval->len = strlen(sval->str);
-    sval->size = sval->len + 1;
-    return sval;
+inline led_str_t* led_str_dirname(led_str_t* lstr) {
+    lstr->str = basename(lstr->str);
+    lstr->len = strlen(lstr->str);
+    lstr->size = lstr->len + 1;
+    return lstr;
 }
 
 //-----------------------------------------------
@@ -362,19 +362,19 @@ void led_regex_init();
 void led_regex_free();
 
 pcre2_code* led_regex_compile(const char* pat);
-int lstr_match(lstr* sval, pcre2_code* regex);
-int lstr_match_offset(lstr* sval, pcre2_code* regex, size_t* pzone_start, size_t* pzone_stop);
+int led_str_match(led_str_t* lstr, pcre2_code* regex);
+int led_str_match_offset(led_str_t* lstr, pcre2_code* regex, size_t* pzone_start, size_t* pzone_stop);
 
-inline pcre2_code* lstr_regex_compile(lstr* pat) {
+inline pcre2_code* led_str_regex_compile(led_str_t* pat) {
     return led_regex_compile(pat->str);
 }
 
-inline int lstr_match_pat(lstr* sval, const char* pat) {
-    return lstr_match(sval, led_regex_compile(pat));
+inline int led_str_match_pat(led_str_t* lstr, const char* pat) {
+    return led_str_match(lstr, led_regex_compile(pat));
 }
 
-inline int lstr_isblank(lstr* sval) {
-    return lstr_match(sval, LED_REGEX_BLANK_LINE) > 0;
+inline int led_str_isblank(led_str_t* lstr) {
+    return led_str_match(lstr, LED_REGEX_BLANK_LINE) > 0;
 }
 
 //-----------------------------------------------
@@ -415,7 +415,7 @@ inline int lstr_isblank(lstr* sval) {
 //-----------------------------------------------
 
 typedef struct {
-    lstr sval;
+    led_str_t lstr;
     char buf[LED_BUF_MAX+1];
     size_t zone_start;
     size_t zone_stop;
@@ -429,26 +429,26 @@ inline led_line_t* led_line_reset(led_line_t* pline) {
 
 inline led_line_t* led_line_init(led_line_t* pline) {
     led_line_reset(pline);
-    lstr_init_buf(&pline->sval, pline->buf);
+    led_str_init_buf(&pline->lstr, pline->buf);
     return pline;
 }
 
 inline led_line_t* led_line_cpy(led_line_t* pline, led_line_t* pline_src) {
     pline->buf[0] = '\0';
-    if (lstr_isinit(&pline_src->sval)) {
-        lstr_init_buf(&pline->sval, pline->buf);
-        lstr_cpy(&pline->sval, &pline_src->sval);
+    if (led_str_isinit(&pline_src->lstr)) {
+        led_str_init_buf(&pline->lstr, pline->buf);
+        led_str_cpy(&pline->lstr, &pline_src->lstr);
     }
     else
-        lstr_reset(&pline->sval);
+        led_str_reset(&pline->lstr);
     pline->selected = pline_src->selected;
     pline->zone_start = 0;
-    pline->zone_stop = lstr_len(&pline_src->sval);
+    pline->zone_stop = led_str_len(&pline_src->lstr);
     return pline;
 }
 
 inline int led_line_isinit(led_line_t* pline) {
-    return lstr_isinit(&pline->sval);
+    return led_str_isinit(&pline->lstr);
 }
 
 inline int led_line_select(led_line_t* pline, int selected) {
@@ -461,17 +461,17 @@ inline int led_line_selected(led_line_t* pline) {
 }
 
 inline led_line_t* led_line_append_zone(led_line_t* pline, led_line_t* pline_src) {
-    lstr_app_start_stop(&pline->sval, &pline_src->sval, pline_src->zone_start, pline_src->zone_stop);
+    led_str_app_start_stop(&pline->lstr, &pline_src->lstr, pline_src->zone_start, pline_src->zone_stop);
     return pline;
 }
 
 inline led_line_t* led_line_append_before_zone(led_line_t* pline, led_line_t* pline_src) {
-    lstr_app_start_stop(&pline->sval, &pline_src->sval, 0, pline_src->zone_start);
+    led_str_app_start_stop(&pline->lstr, &pline_src->lstr, 0, pline_src->zone_start);
     return pline;
 }
 
 inline led_line_t* led_line_append_after_zone(led_line_t* pline, led_line_t* pline_src) {
-    lstr_app_start_stop(&pline->sval, &pline_src->sval, pline_src->zone_stop, pline_src->sval.len);
+    led_str_app_start_stop(&pline->lstr, &pline_src->lstr, pline_src->zone_stop, pline_src->lstr.len);
     return pline;
 }
 
@@ -485,7 +485,7 @@ typedef struct {
     char tmp_buf[LED_BUF_MAX+1];
 
     struct {
-        lstr sval;
+        led_str_t lstr;
         long val;
         size_t uval;
         pcre2_code* regex;
@@ -533,9 +533,9 @@ typedef struct {
         int file_out_unchanged;
         int file_out_extn;
         int exec;
-        lstr file_out_ext;
-        lstr file_out_dir;
-        lstr file_out_path;
+        led_str_t file_out_ext;
+        led_str_t file_out_dir;
+        led_str_t file_out_path;
     } opt;
 
     // selector
@@ -573,12 +573,12 @@ typedef struct {
 
     // runtime variables
     struct {
-        lstr name;
+        led_str_t name;
         char buf_name[LED_FNAME_MAX+1];
         FILE* file;
     } file_in;
     struct {
-        lstr name;
+        led_str_t name;
         char buf_name[LED_FNAME_MAX+1];
         FILE* file;
     } file_out;

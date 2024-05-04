@@ -151,9 +151,10 @@ void led_fn_impl_insert(led_fn_t* pfunc) {
     led_str_decl(newline, LED_BUF_MAX);
     led_fn_helper_substitute(pfunc, &led.line_prep.lstr, &newline);
 
-    led_str_init_buf(&led.line_write.lstr,led.line_write.buf);
-    size_t n = pfunc->arg_count > 1 ? pfunc->arg[1].uval : 1;
-    for (size_t i = 0; i < n; i++) {
+    led_str_init_buf(&led.line_write.lstr, led.line_write.buf);
+    led_str_empty(&led.line_write.lstr);
+    size_t lcount = pfunc->arg_count > 1 ? pfunc->arg[1].uval : 1;
+    for (size_t i = 0; i < lcount; i++) {
         led_str_app(&led.line_write.lstr, &newline);
         led_str_app_char(&led.line_write.lstr, '\n');
     }
@@ -166,8 +167,8 @@ void led_fn_impl_append(led_fn_t* pfunc) {
 
     led_str_init_buf(&led.line_write.lstr,led.line_write.buf);
     led_str_cpy(&led.line_write.lstr, &led.line_prep.lstr);
-    size_t n = pfunc->arg_count > 1 ? pfunc->arg[1].uval : 1;
-    for (size_t i = 0; i < n; i++) {
+    size_t lcount = pfunc->arg_count > 1 ? pfunc->arg[1].uval : 1;
+    for (size_t i = 0; i < lcount; i++) {
         led_str_app_char(&led.line_write.lstr, '\n');
         led_str_app(&led.line_write.lstr, &newline);;
     }

@@ -13,18 +13,22 @@ SOURCEDIR 	= $(dir $(realpath $(MAKEFILE)))
 SOURCES     = $(wildcard *.c)
 OBJECTS		= $(patsubst %.c,%.o,$(SOURCES))
 APP			= led
+APPTEST 	= $(APP)test
 LIBS        = -lpcre2-8 -lb64
 VERSION     = 1.0.0
 INSTALLDIR  = /usr/local/bin/
 
 ####### Build rules
 
-all: $(APP) $(HOME)/.local/bin/$(APP) VERSION
+all: $(APP) $(APPTEST) $(HOME)/.local/bin/$(APP) VERSION
 
 %.o : %.c $(APP).h
 	$(CC) -c $(CFLAGS) -I$(SOURCEDIR) $< -o $@
 
-$(APP): $(OBJECTS)
+$(APP): $(filter-out $(APPTEST).o, $(OBJECTS))
+	$(LINK) $(LFLAGS) -o $@ $^ $(LIBS)
+
+$(APPTEST): $(filter-out $(APP).o, $(OBJECTS))
 	$(LINK) $(LFLAGS) -o $@ $^ $(LIBS)
 
 VERSION: $(MAKEFILE)

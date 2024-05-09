@@ -9,11 +9,11 @@
 
 #define countof(a) (sizeof(a)/sizeof(a[0]))
 
-int led_zone_pre_process(led_fn_t* pfunc) {
+bool led_zone_pre_process(led_fn_t* pfunc) {
     led_line_init(&led.line_write);
 
     led.line_prep.zone_start = led.line_prep.zone_stop = led_str_len(&led.line_prep.lstr);
-    int rc = led_str_match_offset(&led.line_prep.lstr, pfunc->regex, &led.line_prep.zone_start, &led.line_prep.zone_stop);
+    bool rc = led_str_match_offset(&led.line_prep.lstr, pfunc->regex, &led.line_prep.zone_start, &led.line_prep.zone_stop);
 
     if (!led.opt.output_match)
         led_str_app_start_stop(&led.line_write.lstr, &led.line_prep.lstr, 0, led.line_prep.zone_start);
@@ -89,13 +89,13 @@ void led_fn_helper_substitute(led_fn_t* pfunc, led_str_t* sinput, led_str_t* sou
         if (led_str_startswith_str_at(&pfunc->arg[0].lstr, "$R", i)) {
             size_t ir = 0;
             size_t in = i+2; // position of of register ID if given.
-            if ( in < led_str_len(&pfunc->arg[0].lstr) && led_str_char_at(&pfunc->arg[0].lstr, in) >= '0' && led_str_char_at(&pfunc->arg[0].lstr, in) <= '9' )
+            if ( in < led_str_len(&pfunc->arg[0].lstr) && isdigit(led_str_char_at(&pfunc->arg[0].lstr, in)) )
                 ir = led_str_char_at(&pfunc->arg[0].lstr, in++) - '0';
             else
                 in--; // only $R is given, no ID, adjust "in".
             led_debug("Replace register %d found at %d", ir, i);
             for (size_t i = 0; i < led_str_len(&led.line_reg[ir].lstr); i++) {
-                char c = led_str_char_at(&led.line_reg[ir].lstr, i);
+                u8chr_t c = led_str_char_at(&led.line_reg[ir].lstr, i);
                 if (c == '\\') // double anti slash to make it a true character
                     led_str_app_char(&rsval, c);
                 led_str_app_char(&rsval, c);
@@ -103,7 +103,7 @@ void led_fn_helper_substitute(led_fn_t* pfunc, led_str_t* sinput, led_str_t* sou
             i = in; // position "i" at end of register mark
         }
         else {
-            led_str_app_char(&rsval, led_str_char_at(&pfunc->arg[0].lstr, i));
+            led_str_app_char(&rsval, led_str_char_at_next(&pfunc->arg[0].lstr, &i));
         }
     }
 
@@ -219,19 +219,18 @@ void led_fn_impl_range_unsel(led_fn_t* pfunc) {
 
 void led_fn_impl_translate(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
-
-    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
-        char c = led_str_char_at(&led.line_prep.lstr, i);
-        size_t j;
-        for (j = 0; j < led_str_len(&pfunc->arg[0].lstr); j++) {
-            if (led_str_char_at(&pfunc->arg[0].lstr, j) == c) {
-                if (j < led_str_len(&pfunc->arg[1].lstr))
-                    led_str_app_char(&led.line_write.lstr, led_str_char_at(&pfunc->arg[1].lstr, j));
+    size_t i = led.line_prep.zone_start;
+    while ( i < led.line_prep.zone_stop ) {
+        u8chr_t c = led_str_char_at_next(&led.line_prep.lstr, &i);
+        size_t j=0,k=0;
+        while ( j < led_str_len(&pfunc->arg[0].lstr) && k < led_str_len(&pfunc->arg[1].lstr) ) {
+            u8chr_t ct = led_str_char_at_next(&pfunc->arg[1].lstr, &k);
+            if (led_str_char_at_next(&pfunc->arg[0].lstr, &j) == c) {
+                led_str_app_char(&led.line_write.lstr, ct);
                 break;
             }
         }
-
-        /* output only if no substitution has been done */
+        // if no substitution has been done
         if (j == led_str_len(&pfunc->arg[0].lstr))
             led_str_app_char(&led.line_write.lstr, c);
     }
@@ -269,10 +268,10 @@ void led_fn_impl_case_first(led_fn_t* pfunc) {
 void led_fn_impl_case_camel(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    int wasword = FALSE;
+    bool wasword = false;
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
         int c = led_str_char_at(&led.line_prep.lstr, i);
-        int isword = isalnum(c) || c == '_';
+        bool isword = isalnum(c) || c == '_';
         if (isword) {
             if (wasword) led_str_app_char(&led.line_write.lstr, tolower(c));
             else led_str_app_char(&led.line_write.lstr, toupper(c));
@@ -288,7 +287,7 @@ void led_fn_impl_case_snake(led_fn_t* pfunc) {
 
     for (size_t i=led.line_prep.zone_start; i<led.line_prep.zone_stop; i++) {
         char c = led_str_char_at(&led.line_prep.lstr, i);
-        char lc = led_str_last_char(&led.line_write.lstr);
+        char lc = led_str_char_last(&led.line_write.lstr);
         if (isalnum(c))
             led_str_app_char(&led.line_write.lstr, tolower(c));
         else if (lc != '_')
@@ -298,7 +297,7 @@ void led_fn_impl_case_snake(led_fn_t* pfunc) {
     led_zone_post_process();
 }
 
-void led_fn_impl_quote_base(led_fn_t* pfunc, char q) {
+void led_fn_impl_quote_base(led_fn_t* pfunc, u8chr_t q) {
     led_zone_pre_process(pfunc);
 
     if (! (led_str_char_at(&led.line_prep.lstr, led.line_prep.zone_start) == q && led_str_char_at(&led.line_prep.lstr, led.line_prep.zone_stop - 1) == q) ) {
@@ -318,12 +317,12 @@ void led_fn_impl_quote_double(led_fn_t* pfunc) { led_fn_impl_quote_base(pfunc, '
 void led_fn_impl_quote_back(led_fn_t* pfunc) { led_fn_impl_quote_base(pfunc, '`'); }
 
 void led_fn_impl_quote_remove(led_fn_t* pfunc) {
-    const char* QUOTES="'\"`";
+    const char* QUOTES = "'\"`";
     led_zone_pre_process(pfunc);
 
     char q = QUOTES[0];
     for(size_t i = 0; q != '\0'; i++, q = QUOTES[i]) {
-        if (led_str_char_at(&led.line_prep.lstr, led.line_prep.zone_start) == q && led_str_char_at(&led.line_prep.lstr, led.line_prep.zone_stop - 1) == q) break;
+        if (led_str_char_at(&led.line_prep.lstr, led.line_prep.zone_start) == (u8chr_t)q && led_str_char_at(&led.line_prep.lstr, led.line_prep.zone_stop - 1) == (u8chr_t)q) break;
     }
 
     if (q) {
@@ -420,7 +419,7 @@ void led_fn_impl_base64_decode(led_fn_t* pfunc) {
 void led_fn_impl_url_encode(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
-    const char *HEX = "0123456789ABCDEF";
+    static const char HEX[] = "0123456789ABCDEF";
     char pcbuf[4] = "%00";
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
@@ -437,10 +436,10 @@ void led_fn_impl_url_encode(led_fn_t* pfunc) {
     led_zone_post_process();
 }
 
-const char fname_stdchar_table[] = "/._-~:=%";
-
 void led_fn_impl_shell_escape(led_fn_t* pfunc) {
+    static const char fname_stdchar_table[] = "/._-~:=%";
     led_str_decl_str(table, fname_stdchar_table);
+
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
@@ -460,10 +459,10 @@ void led_fn_impl_shell_unescape(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
 
     for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
-        int wasesc = FALSE;
+        bool wasesc = false;
         char c = led_str_char_at(&led.line_prep.lstr, i);
         if (!wasesc && c == '\\')
-            wasesc = TRUE;
+            wasesc = true;
         else
             led_str_app_char(&led.line_write.lstr, c);
     }
@@ -522,11 +521,11 @@ void led_fn_impl_field_base(led_fn_t* pfunc, const char* field_sep) {
     led_zone_pre_process(pfunc);
     size_t field_n = pfunc->arg[0].uval;
     size_t n = 0;
-    int was_sep = TRUE;
+    bool was_sep = true;
     size_t str_start = led.line_prep.zone_start;
     size_t str_stop = led.line_prep.zone_stop;
     for (; str_start < led.line_prep.zone_stop; str_start++ ) {
-        int is_sep = led_str_ischar(&sepsval, led_str_char_at(&led.line_prep.lstr, str_start));
+        bool is_sep = led_str_ischar(&sepsval, led_str_char_at(&led.line_prep.lstr, str_start));
         if (was_sep && !is_sep) {
             n++;
             if (n == field_n) break;
@@ -534,9 +533,9 @@ void led_fn_impl_field_base(led_fn_t* pfunc, const char* field_sep) {
         was_sep = is_sep;
     }
     if (n == field_n) {
-        was_sep = FALSE;
+        was_sep = false;
         for (str_stop = str_start; str_stop < led.line_prep.zone_stop; str_stop++ ) {
-            int is_sep = led_str_ischar(&sepsval, led_str_char_at(&led.line_prep.lstr, str_stop));
+            bool is_sep = led_str_ischar(&sepsval, led_str_char_at(&led.line_prep.lstr, str_stop));
             if (!was_sep && is_sep) break;
         }
         led_str_app_start_stop(&led.line_write.lstr, &led.line_prep.lstr, str_start, str_stop);
@@ -617,11 +616,12 @@ void led_fn_impl_fname_lower(led_fn_t* pfunc) {
             if (isalnum(c))
                 led_str_app_char(&led.line_write.lstr, tolower(c));
             else if (c == '.') {
-                if (isalnum(led_str_last_char(&led.line_write.lstr))) led_str_app_char(&led.line_write.lstr, c);
-                else led_str_set_last_char(&led.line_write.lstr, c);
+                if (!isalnum(led_str_char_last(&led.line_write.lstr)))
+                    led_str_trunk_char_last(&led.line_write.lstr);
+                led_str_app_char(&led.line_write.lstr, c);
             }
             else {
-                if (isalnum(led_str_last_char(&led.line_write.lstr))) led_str_app_char(&led.line_write.lstr, '_');
+                if (isalnum(led_str_char_last(&led.line_write.lstr))) led_str_app_char(&led.line_write.lstr, '_');
             }
         }
     }
@@ -641,11 +641,12 @@ void led_fn_impl_fname_upper(led_fn_t* pfunc) {
             if (isalnum(c))
                 led_str_app_char(&led.line_write.lstr, toupper(c));
             else if (c == '.') {
-                if (isalnum(led_str_last_char(&led.line_write.lstr))) led_str_app_char(&led.line_write.lstr, c);
-                else led_str_set_last_char(&led.line_write.lstr, c);
+                if (!isalnum(led_str_char_last(&led.line_write.lstr)))
+                    led_str_trunk_char_last(&led.line_write.lstr);
+                led_str_app_char(&led.line_write.lstr, c);
             }
             else {
-                if (isalnum(led_str_last_char(&led.line_write.lstr))) led_str_app_char(&led.line_write.lstr, '_');
+                if (isalnum(led_str_char_last(&led.line_write.lstr))) led_str_app_char(&led.line_write.lstr, '_');
             }
         }
     }
@@ -659,20 +660,20 @@ void led_fn_impl_fname_camel(led_fn_t* pfunc) {
         size_t iname = led_fn_helper_fname_pos();
         led_str_app_start_stop(&led.line_write.lstr, &led.line_prep.lstr, led.line_prep.zone_start, iname);
 
-        int wasword = TRUE;
-        int isfirst = TRUE;
+        bool wasword = true;
+        bool isfirst = true;
         for (; iname < led.line_prep.zone_stop; iname++) {
             char c = led_str_char_at(&led.line_prep.lstr, iname);
-            if (isalnum(led_str_last_char(&led.line_write.lstr)) && c == '.') {
+            if (isalnum(led_str_char_last(&led.line_write.lstr)) && c == '.') {
                 led_str_app_char(&led.line_write.lstr, c);
-                isfirst = TRUE;
+                isfirst = true;
             }
             else {
-                int isword = isalnum(c);
+                bool isword = isalnum(c);
                 if (isword) {
                     if (wasword || isfirst) led_str_app_char(&led.line_write.lstr, tolower(c));
                     else led_str_app_char(&led.line_write.lstr, toupper(c));
-                    isfirst = FALSE;
+                    isfirst = false;
                 }
                 wasword = isword;
             }
@@ -690,16 +691,16 @@ void led_fn_impl_fname_snake(led_fn_t* pfunc) {
 
         for (; iname < led.line_prep.zone_stop; iname++) {
             char c = led_str_char_at(&led.line_prep.lstr, iname);
-            char lc = led_str_last_char(&led.line_write.lstr);
+            char lc = led_str_char_last(&led.line_write.lstr);
             if (isalnum(c))
                 led_str_app_char(&led.line_write.lstr, tolower(c));
             else if (c == '.') {
-                led_str_unapp_char(&led.line_write.lstr, '.');
-                led_str_unapp_char(&led.line_write.lstr, '_');
+                led_str_trunk_char(&led.line_write.lstr, '.');
+                led_str_trunk_char(&led.line_write.lstr, '_');
                 led_str_app_char(&led.line_write.lstr, '.');
             }
             else if (lc != '\0' && lc != '.') {
-                led_str_unapp_char(&led.line_write.lstr, '_');
+                led_str_trunk_char(&led.line_write.lstr, '_');
                 led_str_app_char(&led.line_write.lstr, '_');
             }
         }
@@ -710,7 +711,7 @@ void led_fn_impl_fname_snake(led_fn_t* pfunc) {
 void led_fn_impl_generate(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
     size_t n = pfunc->arg[1].uval > 0 ? led.line_prep.zone_start + pfunc->arg[1].uval : led.line_prep.zone_stop;
-    char c = led_str_first_char(&pfunc->arg[0].lstr);
+    char c = led_str_char_first(&pfunc->arg[0].lstr);
 
     for (size_t i = led.line_prep.zone_start; i < n; i++) {
         led_str_app_char(&led.line_write.lstr, c);

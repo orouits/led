@@ -319,7 +319,7 @@ A register can be used into a substitue replace string with using `$R[N]` notati
 `r|register/[regex][/N]`
 
 - without N: each capture of the regex is copied into subsequent register IDs
-- N: the regex capture is copied int the given register ID
+- N: the regex capture is copied in the given register ID
 
 `r/` => all the line into R0
 

@@ -35,24 +35,28 @@ void led_debug(const char* message, ...);
 
 typedef uint32_t u8chr_t;
 
-extern const size_t led_utf8_char_size_table[];
+extern const size_t led_u8chr_size_table[];
 
-inline size_t led_utf8_char_size(char* str) {
-    return led_utf8_char_size_table[(((uint8_t *)(str))[0] & 0xFF) >> 4];
+inline size_t led_u8chr_size(char* str) {
+    return led_u8chr_size_table[(((uint8_t *)(str))[0] & 0xFF) >> 4];
 }
 
-inline bool led_utf8_char_iscont(char c) {
+inline bool led_u8chr_iscont(char c) {
     return (c & 0xC0) == 0x80;
 }
 
-bool led_utf8_char_isvalid(u8chr_t c);
+inline bool led_u8chr_isalnum(u8chr_t c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
 
-u8chr_t led_utf8_char_encode(uint32_t code);
-uint32_t led_utf8_char_decode(u8chr_t c);
+bool led_u8chr_isvalid(u8chr_t c);
 
-size_t led_utf8_char_from_str(char* str, u8chr_t* u8chr);
-size_t led_utf8_char_from_rstr(char* str, size_t len, u8chr_t* u8chr);
-size_t led_utf8_char_to_str(char* str, u8chr_t u8chr);
+u8chr_t led_u8chr_encode(uint32_t code);
+uint32_t led_u8chr_decode(u8chr_t c);
+
+size_t led_u8chr_from_str(char* str, u8chr_t* u8chr);
+size_t led_u8chr_from_rstr(char* str, size_t len, u8chr_t* u8chr);
+size_t led_u8chr_to_str(char* str, u8chr_t u8chr);
 
 
 //------------------------------------------------------------------------------
@@ -179,7 +183,7 @@ inline led_str_t* led_str_app_start_stop(led_str_t* lstr, led_str_t* lstr_src, s
 inline led_str_t* led_str_app_char(led_str_t* lstr, u8chr_t u8chr) {
     char buf[4];
     char* str = buf;
-    size_t u8chr_len = led_utf8_char_to_str(str, u8chr);
+    size_t u8chr_len = led_u8chr_to_str(str, u8chr);
     if (lstr->len + u8chr_len < lstr->size) {
         while (u8chr_len) {
             lstr->str[lstr->len++] = *(str++);
@@ -192,7 +196,7 @@ inline led_str_t* led_str_app_char(led_str_t* lstr, u8chr_t u8chr) {
 
 inline led_str_t* led_str_trunk_char(led_str_t* lstr, u8chr_t u8chr) {
     u8chr_t c = 0;
-    size_t u8chr_len = led_utf8_char_from_rstr(lstr->str, lstr->len, &c);
+    size_t u8chr_len = led_u8chr_from_rstr(lstr->str, lstr->len, &c);
     // led_debug("led_str_trunk_char - len=%lu", u8chr_len);
     if (u8chr == c) {
         lstr->len -= u8chr_len;
@@ -202,7 +206,7 @@ inline led_str_t* led_str_trunk_char(led_str_t* lstr, u8chr_t u8chr) {
 }
 
 inline led_str_t* led_str_trunk_char_last(led_str_t* lstr) {
-    while ( lstr->len > 0 && led_utf8_char_iscont(--(lstr->len)) );
+    while ( lstr->len > 0 && led_u8chr_iscont(--(lstr->len)) );
     lstr->str[lstr->len] = '\0';
     return lstr;
 }
@@ -249,7 +253,7 @@ inline led_str_t* led_str_cut_next(led_str_t* lstr, u8chr_t u8chr, led_str_t* st
     u8chr_t c;
     size_t i = 0;
     while(i < lstr->len) {
-        size_t l = led_utf8_char_from_str(lstr->str + i, &c);
+        size_t l = led_u8chr_from_str(lstr->str + i, &c);
         // led_debug("led_str_cut_next - i=%u c=%x l=%u", i, c, l);
         if ( c == u8chr ) {
             stok->len = i;
@@ -268,9 +272,9 @@ inline led_str_t* led_str_cut_next(led_str_t* lstr, u8chr_t u8chr, led_str_t* st
 }
 
 inline u8chr_t led_str_char_at(led_str_t* lstr, size_t idx) {
-    if (led_utf8_char_iscont(lstr->str[idx])) return '\0';
+    if (led_u8chr_iscont(lstr->str[idx])) return '\0';
     u8chr_t u8chr;
-    led_utf8_char_from_str(lstr->str + idx, &u8chr);
+    led_u8chr_from_str(lstr->str + idx, &u8chr);
     return u8chr;
 }
 
@@ -282,20 +286,20 @@ inline u8chr_t led_str_char_last(led_str_t* lstr) {
     if (lstr->len == 0) return '\0';
     u8chr_t u8chr = 0;
     size_t idx = lstr->len;
-    while ( idx > 0 && led_utf8_char_iscont(lstr->str[--idx]) );
+    while ( idx > 0 && led_u8chr_iscont(lstr->str[--idx]) );
     // led_debug("led_str_char_last - len=%lu idx=%lu", lstr->len, idx);
-    led_utf8_char_from_str(lstr->str + idx, &u8chr);
+    led_u8chr_from_str(lstr->str + idx, &u8chr);
     return u8chr;
 }
 
 inline u8chr_t led_str_char_at_next(led_str_t* lstr, size_t* idx) {
     u8chr_t u8chr;
-    *idx  += led_utf8_char_from_str(lstr->str + *idx, &u8chr);
+    *idx  += led_u8chr_from_str(lstr->str + *idx, &u8chr);
     return u8chr;
 }
 
 inline char* led_str_str_at(led_str_t* lstr, size_t idx) {
-    if (led_utf8_char_iscont(lstr->str[idx])) return '\0';
+    if (led_u8chr_iscont(lstr->str[idx])) return '\0';
     return lstr->str + idx;
 }
 
@@ -319,7 +323,7 @@ inline bool led_str_startswith(led_str_t* lstr1, led_str_t* lstr2) {
 }
 
 inline bool led_str_startswith_at(led_str_t* lstr1, led_str_t* lstr2, size_t start) {
-    if ( led_utf8_char_iscont(lstr1->str[start]) ) return false;
+    if ( led_u8chr_iscont(lstr1->str[start]) ) return false;
     size_t i = 0;
     for (; start < lstr1->len && i < lstr2->len && lstr1->str[start] == lstr2->str[i]; i++, start++);
     return lstr2->str[i] == '\0';
@@ -332,7 +336,7 @@ inline bool led_str_startswith_str(led_str_t* lstr, const char* str) {
 }
 
 inline bool led_str_startswith_str_at(led_str_t* lstr, const char* str, size_t start) {
-    if ( led_utf8_char_iscont(lstr->str[start]) ) return false;
+    if ( led_u8chr_iscont(lstr->str[start]) ) return false;
     size_t i = 0;
     for (; start < lstr->len && str[i] && lstr->str[start] == str[i]; i++, start++);
     return str[i] == '\0';
@@ -353,8 +357,8 @@ inline size_t led_str_find_char(led_str_t* lstr, u8chr_t c) {
 inline size_t led_str_rfind_char_start_stop(led_str_t* lstr, u8chr_t c, size_t start, size_t stop) {
     u8chr_t u8chr;
     while( stop > start )
-        if ( !led_utf8_char_iscont(lstr->str[--stop]) ) {
-            led_utf8_char_from_str(lstr->str + stop, &u8chr);
+        if ( !led_u8chr_iscont(lstr->str[--stop]) ) {
+            led_u8chr_from_str(lstr->str + stop, &u8chr);
             if ( u8chr == c ) return stop;
         }
     return lstr->len;

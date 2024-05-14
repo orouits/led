@@ -441,10 +441,10 @@ void led_fn_impl_shell_escape(led_fn_t* pfunc) {
     led_str_decl_str(table, fname_stdchar_table);
 
     led_zone_pre_process(pfunc);
-
-    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
-        char c = led_str_char_at(&led.line_prep.lstr, i);
-        if (isalnum(c) || led_str_ischar(&table, c))
+    size_t i = led.line_prep.zone_start;
+    while ( i < led.line_prep.zone_stop ) {
+        u8chr_t c = led_str_char_at_next(&led.line_prep.lstr, &i);
+        if (led_u8chr_isalnum(c) || led_str_ischar(&table, c))
             led_str_app_char(&led.line_write.lstr, c);
         else {
             led_str_app_char(&led.line_write.lstr, '\\');

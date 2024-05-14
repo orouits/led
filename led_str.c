@@ -79,11 +79,11 @@ bool led_str_match_offset(led_str_t* lstr, pcre2_code* regex, size_t* pzone_star
 // LED utf8 functions
 //-----------------------------------------------
 
-size_t const led_utf8_char_size_table[] = {
+size_t const led_u8chr_size_table[] = {
     1,1,1,1,1,1,1,1,0,0,0,0,2,2,3,4
 };
 
-bool led_utf8_char_isvalid(u8chr_t c)
+bool led_u8chr_isvalid(u8chr_t c)
 {
   if (c <= 0x7F) return true;                    // [1]
 
@@ -102,7 +102,7 @@ bool led_utf8_char_isvalid(u8chr_t c)
   return false;
 }
 
-u8chr_t led_utf8_char_encode(uint32_t code) {
+u8chr_t led_u8chr_encode(uint32_t code) {
     u8chr_t c = code;
     if (code > 0x7F) {
         c =  (code & 0x000003F)
@@ -117,7 +117,7 @@ u8chr_t led_utf8_char_encode(uint32_t code) {
     return c;
 }
 
-uint32_t led_utf8_char_decode(u8chr_t c) {
+uint32_t led_u8chr_decode(u8chr_t c) {
   uint32_t mask;
   if (c > 0x7F) {
     mask = (c <= 0x00EFBFBF) ? 0x000F0000 : 0x003F0000 ;
@@ -129,26 +129,26 @@ uint32_t led_utf8_char_decode(u8chr_t c) {
   return c;
 }
 
-size_t led_utf8_char_from_str(char* str, u8chr_t* u8chr) {
-    size_t l = led_utf8_char_size(str);
-    // led_debug("led_utf8_char_from_str - len=%lu", l);
+size_t led_u8chr_from_str(char* str, u8chr_t* u8chr) {
+    size_t l = led_u8chr_size(str);
+    // led_debug("led_u8chr_from_str - len=%lu", l);
     u8chr_t c = 0;
     for (size_t i = 0; i < l && str[i]; i++)
         c = (c << 8) | ((uint8_t*)str)[i];
-    // led_debug("led_utf8_char_from_str - c=%x", c);
+    // led_debug("led_u8chr_from_str - c=%x", c);
     *u8chr = c;
     return l;
 }
 
-size_t led_utf8_char_from_rstr(char* str, size_t len, u8chr_t* u8chr) {
+size_t led_u8chr_from_rstr(char* str, size_t len, u8chr_t* u8chr) {
     size_t u8chr_len = 0;
     u8chr_t c = 0;
     while ( len > 0 ) {
         len--;
         c = c | (((uint8_t*)str)[len] << (u8chr_len*8));
         u8chr_len++;
-        // led_debug("led_utf8_char_from_rstr - len=%lu c=%x", u8chr_len, c);
-        if ( !led_utf8_char_iscont(str[len]) ) {
+        // led_debug("led_u8chr_from_rstr - len=%lu c=%x", u8chr_len, c);
+        if ( !led_u8chr_iscont(str[len]) ) {
             *u8chr = c;
             return u8chr_len;
         }
@@ -156,18 +156,18 @@ size_t led_utf8_char_from_rstr(char* str, size_t len, u8chr_t* u8chr) {
     return 0;
 }
 
-size_t led_utf8_char_to_str(char* str, u8chr_t u8chr) {
+size_t led_u8chr_to_str(char* str, u8chr_t u8chr) {
     uint32_t mask = 0xFF000000;
     size_t l = 0;
     for (size_t i = 0; i < 4; i++) {
         uint8_t c = (u8chr & mask) >> ((3-i)*8);
-        // led_debug("led_utf8_char_to_str - u8chr&mask=%x shift=%x", (u8chr & mask), c);
+        // led_debug("led_u8chr_to_str - u8chr&mask=%x shift=%x", (u8chr & mask), c);
         if (c) {
             *((uint8_t*)str++) = c;
             l++;
         }
         mask >>= 8;
     }
-    // led_debug("led_utf8_char_to_str - %x => %x %x %x %x", u8chr, (uint8_t)str[0], (uint8_t)str[1], (uint8_t)str[2], (uint8_t)str[3] );
+    // led_debug("led_u8chr_to_str - %x => %x %x %x %x", u8chr, (uint8_t)str[0], (uint8_t)str[1], (uint8_t)str[2], (uint8_t)str[3] );
     return l;
 }

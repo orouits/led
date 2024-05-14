@@ -4,7 +4,7 @@
 // LED str functions
 //-----------------------------------------------
 
-led_str_t* led_str_init(led_str_t* lstr, char* buf, size_t size) {
+led_str_t* led_u8str_init(led_str_t* lstr, char* buf, size_t size) {
     lstr->str = buf;
     if (!lstr->str) {
         lstr->len = 0;
@@ -53,14 +53,14 @@ pcre2_code* led_regex_compile(const char* pattern) {
     return regex;
 }
 
-bool led_str_match(led_str_t* lstr, pcre2_code* regex) {
+bool led_u8str_match(led_str_t* lstr, pcre2_code* regex) {
     pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
     int rc = pcre2_match(regex, (PCRE2_SPTR)lstr->str, lstr->len, 0, 0, match_data, NULL);
     pcre2_match_data_free(match_data);
     return rc > 0;
 }
 
-bool led_str_match_offset(led_str_t* lstr, pcre2_code* regex, size_t* pzone_start, size_t* pzone_stop) {
+bool led_u8str_match_offset(led_str_t* lstr, pcre2_code* regex, size_t* pzone_start, size_t* pzone_stop) {
     pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(regex, NULL);
     int rc = pcre2_match(regex, (PCRE2_SPTR)lstr->str, lstr->len, 0, 0, match_data, NULL);
     led_debug("match_offset %d ", rc);

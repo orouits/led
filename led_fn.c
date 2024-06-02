@@ -82,20 +82,22 @@ void led_fn_impl_register_recall(led_fn_t* pfunc) {
 
 void led_fn_helper_substitute(led_fn_t* pfunc, led_str_t* sinput, led_str_t* soutput) {
     led_u8str_decl(rsval, LED_BUF_MAX);
-    led_debug("Replace registers in substitute string (len=%d) %s", led_u8str_len(&pfunc->arg[0].lstr), led_u8str_str(&pfunc->arg[0].lstr));
+    led_debug("led_fn_helper_substitute: Replace registers in substitute string (len=%d) %s", led_u8str_len(&pfunc->arg[0].lstr), led_u8str_str(&pfunc->arg[0].lstr));
 
-    for (size_t i = 0; i < led_u8str_len(&pfunc->arg[0].lstr); i++) {
+    size_t i = 0;
+    while ( i < led_u8str_len(&pfunc->arg[0].lstr) ) {
         if (led_u8str_isfull(&rsval)) break;
         if (led_u8str_startswith_str_at(&pfunc->arg[0].lstr, "$R", i)) {
             size_t ir = 0;
             size_t in = i+2; // position of of register ID if given.
-            if ( in < led_u8str_len(&pfunc->arg[0].lstr) && isdigit(led_u8str_char_at(&pfunc->arg[0].lstr, in)) )
+            if ( in < led_u8str_len(&pfunc->arg[0].lstr) && led_u8chr_isdigit(led_u8str_char_at(&pfunc->arg[0].lstr, in)) ) {
                 ir = led_u8str_char_at(&pfunc->arg[0].lstr, in++) - '0';
-            else
-                in--; // only $R is given, no ID, adjust "in".
-            led_debug("Replace register %d found at %d", ir, i);
-            for (size_t i = 0; i < led_u8str_len(&led.line_reg[ir].lstr); i++) {
-                u8chr_t c = led_u8str_char_at(&led.line_reg[ir].lstr, i);
+                in++;
+            }
+            led_debug("led_fn_helper_substitute: Replace register %d found at %d", ir, i);
+            size_t j = 0;
+            while (j < led_u8str_len(&led.line_reg[ir].lstr)) {
+                u8chr_t c = led_u8str_char_at_next(&led.line_reg[ir].lstr, &j);
                 if (c == '\\') // double anti slash to make it a true character
                     led_u8str_app_char(&rsval, c);
                 led_u8str_app_char(&rsval, c);
@@ -103,7 +105,9 @@ void led_fn_helper_substitute(led_fn_t* pfunc, led_str_t* sinput, led_str_t* sou
             i = in; // position "i" at end of register mark
         }
         else {
-            led_u8str_app_char(&rsval, led_u8str_char_at_next(&pfunc->arg[0].lstr, &i));
+            u8chr_t c = led_u8str_char_at_next(&pfunc->arg[0].lstr, &i);
+            led_debug("led_fn_helper_substitute: append to rsval %c", c);
+            led_u8str_app_char(&rsval, c);
         }
     }
 
@@ -422,9 +426,10 @@ void led_fn_impl_url_encode(led_fn_t* pfunc) {
     static const char HEX[] = "0123456789ABCDEF";
     char pcbuf[4] = "%00";
 
-    for (size_t i = led.line_prep.zone_start; i < led.line_prep.zone_stop; i++) {
-        char c = led_u8str_char_at(&led.line_prep.lstr, i);
-        if (isalnum(c))
+    size_t i = led.line_prep.zone_start;
+    while ( i < led.line_prep.zone_stop ) {
+        u8chr_t c = led_u8str_char_at_next(&led.line_prep.lstr, &i);
+        if (led_u8chr_isalnum(c))
             led_u8str_app_char(&led.line_write.lstr, c);
         else {
             pcbuf[1] = HEX[(c >> 4) & 0x0F];

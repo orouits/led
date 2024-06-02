@@ -49,6 +49,10 @@ inline bool led_u8chr_isalnum(u8chr_t c) {
     return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
+inline bool led_u8chr_isdigit(u8chr_t c) {
+    return (c >= '0' && c <= '9');
+}
+
 bool led_u8chr_isvalid(u8chr_t c);
 
 u8chr_t led_u8chr_encode(uint32_t code);

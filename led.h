@@ -304,6 +304,12 @@ inline u8c_t led_u8s_char_next(led_u8s_t* lstr, size_t* idx) {
     return u8chr;
 }
 
+inline u8c_t led_u8s_char_prev(led_u8s_t* lstr, size_t* idx) {
+    u8c_t u8chr;
+    *idx  -= led_u8c_from_rstr(lstr->str, *idx, &u8chr);
+    return u8chr;
+}
+
 inline char* led_u8s_str_at(led_u8s_t* lstr, size_t idx) {
     if (led_u8c_iscont(lstr->str[idx])) return '\0';
     return lstr->str + idx;

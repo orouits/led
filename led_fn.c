@@ -92,7 +92,6 @@ void led_fn_helper_substitute(led_fn_t* pfunc, led_u8s_t* sinput, led_u8s_t* sou
             size_t in = i+2; // position of of register ID if given.
             if ( in < led_u8s_len(&pfunc->arg[0].lstr) && led_u8c_isdigit(led_u8s_char_at(&pfunc->arg[0].lstr, in)) ) {
                 ir = led_u8s_char_at(&pfunc->arg[0].lstr, in++) - '0';
-                in++;
             }
             led_debug("led_fn_helper_substitute: Replace register %d found at %d", ir, i);
             size_t j = 0;
@@ -184,20 +183,25 @@ void led_fn_impl_range_sel(led_fn_t* pfunc) {
     if (led_u8s_iscontent(&pfunc->arg[0].lstr)) {
         long val = pfunc->arg[0].val;
         size_t uval = pfunc->arg[0].uval;
-        if (val > 0)
-            led.line_prep.zone_start = uval > led_u8s_len(&led.line_prep.lstr) ? led_u8s_len(&led.line_prep.lstr) : uval;
+        if (val >= 0)
+            for (led.line_prep.zone_start = 0; led.line_prep.zone_start < led_u8s_len(&led.line_prep.lstr) && uval > 0; uval-- )
+                led_u8s_char_next(&led.line_prep.lstr, &led.line_prep.zone_start);
         else
-            led.line_prep.zone_start = uval > led_u8s_len(&led.line_prep.lstr) ? 0 : led_u8s_len(&led.line_prep.lstr) - uval;
+            for (led.line_prep.zone_start = led_u8s_len(&led.line_prep.lstr); led.line_prep.zone_start > 0 && uval > 0; uval-- )
+                led_u8s_char_prev(&led.line_prep.lstr, &led.line_prep.zone_start);
     }
     if (led_u8s_iscontent(&pfunc->arg[1].lstr)) {
         size_t uval = pfunc->arg[1].uval;
-        led.line_prep.zone_stop = led.line_prep.zone_start + uval > led_u8s_len(&led.line_prep.lstr) ? led_u8s_len(&led.line_prep.lstr) : led.line_prep.zone_start + uval;
+        for (led.line_prep.zone_stop = led.line_prep.zone_start; led.line_prep.zone_stop < led_u8s_len(&led.line_prep.lstr) && uval > 0; uval-- )
+            led_u8s_char_next(&led.line_prep.lstr, &led.line_prep.zone_stop);
     }
     else
         led.line_prep.zone_stop = led_u8s_len(&led.line_prep.lstr);
 
     led_line_append_zone(&led.line_write, &led.line_prep);
 }
+
+// Continue U8 convertion
 
 void led_fn_impl_range_unsel(led_fn_t* pfunc) {
     if (led_u8s_iscontent(&pfunc->arg[0].lstr)) {

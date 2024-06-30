@@ -53,6 +53,10 @@ inline bool led_u8c_isdigit(u8c_t c) {
     return (c >= '0' && c <= '9');
 }
 
+inline bool led_u8c_isspace(u8c_t c) {
+    return (c == ' ' || c == '\t' || c == '\r' || c == '\n');
+}
+
 inline u8c_t led_u8c_tolower(u8c_t c) {
     if (c >= 'A' && c <= 'Z') c = tolower((char)c);
     return c;
@@ -200,10 +204,10 @@ inline led_u8s_t* led_u8s_app_char(led_u8s_t* lstr, u8c_t u8chr) {
     return lstr;
 }
 
-inline led_u8s_t* led_str_trunk_char(led_u8s_t* lstr, u8c_t u8chr) {
+inline led_u8s_t* led_u8s_trunk_char(led_u8s_t* lstr, u8c_t u8chr) {
     u8c_t c = 0;
     size_t u8chr_len = led_u8c_from_rstr(lstr->str, lstr->len, &c);
-    // led_debug("led_str_trunk_char - len=%lu", u8chr_len);
+    // led_debug("led_u8s_trunk_char - len=%lu", u8chr_len);
     if (u8chr == c) {
         lstr->len -= u8chr_len;
         lstr->str[lstr->len] = '\0';
@@ -211,13 +215,13 @@ inline led_u8s_t* led_str_trunk_char(led_u8s_t* lstr, u8c_t u8chr) {
     return lstr;
 }
 
-inline led_u8s_t* led_str_trunk_char_last(led_u8s_t* lstr) {
+inline led_u8s_t* led_u8s_trunk_char_last(led_u8s_t* lstr) {
     while ( lstr->len > 0 && led_u8c_iscont(--(lstr->len)) );
     lstr->str[lstr->len] = '\0';
     return lstr;
 }
 
-inline led_u8s_t* led_str_trunk(led_u8s_t* lstr, size_t len) {
+inline led_u8s_t* led_u8s_trunk(led_u8s_t* lstr, size_t len) {
     if (len < lstr->len) {
         lstr->len = len;
         lstr->str[lstr->len] = '\0';
@@ -225,7 +229,7 @@ inline led_u8s_t* led_str_trunk(led_u8s_t* lstr, size_t len) {
     return lstr;
 }
 
-inline led_u8s_t* led_str_trunk_end(led_u8s_t* lstr, size_t len) {
+inline led_u8s_t* led_u8s_trunk_end(led_u8s_t* lstr, size_t len) {
     if (len < lstr->len) {
         lstr->len -= len;
         lstr->str[lstr->len] = '\0';
@@ -249,7 +253,7 @@ inline led_u8s_t* led_u8s_ltrim(led_u8s_t* lstr) {
     return lstr;
 }
 
-inline led_u8s_t* led_str_trim(led_u8s_t* lstr) {
+inline led_u8s_t* led_u8s_trim(led_u8s_t* lstr) {
     return led_u8s_ltrim(led_u8s_rtrim(lstr));
 }
 

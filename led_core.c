@@ -475,7 +475,7 @@ void led_file_open_in() {
         led_u8s_cpy_chars(&led.file_in.name, led.file_names[0]);
         led.file_names++;
         led.file_count--;
-        led_str_trim(&led.file_in.name);
+        led_u8s_trim(&led.file_in.name);
         led_debug("open file from args: %s", led_u8s_str(&led.file_in.name));
         led.file_in.file = fopen(led_u8s_str(&led.file_in.name), "r");
         led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_u8s_str(&led.file_in.name));
@@ -486,7 +486,7 @@ void led_file_open_in() {
         char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
         if (fname) {
             led_u8s_cpy_chars(&led.file_in.name, fname);
-            led_str_trim(&led.file_in.name);
+            led_u8s_trim(&led.file_in.name);
             led_debug("open file from stdin: [%s]", led_u8s_str(&led.file_in.name));
             led.file_in.file = fopen(led_u8s_str(&led.file_in.name), "r");
             led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_u8s_str(&led.file_in.name));
@@ -553,7 +553,7 @@ void led_file_close_out() {
     led.file_out.file = NULL;
     if (led.opt.file_out == LED_OUTPUT_FILE_INPLACE) {
         led_u8s_cpy(&tmp, &led.file_out.name);
-        led_str_trunk_end(&tmp, 5);
+        led_u8s_trunk_end(&tmp, 5);
         led_debug("Rename: %s ==> %s", led_u8s_str(&led.file_out.name), led_u8s_str(&tmp));
         int syserr = remove(led_u8s_str(&tmp));
         led_assert(!syserr, LED_ERR_FILE, "File remove error: %d => %s", syserr, led_u8s_str(&tmp));
@@ -618,7 +618,7 @@ bool led_process_read() {
     if (!led_line_isinit(&led.line_read)) {
         led_u8s_init(&led.line_read.lstr, fgets(led.line_read.buf, sizeof led.line_read.buf, led.file_in.file), sizeof led.line_read.buf);
         if (led_line_isinit(&led.line_read)) {
-            led_str_trunk_char(&led.line_read.lstr, '\n');
+            led_u8s_trunk_char(&led.line_read.lstr, '\n');
             led.line_read.zone_start = 0;
             led.line_read.zone_stop = led.line_read.lstr.len;
             led.line_read.selected = false;

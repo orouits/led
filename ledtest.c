@@ -24,11 +24,11 @@ void led_test_char_last() {
 void led_test_trunk_char() {
     led_u8s_decl(test, 16);
     led_u8s_app_str(&test,"test=àa");
-    led_str_trunk_char(&test, 'à');
+    led_u8s_trunk_char(&test, 'à');
     led_debug("%s",led_u8s_str(&test));
-    led_str_trunk_char(&test, 'a');
+    led_u8s_trunk_char(&test, 'a');
     led_debug("%s",led_u8s_str(&test));
-    led_str_trunk_char(&test, 'à');
+    led_u8s_trunk_char(&test, 'à');
     led_debug("%s",led_u8s_str(&test));
     led_assert(led_u8s_equal_str(&test, "test="), LED_ERR_INTERNAL, "led_test_trunk_char");
 }

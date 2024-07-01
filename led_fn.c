@@ -767,11 +767,19 @@ void led_fn_impl_fname_snake(led_fn_t* pfunc) {
 
 void led_fn_impl_generate(led_fn_t* pfunc) {
     led_zone_pre_process(pfunc);
-    size_t n = pfunc->arg[1].uval > 0 ? led.line_prep.zone_start + pfunc->arg[1].uval : led.line_prep.zone_stop;
+
     u8c_t c = led_u8s_char_first(&pfunc->arg[0].lstr);
 
-    for (size_t i = led.line_prep.zone_start; i < n; i++) {
-        led_u8s_app_char(&led.line_write.lstr, c);
+    if ( pfunc->arg[1].uval > 0  ) {
+        for (size_t i = led.line_prep.zone_start; i < pfunc->arg[1].uval; i++)
+            led_u8s_app_char(&led.line_write.lstr, c);
+    }
+    else {
+        size_t i = led.line_prep.zone_start;
+        while (i < led.line_prep.zone_stop) {
+            led_u8s_char_next(&led.line_prep.lstr, &i);
+            led_u8s_app_char(&led.line_write.lstr, c);
+        }
     }
 
     led_zone_post_process();

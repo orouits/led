@@ -388,8 +388,12 @@ see options -F, -W, -A, -E, -D to ouput filenames and build multiple changes on 
 - `-F` write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
 - `-W<path>` write content to a fixed file
 - `-A<path>` append content to a fixed file
-- `-E<ext>` write content to filename.ext
-- `-D<dir>` write files in dir.
+- `-E<ext>`  write content to filename.ext
+- `-D<dir>`  write files in dir.
+
+### Execution option
+
+- `-X`       execute each line
 
 ### Global options
 

@@ -429,4 +429,4 @@ change in-place:
 
 ## massive execution (rename files in camel case)
 
-`find /path/to/dir -type f | led she/ r/ shu/ fnc/ 's//$R $0'`
+`find /path/to/dir -type f | led she/ r/ shu/ fnc/ 's//mv $R $0' -X`

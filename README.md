@@ -14,23 +14,25 @@ The **led** command line arguments is composed of section in the folling order:
 
 `ls [DIR] | led [SELECTOR] [PROCESSORS] [-opts...] -f`
 
-The options can be anywhere before -f option
-The section recognition (selector, processor) depends on the arguments format and content.
+- The options can be anywhere before -f option
+- The section recognition (selector, processor) depends on the arguments format and content.
 
 Led text processing workflow is simple:
 
-input text lines >> select lines >> process lines >> output text lines
+- input text lines >> select lines >> process lines >> output text lines
+- There is only one selector and 0 to 16 processor functions possible per call.
+- **led** does not implement a complex transformation language as **sed**, processors are executed sequentially on each line.
+- to make more complex transformations multiple piped calls can be done.
 
-There is only one selector and one processor function per led call. **led**. do not implement a complex transformation language as **sed**. To achieve multiple transformation, just use pipes power with multiple led calls.
-
-//TODO fully support UTF8
+UTF8 is fully supported.
 
 ### The selector
 
-the selector allows to apply the line processor on selected lines of the input text.
-the selector is optional, it must be declared before a recognized processor function, the default lines selector is set as none (all lines selected)
+The selector allows to apply the line processor on selected lines of the input text.
 
-When led is used only with the selector, it is equivalent to grep with a similar addressing feature as sed using PCRE2 as regex engine.
+The selector is optional, it must be declared before a recognized processor function. If no selector is defined, all lines are selected for processing.
+
+When led is used only with the selector (no processor), it is globally equivalent to grep using PCRE2 as regex engine.
 
 Example:
 
@@ -40,10 +42,13 @@ is equivalent to:
 
 `cat <file> | led Test`
 
+but PCRE2 regex engine is used.
+
 #### syntax:
 
-- selector := [address_from] [address_to]
+- selector := [address_from [shift]] [address_to [shift]]
 - address  := regex|number
+- shift    := +number
 
 addressing examples:
 
@@ -419,7 +424,7 @@ On value (see -e):
 
 `cat file.txt | led s/<regex>/<replace> > file-changed.txt`
 
-change in-place:
+## change in-place:
 
 `led s/<regex>/<replace> -F -f file.txt`
 

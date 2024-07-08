@@ -53,6 +53,7 @@ dkms.conf
 
 .vscode/
 **/led
+**/ledtest
 **/*.debug
 **/*.pro.user
 debug

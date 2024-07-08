@@ -346,6 +346,8 @@ void led_init(int argc, char* argv[]) {
     led.stdin_ispipe = !isatty(fileno(stdin));
     led.stdout_ispipe = !isatty(fileno(stdout));
 
+    if (argc <= 1) led.opt.help = true;
+
     int arg_section = 0;
     for (int argi=1; argi < argc; argi++) {
         led_u8s_decl_str(arg, argv[argi]);

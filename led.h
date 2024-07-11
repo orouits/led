@@ -1,3 +1,22 @@
+/***************************************************************************
+ Copyright (C) 2024 - Olivier ROUITS <olivier.rouits@free.fr>
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ USA
+ ***************************************************************************/
+
 #include <limits.h>
 #include <unistd.h>
 #include <string.h>
@@ -28,8 +47,8 @@ void led_assert_pcre(int rc);
 void led_debug(const char* message, ...);
 
 //------------------------------------------------------------------------------
-// LED simple poor string management
-// thanks to very clear explanations from
+// LED UTF8 support
+// thanks to clear explanations from
 // https://dev.to/rdentato/utf-8-strings-in-c-2-3-3kp1
 //------------------------------------------------------------------------------
 
@@ -77,8 +96,8 @@ size_t led_u8c_to_str(char* str, u8c_t u8chr);
 
 
 //------------------------------------------------------------------------------
-// LED poor & simple string management without memmory allocation.
-// led strings only wraps buffers declared statically or in the stack
+// Led poor & simple string management without any memory allocation.
+// Led strings only wraps buffers declared statically or in the stack
 // to offer various management functions easyer.
 //------------------------------------------------------------------------------
 

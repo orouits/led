@@ -472,7 +472,7 @@ On value (see -e):
 
 `ls *.txt | led s/<regex>/<replace> s/<regex>/<replace>  ... -F -f`
 
-### massive execution (rename files in camel case)
+### massive command execution (rename files in camel case)
 
 `find /path/to/dir -type f | led she/ r/ shu/ fnc/ 's//mv $R $0' -X`
 

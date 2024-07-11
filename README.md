@@ -5,7 +5,7 @@
 Line EDitor (led) is a simple command line utility wrote in C to edit text files using the well known PCRE2 library (Philip Hazel) for modern REGEX syntax and more.
 It aims to cover in one tool common text search/replace/process transformations that often need multiple tools combined like sed, grep, tr, awk, perl, xargs ...
 
-**CAUTION: this project is in DRAFT mode, all is not implemented nor stable. Work in progress.**
+**CAUTION: this project is in DRAFT mode, all is not implemented yet nor stable. Work in progress.**
 
 ## Command line syntax
 

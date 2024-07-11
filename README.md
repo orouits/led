@@ -183,13 +183,13 @@ Append replaced line(s)
  Join lines.
  This function needs selector `pack` mode to transmit all lines in the same buffer.
 
-`j|join`
+`j|join/`
 
 ### Delete blank function
 
  Delete blank lines.
 
-`db|delete_blank`
+`db|delete_blank/`
 
 ### Translate function
 

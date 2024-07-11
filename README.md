@@ -359,7 +359,7 @@ A register can be used into a substitue replace string with using `$R[N]` notati
 
 `r//1` => all the line into R1
 
-`r/(\w+),(\w+)/` => all the matching zone into R0, first capture into R1, second captureinto R2
+`r/(\w+),(\w+)/` => all the matching zone into R0, first capture into R1, second capture into R2
 
 Copy a register value (or part of the value) to line
 

@@ -156,15 +156,15 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
 
 ### Remove function
 
-Remove line
+Delete line
 
-`rm|remove/`
+`d|delete/`
 
 ### Insert function
 
 Insert replaced line(s)
 
-`ins|insert/[regex]/<replace>[/N]`
+`i|insert/[regex]/<replace>[/N]`
 
 - replace: the replaced string to insert before line
 - N: number of line inserted, default 1
@@ -173,7 +173,7 @@ Insert replaced line(s)
 
 Append replaced line(s)
 
-`app|append/[regex]/<replace>[/N]`
+`a|append/[regex]/<replace>[/N]`
 
 - replace: the replaced string to append after line
 - N: number of line appended, default 1
@@ -182,9 +182,9 @@ Append replaced line(s)
 
 Extract a range of characters in the line
 
-`rn|range/[regex]/N[/C]`
+`rn|range_sel/[regex]/N[/C]`
 
-`rnn|rangenot/[regex]/N[/C]`
+`rnu|range_unsel/[regex]/N[/C]`
 
 - N: from column, relative to the end of line if N is negative
 - C: character count, 1 by default

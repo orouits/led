@@ -182,8 +182,8 @@ Translate characters string of a matching regex.
 
 `tr|translate/[regex]/<src_chars>/<dst_chars>`
 
-- schars: a sequence of source characters to be replaced by dest characters
-- dchars: a sequence of dest characters
+- src_chars: a sequence of source characters to be replaced by dest characters
+- dst_chars: a sequence of dest characters
 
 
 ### Case functions

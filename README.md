@@ -154,7 +154,7 @@ PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc
     - e: PCRE2_SUBSTITUTE_EXTENDED
     - l: PCRE2_SUBSTITUTE_LITERAL
 
-### Remove function
+### Delete function
 
 Delete line
 

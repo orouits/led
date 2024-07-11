@@ -52,7 +52,7 @@ but PCRE2 regex engine is used.
 addressing examples:
 
 ```
-# output the fisrt line only
+# output the first line only
 cat file.txt | led 1
 
 # output the block of lines from line 10 and 3 next ones (including line 10)

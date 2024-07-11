@@ -35,11 +35,11 @@ The selector filters lines of input text that must be processed.
 
 Example:
 
-`cat <file> | grep Test`
+`cat <file> | led Test`
 
 is equivalent to:
 
-`cat <file> | led Test`
+`cat <file> | grep Test`
 
 but PCRE2 regex engine is used.
 

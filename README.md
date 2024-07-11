@@ -178,17 +178,18 @@ Append replaced line(s)
 - replace: the replaced string to append after line
 - N: number of line appended, default 1
 
-### Range function
+### Join function
 
-Extract a range of characters in the line
+ Join lines.
+ This function needs selector `pack` mode to transmit all lines in the same buffer.
 
-`rn|range_sel/[regex]/N[/C]`
+`j|join`
 
-`rnu|range_unsel/[regex]/N[/C]`
+### Delete blank function
 
-- N: from column, relative to the end of line if N is negative
-- C: character count, 1 by default
+ Delete blank lines.
 
+`db|delete_blank`
 
 ### Translate function
 
@@ -198,7 +199,6 @@ Translate characters string of a matching regex.
 
 - src_chars: a sequence of source characters to be replaced by dest characters
 - dst_chars: a sequence of dest characters
-
 
 ### Case functions
 
@@ -271,13 +271,6 @@ revert the char order of the line
 - N: extract the Nth field, by default the first one.
 - sep: separator chars
 
-### Join function
-
- Join lines.
- This function needs selector `pack` mode to transmit all lines in the same buffer.
-
-`j|join`
-
 ### Base64 encoding functions
 
  encode/decode lines.
@@ -345,6 +338,17 @@ Generate randomized characters
 
 - char: the character to repeat
 - N: char count, default is 1
+
+### Range function
+
+Extract a range of characters in the line
+
+`rn|range_sel/[regex]/N[/C]`
+
+`rnu|range_unsel/[regex]/N[/C]`
+
+- N: from column, relative to the end of line if N is negative
+- C: character count, 1 by default
 
 ### Register functions
 

@@ -465,7 +465,7 @@ for simple automatic word processing based on PCRE2 modern regular expressions.\
 ## Processor options\n\
     -m          output only processed maching zone when regex is used\n\
 \n\
-## Processor commands:\n\n\
+## Processor functions:\n\n\
 "
    );
     fprintf(stderr, "|%.5s|%.20s|%.10s|%.50s|%.40s|\n", DASHS, DASHS, DASHS, DASHS, DASHS);

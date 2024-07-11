@@ -81,12 +81,12 @@ void led_fn_impl_register_recall(led_fn_t* pfunc) {
 }
 
 void led_fn_helper_substitute(led_fn_t* pfunc, led_u8s_t* sinput, led_u8s_t* soutput) {
-    led_u8s_decl(rsval, LED_BUF_MAX);
+    led_u8s_decl(sreplace, LED_BUF_MAX);
     led_debug("led_fn_helper_substitute: Replace registers in substitute string (len=%d) %s", led_u8s_len(&pfunc->arg[0].lstr), led_u8s_str(&pfunc->arg[0].lstr));
 
     size_t i = 0;
     while ( i < led_u8s_len(&pfunc->arg[0].lstr) ) {
-        if (led_u8s_isfull(&rsval)) break;
+        if (led_u8s_isfull(&sreplace)) break;
         if (led_u8s_startswith_str_at(&pfunc->arg[0].lstr, "$R", i)) {
             size_t ir = 0;
             size_t in = i+2; // position of of register ID if given.
@@ -98,30 +98,50 @@ void led_fn_helper_substitute(led_fn_t* pfunc, led_u8s_t* sinput, led_u8s_t* sou
             while (j < led_u8s_len(&led.line_reg[ir].lstr)) {
                 u8c_t c = led_u8s_char_next(&led.line_reg[ir].lstr, &j);
                 if (c == '\\') // double anti slash to make it a true character
-                    led_u8s_app_char(&rsval, c);
-                led_u8s_app_char(&rsval, c);
+                    led_u8s_app_char(&sreplace, c);
+                led_u8s_app_char(&sreplace, c);
             }
             i = in; // position "i" at end of register mark
         }
         else {
             u8c_t c = led_u8s_char_next(&pfunc->arg[0].lstr, &i);
-            led_debug("led_fn_helper_substitute: append to rsval %c", c);
-            led_u8s_app_char(&rsval, c);
+            led_debug("led_fn_helper_substitute: append to sreplace %c", c);
+            led_u8s_app_char(&sreplace, c);
         }
     }
 
-    led_debug("Substitute input line (len=%d) to rsval (len=%d)", led_u8s_len(sinput), led_u8s_len(&rsval));
+    //TODO: must be optimized, should be done at initialization
+    uint32_t opts = 0;
+    if (pfunc->arg_count > 1) {
+        size_t i = 0;
+        while (i < led_u8s_len(&pfunc->arg[1].lstr))
+            switch (led_u8s_char_next(&pfunc->arg[1].lstr, &i)) {
+                case 'g':
+                    opts |= PCRE2_SUBSTITUTE_GLOBAL;
+                    break;
+                case 'e':
+                    opts |= PCRE2_SUBSTITUTE_EXTENDED;
+                    break;
+                case 'l':
+                    opts |= PCRE2_SUBSTITUTE_LITERAL;
+                    break;
+                default:
+                    break;
+            }
+    }
+
+    led_debug("Substitute input line (len=%d) to sreplace (len=%d)", led_u8s_len(sinput), led_u8s_len(&sreplace));
     PCRE2_SIZE len = led_u8s_size(soutput);
     int rc = pcre2_substitute(
                 pfunc->regex,
                 (PCRE2_UCHAR8*)led_u8s_str(sinput),
                 led_u8s_len(sinput),
                 0,
-                PCRE2_SUBSTITUTE_EXTENDED|PCRE2_SUBSTITUTE_GLOBAL,
+                opts,
                 NULL,
                 NULL,
-                (PCRE2_UCHAR8*)led_u8s_str(&rsval),
-                led_u8s_len(&rsval),
+                (PCRE2_UCHAR8*)led_u8s_str(&sreplace),
+                led_u8s_len(&sreplace),
                 (PCRE2_UCHAR8*)led_u8s_str(soutput),
                 &len);
     led_assert_pcre(rc);

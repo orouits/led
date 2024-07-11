@@ -47,7 +47,7 @@ pcre2_code* led_regex_compile(const char* pattern) {
     PCRE2_SIZE pcre_erroff;
     PCRE2_UCHAR pcre_errbuf[256];
     led_assert(pattern != NULL, LED_ERR_ARG, "Missing regex");
-    pcre2_code* regex = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, 0, &pcre_err, &pcre_erroff, NULL);
+    pcre2_code* regex = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, PCRE2_UTF, &pcre_err, &pcre_erroff, NULL);
     pcre2_get_error_message(pcre_err, pcre_errbuf, sizeof(pcre_errbuf));
     led_assert(regex != NULL, LED_ERR_PCRE, "Regex error \"%s\" offset %d: %s", pattern, pcre_erroff, pcre_errbuf);
     return regex;

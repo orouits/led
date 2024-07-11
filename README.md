@@ -56,7 +56,7 @@ Stop selection condition
 - an optional shift of positive cout of line after matching line (to be used with regex_stop)
 - the matching line is not included into the last selected block of lines.
 
-If start and stop conditions are defined it is possible to select several block of lines in the current text. Each time the start condition is met a new block of lines is selected until the stop condition is met. If the stop selection condition is not defined, only the lines matching the start condition are selected. 
+If start and stop conditions are defined it is possible to select several block of lines in the current text. Each time the start condition is met a new block of lines is selected until the stop condition is met. If the stop selection condition is not defined, only the lines matching the start condition are selected.
 
 #### Selector examples:
 
@@ -143,11 +143,14 @@ The `s|substitute` function allows to substitute string from a regex.
 PCRE2 library substitution feature is used (see https://www.pcre.org/current/doc/html/pcre2_substitute.html).
 `PCRE2_SUBSTITUTE_EXTENDED` option is used in order to have more substitution flexibility (see https://www.pcre.org/current/doc/html/pcre2api.html#SEC36).
 
-`s|substitute/[regex]/replace[/opt]`
+`s|substitute/[regex]/replace[/opts]`
 
 - regex: the search regex string
 - replace: the replace string
-- opts: character sequence of PCRE2 options (ge...)
+- opts: character sequence of PCRE2 options
+    - g: PCRE2_SUBSTITUTE_GLOBAL
+    - e: PCRE2_SUBSTITUTE_EXTENDED
+    - l: PCRE2_SUBSTITUTE_LITERAL
 
 ### Remove function
 

@@ -45,11 +45,20 @@ but PCRE2 regex engine is used.
 
 #### Selector syntax:
 
-- selector := [address_from [shift]] [address_to [shift]]
-- address  := regex|number
-- shift    := +number
+`led [regex_start|line_number [+shift]] [regex_stop|line_count [+shift]]`
 
-addressing examples:
+Start selection condition
+- the input line matches regex_start or the line number match line_number
+- an optional shift of positive cout of line after matching line (to be used with regex_start)
+
+Stop selection condition
+- the input line matches regex_stop or the line count from current selection starting point
+- an optional shift of positive cout of line after matching line (to be used with regex_stop)
+- the matching line is not included into the last selected block of lines.
+
+If start and stop conditions are defined it is possible to select several block of lines in the current text. Each time the start condition is met a new block of lines is selected until the stop condition is met. If the stop selection condition is not defined, only the lines matching the start condition are selected. 
+
+#### Selector examples:
 
 ```
 # output the first line only

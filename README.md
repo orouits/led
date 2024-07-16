@@ -480,4 +480,5 @@ On value (see -e):
 
 ## Future plans
 
-re-write **led** in Rust
+- add hash and encryption functions
+- re-write **led** in Rust

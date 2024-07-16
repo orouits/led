@@ -132,9 +132,7 @@ The first argment (arg0) is allways a `regex`. It is used to identify a matching
     - `function/Abc(\w+)/arg1`
     - the function is applied on the first capture zone only (for better context matching)
 
-- the argument separator can be replaced by `:` instead of `/` to facilitate the usage of `/` as char data.
-
-Arguments follows the regex.
+Arguments follows the regex, in some very few cases, the regex is not used due to the function itself.
 
 ## Processor functions reference
 
@@ -211,6 +209,8 @@ Convert to various case
 `csf|case_first/[regex]`
 
 `csc|case_camel/[regex]`
+
+`css|case_snake/[regex]`
 
 ### Quote functions
 
@@ -311,6 +311,8 @@ Modify file name in a line, path prefix is not modified.
 `fnl|fname_lower/[regex]`
 
 `fnu|fname_upper/[regex]`
+
+`fnf|fname_first/[regex]`
 
 `fnc|fname_camel/[regex]`
 

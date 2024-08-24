@@ -73,7 +73,7 @@ release: $(ARCNAME) VERSION
 	git add * || true
 	git commit -a -m "prepare release $(VERSION)"
 	git tag -a -f $(VERSION) -m "release $(VERSION)"
-	git push -f --delete origin $(VERSION)
+	git push --delete origin $(VERSION) || true
 	git push --all
 
 publish: clean release

@@ -58,3 +58,4 @@ dkms.conf
 **/*.pro.user
 debug
 test/**
+led_bin.tgz

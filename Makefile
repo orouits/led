@@ -68,7 +68,7 @@ $(ARCNAME): $(APP)
 	rm -f $(ARCNAME)
 	tar -czf $(ARCNAME) $(APP)
 
-release: $(ARCNAME)
+release: $(ARCNAME) VERSION
 	git pull
 	git add * || true
 	git commit -a -m "prepare release $(VERSION)"

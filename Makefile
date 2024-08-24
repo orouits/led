@@ -69,8 +69,10 @@ $(ARCNAME): $(APP)
 	tar -czf $(ARCNAME) $(APP)
 
 release: $(ARCNAME)
+	git pull
+	#git add *
 	git commit -a -m "prepare release $(VERSION)"
-	git tag -a $(VERSION) -m "release $(VERSION)"
+	git tag -a -f $(VERSION) -m "release $(VERSION)"
 	git push --tags
 
 publish: clean release

@@ -9,27 +9,32 @@ It aims to cover in one tool common text search/replace/process transformations 
 
 ## Command line syntax
 
-The **led** command line arguments is composed of section in the folling order:
+The **led** command line arguments is composed of sections in the folling order:
 
-`led [SELECTOR] [PROCESSOR] [-opts...] [-f] [FILES...]`
+```
+# direct invocation
+led [SELECTOR] [PROCESSOR] [-opts...] [-f] [FILES...]
 
-`cat [FILES...] | led [SELECTOR] [PROCESSOR] [-opts...]`
+# file content piped invocation
+cat [FILES...] | led [SELECTOR] [PROCESSOR] [-opts...]
 
-`ls [DIR] | led [SELECTOR] [PROCESSOR] [-opts...] -f`
+# file names piped invocation
+ls [DIR] | led [SELECTOR] [PROCESSOR] [-opts...] -f
+```
 
-- The options can be anywhere before -f option
+- The options (except -f) can be anywhere before -f one
 - The section recognition (selector, processor) depends on the arguments format and content.
+- STDIN / STDOUT shell pipelines are supported (file content or file names, see Invocation chapter)
+- UTF8 is supported.
+
+### Principle
 
 The global Led text processing pipeline is simple:
-
 - For each input file and each line of file:
     - read line ==> select line ==> process line ==> write line
 
 The selector is defined once, the processor is composed of 0 (not defined) to 16 functions.
-
-- When led is used only with the selector (no processor), it is similar to a simple **grep** usage (filter).
-
-UTF8 is supported.
+- Using led without any processor (only selector), is similar to **grep** usage (filter only).
 
 ### The selector
 

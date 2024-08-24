@@ -126,6 +126,14 @@ typedef struct {
     led_u8s_init(&VAR,VAR##_buf,SRC.len); \
     led_u8s_cpy(&VAR, &SRC)
 
+#define led_u8s_foreach_char(VAR) \
+    size_t i = 0; \
+    for (u8c_t c = led_u8s_char_at(VAR, i); i < led_u8s_len(VAR); c = led_u8s_char_next(VAR, &i))
+
+#define led_u8s_foreach_char_zone(VAR, START, STOP) \
+    size_t i = START; \
+    for (u8c_t c = led_u8s_char_at(VAR, i); i < STOP; c = led_u8s_char_next(VAR, &i))
+
 inline size_t led_u8s_len(led_u8s_t* lstr) {
     return lstr->len;
 }

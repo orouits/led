@@ -14,6 +14,7 @@ SOURCES     = $(wildcard *.c)
 OBJECTS		= $(patsubst %.c,%.o,$(SOURCES))
 APP			= led
 APPTEST 	= $(APP)test
+ARCNAME		= $(APP)_bin.tgz
 LIBS        = -lpcre2-8 -lb64
 VERSION     = 1.0.0
 INSTALLDIR  = /usr/local/bin/
@@ -41,6 +42,7 @@ $(HOME)/.local/bin/$(APP):
 clean:
 	rm -f *.o $(APP) $(APP)test
 	rm -f ~/.local/bin/$(APP)
+	rm -f *.tgz
 
 distclean: clean
 
@@ -60,4 +62,16 @@ uninstall:
 	sudo rm -f $(INSTALLDIR)$(APP)
 
 deb: $(APP)
-	# not implemented
+	#not implemented
+
+$(ARCNAME): $(APP)
+	rm -f $(ARCNAME)
+	tar -czf $(ARCNAME) $(APP)
+
+release: $(ARCNAME)
+	git commit -a -m "prepare release $(VERSION)"
+	#git tag -a $(VERSION) -m "release $(VERSION)"
+	#git push --tags
+
+publish: clean release
+	#not implemented

@@ -636,9 +636,7 @@ void led_fn_impl_field_space(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, " 
 void led_fn_impl_field_mixed(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, ",; \t\n"); }
 
 void led_fn_impl_join(led_fn_t*) {
-    size_t i = 0;
-    while ( i < led_u8s_len(&led.line_prep.lstr) ) {
-        u8c_t c = led_u8s_char_next(&led.line_prep.lstr, &i);
+    led_u8s_foreach_char(&led.line_prep.lstr) {
         if ( c != '\n') led_u8s_app_char(&led.line_write.lstr, c);
     }
 }
@@ -649,9 +647,7 @@ void led_fn_impl_split_base(led_fn_t* pfunc, const char* field_sep) {
     led_u8s_decl_str(sepsval, field_sep);
     led_zone_pre_process(pfunc);
 
-    size_t i = led.line_prep.zone_start;
-    while ( i < led_u8s_len(&led.line_prep.lstr) ) {
-        u8c_t c = led_u8s_char_next(&led.line_prep.lstr, &i);
+    led_u8s_foreach_char_zone(&led.line_prep.lstr, led.line_prep.zone_start, led_u8s_len(&led.line_prep.lstr)) {
         if ( led_u8s_ischar(&sepsval, c) ) c = '\n';
         led_u8s_app_char(&led.line_write.lstr, c);
     }
@@ -841,7 +837,7 @@ led_fn_desc_t LED_FN_TABLE[] = {
     { "qtd", "quote_double", &led_fn_impl_quote_double, "", "Quote double", "qd/[regex]" },
     { "qtb", "quote_back", &led_fn_impl_quote_back, "", "Quote back", "qb/[regex]" },
     { "qtr", "quote_remove", &led_fn_impl_quote_remove, "", "Quote remove", "qr/[regex]" },
-    { "sp", "split", &led_fn_impl_split, "", "Split using characters", "sp/[regex]/chars" },
+    { "sp", "split", &led_fn_impl_split, "S", "Split using characters", "sp/[regex]/chars" },
     { "spc", "split_csv", &led_fn_impl_split_csv, "", "Split using comma", "spc/[regex]" },
     { "sps", "split_space", &led_fn_impl_split_space, "", "Split using space", "sps/[regex]" },
     { "spm", "split_mixed", &led_fn_impl_split_mixed, "", "Split using comma and space", "spm/[regex]" },

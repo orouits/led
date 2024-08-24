@@ -70,8 +70,8 @@ $(ARCNAME): $(APP)
 
 release: $(ARCNAME)
 	git commit -a -m "prepare release $(VERSION)"
-	#git tag -a $(VERSION) -m "release $(VERSION)"
-	#git push --tags
+	git tag -a $(VERSION) -m "release $(VERSION)"
+	git push --tags
 
 publish: clean release
 	#not implemented

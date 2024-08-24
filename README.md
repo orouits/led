@@ -119,7 +119,7 @@ The global format is `function/[regex][/arg1][/arg2]...`
 Each function has a short name and a long name
 - example:  `s|substitute`
 
-The first argment (arg0) is allways a `regex`. It is used to identify a matching zone where the function is applied in the input line.
+The first argment (arg0) is allways a `regex`. It is used to identify a matching zone of the current line where the function is applied.
 
 - if the regex is NOT defined (empty)
     - `function/`
@@ -135,9 +135,9 @@ The first argment (arg0) is allways a `regex`. It is used to identify a matching
 - if the regex is defined with capture block (...)
     - `function/Abc(\w+)/`
     - `function/Abc(\w+)/arg1`
-    - the function is applied on the first capture zone only (for better context matching)
+    - the function is applied on the first capture group only (allows improved zone definition)
 
-Arguments follows the regex, in some very few cases, the regex is not used due to the function itself.
+*Depending on the function, in some few cases, the regex can define multiple capture groups or can be not used*.
 
 ## Processor functions reference
 
@@ -352,9 +352,11 @@ Extract a range of characters in the line
 
 `rn|range_sel/[regex]/N[/C]`
 
+Extract all characters in the line except for the range given
+
 `rnu|range_unsel/[regex]/N[/C]`
 
-- N: from column, relative to the end of line if N is negative
+- N: first column (if N is negative, it is relative to the end of line)
 - C: character count, 1 by default
 
 ### Register functions

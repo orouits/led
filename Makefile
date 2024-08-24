@@ -64,7 +64,7 @@ uninstall:
 deb: $(APP)
 	#not implemented
 
-$(ARCNAME): $(APP)
+$(ARCNAME): all
 	rm -f $(ARCNAME)
 	tar -czf $(ARCNAME) $(APP)
 

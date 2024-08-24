@@ -74,7 +74,7 @@ release: $(ARCNAME) VERSION
 	git commit -a -m "prepare release $(VERSION)"
 	git tag -a -f $(VERSION) -m "release $(VERSION)"
 	git push --delete origin $(VERSION) || true
-	git push --all
+	git push --all --tags
 
 publish: clean release
 	#not implemented

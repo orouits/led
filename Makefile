@@ -70,7 +70,7 @@ $(ARCNAME): $(APP)
 
 release: $(ARCNAME)
 	git pull
-	#git add *
+	git add * || true
 	git commit -a -m "prepare release $(VERSION)"
 	git tag -a $(VERSION) -m "release $(VERSION)"
 	git push --tags

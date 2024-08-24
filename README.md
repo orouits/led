@@ -392,30 +392,39 @@ Copy a register value (or part of the value) to line
 
 ## Invocation
 
-4 way to invoque **led**:
-* pipe mode
+Ther is 4 ways to invoque **led**:
 * direct mode with files
-* advanced pipe mode with files
+* pipe mode with content
+* pipe mode with file names (massive changes)
+* advanced pipe mode with file names (advanced massive changes)
 
-### Pipe mode
-
-`cat <file> | led ...`
-
-this is the default mode when the `[files]` section is not given.
-
-### Direct mode with files
+### Direct mode with file names
 
 `led ... -f <file> <file> ...`
 
-the **-f** option must be the last option, every subsequent argument is considered as an intput file name.
+the `-f` option must be the last option, every subsequent argument is considered as an intput file name.
 
-### Advanced pipe mode with files
+### Pipe mode with content
 
-`find <rootdir> -name <filespec> | led ... -f`
+`cat <file> | led ...`
 
-the file section is limitted to the **-f** option without any files behind. It tells led to read file names from STDIN.
+this is the default mode when the `-f` option is not given.
 
-see options -F, -W, -A, -E, -D to ouput filenames and build multiple changes on multiple files
+### Pipe mode with file names
+
+`find <dir> | led ... -f`
+
+the last argument is the `-f` option without any files behind. It tells led to read file names from STDIN.
+
+This allows massive changes on multiple files.
+
+### Advanced pipe mode with file names
+
+`find <dir> | led ... -F -f | led ... -F -f | ...`
+
+See options -F, -W, -A, -E, -D and examples to ouput filenames instead of content.
+
+This allows multiple led invocations on multiple files and file trees.
 
 ## Options
 
@@ -427,12 +436,15 @@ see options -F, -W, -A, -E, -D to ouput filenames and build multiple changes on 
 
 ### File options
 
-- `-f` read filenames to STDIN instead of content, or from command line if followd by arguments as file names (file section)
-- `-F` write filenames to STDOUT instead of content. This option is made to be used with advanced pipe mode with files to build a pipeline of multiple led transformation chained on multiple files.
+- `-f` read file names (paths) from STDIN instead of content, or from command line if followed by arguments as file names (file section)
+
+following file options write filenames to STDOUT instead of file content. It allows advanced pipe mode on chained led invocations on multiple given files from STDIN. `-f` option is mandatory to use them.
+
+- `-F` change each input file inplace.
 - `-W<path>` write content to a fixed file
 - `-A<path>` append content to a fixed file
-- `-E<ext>`  write content to filename.ext
-- `-D<dir>`  write files in dir.
+- `-E<ext>`  write content to <file>.ext
+- `-D<dir>`  write to same file names in a given target dir.
 
 ### Execution option
 
@@ -477,7 +489,7 @@ On value (see -e):
 
 ### massive multi change inplace:
 
-`ls *.txt | led s/<regex>/<replace> s/<regex>/<replace>  ... -F -f`
+`ls -1 *.txt | led s/<regex>/<replace> s/<regex>/<replace>  ... -F -f`
 
 ### massive command execution (rename files in camel case)
 

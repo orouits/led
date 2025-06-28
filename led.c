@@ -294,6 +294,12 @@ void led_init(size_t argc, char* argv[]) {
         if (arg_section == ARGS_SEC_FILES) {
             led.file_names = argv + foreach.i;
             led.file_count = argc - foreach.i;
+            
+            // If we found at least one file on the command line, do not read from stdin.
+            if (led.file_count > 0) {
+                led.opt.had_cmd_line_files = true;
+            }
+
             led_debug("led_init: arg is file names with count=%lu", led.file_count);
             break;
         }
@@ -423,16 +429,22 @@ void led_file_open_in() {
         led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_str_str(&led.file_in.name));
         led.report.file_in_count++;
     }
-    else if (led.stdin_ispipe) {
+    // Only try to read from stdin if it's a pipe AND we didn't
+    // have files on the command line to begin with.
+    else if (led.stdin_ispipe && !led.opt.had_cmd_line_files) {
         char buf_fname[LED_FNAME_MAX+1];
         char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
         if (fname) {
             led_str_cpy_str(&led.file_in.name, fname);
             led_str_trim(&led.file_in.name);
-            led_debug("led_file_open_in: open file from stdin=%s", led_str_str(&led.file_in.name));
-            led.file_in.file = fopen(led_str_str(&led.file_in.name), "r");
-            led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_str_str(&led.file_in.name));
-            led.report.file_in_count++;
+            if (!led_str_isempty(&led.file_in.name)) {
+                led_debug("led_file_open_in: open file from stdin=%s", led_str_str(&led.file_in.name));
+                led.file_in.file = fopen(led_str_str(&led.file_in.name), "r");
+                led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_str_str(&led.file_in.name));
+                led.report.file_in_count++;
+            } else {
+                led_debug("led_file_open_in: empty line from stdin, stopping");
+            }
         }
     }
 }

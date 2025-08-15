@@ -446,7 +446,7 @@ Copy a register value (or part of the value) to line
 ### Selector options
 
 - `-n` invert selection
-- `-b` selected lines as blocks.
+- `-p` pack contiguous selected line in one multi-line before function processing
 - `-s` output only selected
 
 ### File options

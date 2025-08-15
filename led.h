@@ -531,7 +531,7 @@ inline led_str_t* led_str_dirname(led_str_t* lstr) {
 #define LED_RGX_GROUP_MATCH 2
 
 extern pcre2_code* LED_REGEX_ALL_LINE;
-extern pcre2_code* LED_REGEX_ALL_MULTILINE;
+extern pcre2_code* LED_REGEX_ALL_PACKEDLINES;
 extern pcre2_code* LED_REGEX_BLANK_LINE;
 extern pcre2_code* LED_REGEX_INTEGER;
 extern pcre2_code* LED_REGEX_REGISTER;
@@ -562,7 +562,7 @@ inline bool led_str_isblank(led_str_t* lstr) {
 // LED constants
 //-----------------------------------------------
 
-#define LED_BUF_MAX 0x8000
+#define LED_BUF_MAX 0x10000 //64KB
 #define LED_FARG_MAX 3
 #define LED_SEL_MAX 2
 #define LED_FUNC_MAX 16

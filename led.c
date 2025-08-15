@@ -151,7 +151,7 @@ bool led_init_func(led_str_t* arg) {
         led_str_cut_next(arg, fsep, &regx);
         if (!led_str_isempty(&regx)) {
             led_debug("led_init_func: regex found=%s", led_str_str(&regx));
-            pfunc->regex = led_str_regex_compile(&regx, led.opt.pack_selected ? PCRE2_MULTILINE: 0);
+            pfunc->regex = led_str_regex_compile(&regx, led.opt.pack_selected ? PCRE2_DOTALL: 0);
         }
         else {
             led_debug("led_init_func: regex NOT found, no zone selection");
@@ -461,7 +461,7 @@ void led_file_open_out() {
     }
     else if (led.opt.file_out == LED_OUTPUT_FILE_APPEND) {
         led_str_cpy(&led.file_out.name, &led.opt.file_out_path);
-        mode = "a";
+        mode = "a+";
     }
     else if (led.opt.file_out == LED_OUTPUT_FILE_NEWEXT) {
         led_str_cpy(&led.file_out.name, &led.file_in.name);

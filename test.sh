@@ -122,6 +122,20 @@ if [[ $TEST == 13 || $TEST == all ]]; then
     ls $TEST_DIR/files_to_mv/* | $SCRIPT_DIR/led -v she// r// shu// fnc// 's//mv $R $0/' -X || exit 1
 fi
 
+if [[ $TEST == 14 || $TEST == all ]]; then
+    echo -e "\ntest 14:"
+    cat - > $TEST_DIR/files_in/multiline.txt<<EOT
+FLAG
+EXISTING LINE 1
+EXISTING LINE 2
+FLAG
+EXISTING LINE 3
+EXISTING LINE 4
+EOT
+    $SCRIPT_DIR/led -v -p 's/[^a]EXISTING.*LINE..$/replaced/'  -W$TEST_DIR/files_out/multiline.txt -f $TEST_DIR/files_in/multiline.txt || exit 1
+cat $TEST_DIR/files_out/multiline.txt
+fi
+
 echo -e "\nfiles:"
 ls -1 $TEST_DIR/files_in/*
 ls -1 $TEST_DIR/files_out/*

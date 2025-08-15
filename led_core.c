@@ -50,7 +50,7 @@ void led_free() {
     }
     led_foreach_pval(led.func_list) {
         // do not free STD regex here.
-        if (foreach.pval->regex == LED_REGEX_ALL_LINE || foreach.pval->regex == LED_REGEX_ALL_MULTILINE) continue;
+        if (foreach.pval->regex == LED_REGEX_ALL_LINE || foreach.pval->regex == LED_REGEX_ALL_PACKEDLINES) continue;
         if (foreach.pval->regex != NULL) {
             pcre2_code_free(foreach.pval->regex);
             foreach.pval->regex = NULL;
@@ -97,7 +97,7 @@ void led_debug(const char* message, ...) {
 //-----------------------------------------------
 
 pcre2_code* LED_REGEX_ALL_LINE;
-pcre2_code* LED_REGEX_ALL_MULTILINE;
+pcre2_code* LED_REGEX_ALL_PACKEDLINES;
 pcre2_code* LED_REGEX_BLANK_LINE;
 pcre2_code* LED_REGEX_INTEGER;
 pcre2_code* LED_REGEX_REGISTER;
@@ -106,7 +106,7 @@ pcre2_code* LED_REGEX_FUNC2;
 
 void led_regex_init() {
     LED_REGEX_ALL_LINE = led_regex_compile("^.*$",0);
-    LED_REGEX_ALL_MULTILINE = led_regex_compile(".*", PCRE2_MULTILINE);
+    LED_REGEX_ALL_PACKEDLINES = led_regex_compile(".*", PCRE2_DOTALL);
     LED_REGEX_BLANK_LINE = led_regex_compile("^[ \t]*$",0);
     LED_REGEX_INTEGER = led_regex_compile("^[0-9]+$",0);
     LED_REGEX_REGISTER = led_regex_compile("\\$R[0-9]?",0);
@@ -116,7 +116,7 @@ void led_regex_init() {
 
 void led_regex_free() {
     if (LED_REGEX_ALL_LINE != NULL) { pcre2_code_free(LED_REGEX_ALL_LINE); LED_REGEX_ALL_LINE = NULL; }
-    if (LED_REGEX_ALL_MULTILINE != NULL) { pcre2_code_free(LED_REGEX_ALL_LINE); LED_REGEX_ALL_LINE = NULL; }
+    if (LED_REGEX_ALL_PACKEDLINES != NULL) { pcre2_code_free(LED_REGEX_ALL_LINE); LED_REGEX_ALL_LINE = NULL; }
     if (LED_REGEX_BLANK_LINE != NULL) { pcre2_code_free(LED_REGEX_BLANK_LINE); LED_REGEX_BLANK_LINE = NULL; }
     if (LED_REGEX_INTEGER != NULL) { pcre2_code_free(LED_REGEX_INTEGER); LED_REGEX_INTEGER = NULL; }
     if (LED_REGEX_REGISTER != NULL) { pcre2_code_free(LED_REGEX_REGISTER); LED_REGEX_REGISTER = NULL; }

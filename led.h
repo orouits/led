@@ -28,6 +28,10 @@
 #include <libgen.h>
 #include <stdbool.h>
 
+#ifdef WIN32
+#define realpath(N,R) _fullpath((R),(N),PATH_MAX)
+#endif
+
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -713,6 +717,7 @@ typedef struct {
         bool file_out_unchanged;
         bool file_out_extn;
         bool exec;
+        bool had_cmd_line_files;
         led_str_t file_out_ext;
         led_str_t file_out_dir;
         led_str_t file_out_path;

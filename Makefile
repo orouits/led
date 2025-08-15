@@ -40,7 +40,7 @@ $(HOME)/.local/bin/$(APP):
 	ln -s -f $(SOURCEDIR)$(APP) $@
 
 clean:
-	rm -f *.o $(APP) $(APP)test
+	rm -f *.o $(APP) $(APP)test $(APPTEST)
 	rm -f ~/.local/bin/$(APP)
 	rm -f *.tgz
 	rm -rf test

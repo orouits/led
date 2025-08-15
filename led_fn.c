@@ -202,7 +202,8 @@ void led_fn_impl_delete(led_fn_t* pfunc) {
         led_zn_post_process();
 }
 
-void led_fn_impl_delete_blank(led_fn_t*) {
+void led_fn_impl_delete_blank(led_fn_t* pfunc) {
+    (void) pfunc;
     if (led_str_isempty(&led.line_prep.lstr) || led_str_isblank(&led.line_prep.lstr))
         led_line_reset(&led.line_write);
     else
@@ -635,7 +636,8 @@ void led_fn_impl_field_csv(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, ",;"
 void led_fn_impl_field_space(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, " \t\n"); }
 void led_fn_impl_field_mixed(led_fn_t* pfunc) { led_fn_impl_field_base(pfunc, ",; \t\n"); }
 
-void led_fn_impl_join(led_fn_t*) {
+void led_fn_impl_join(led_fn_t* pfunc) {
+    (void) pfunc;
     led_str_foreach_uchar(&led.line_prep.lstr) {
         if (foreach.uc != '\n') led_str_app_uchar(&led.line_write.lstr, foreach.uc);
     }

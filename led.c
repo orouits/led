@@ -18,6 +18,12 @@
  ***************************************************************************/
 
 #include "led.h"
+#include <stdlib.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 bool led_init_opt(led_str_t* arg) {
     bool rc = led_str_match_pat(arg, "^-[a-zA-Z]+");
@@ -288,6 +294,12 @@ void led_init(size_t argc, char* argv[]) {
         if (arg_section == ARGS_SEC_FILES) {
             led.file_names = argv + foreach.i;
             led.file_count = argc - foreach.i;
+            
+            // If we found at least one file on the command line, do not read from stdin.
+            if (led.file_count > 0) {
+                led.opt.had_cmd_line_files = true;
+            }
+
             led_debug("led_init: arg is file names with count=%lu", led.file_count);
             break;
         }
@@ -417,16 +429,22 @@ void led_file_open_in() {
         led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_str_str(&led.file_in.name));
         led.report.file_in_count++;
     }
-    else if (led.stdin_ispipe) {
+    // Only try to read from stdin if it's a pipe AND we didn't
+    // have files on the command line to begin with.
+    else if (led.stdin_ispipe && !led.opt.had_cmd_line_files) {
         char buf_fname[LED_FNAME_MAX+1];
         char* fname = fgets(buf_fname, LED_FNAME_MAX, stdin);
         if (fname) {
             led_str_cpy_str(&led.file_in.name, fname);
             led_str_trim(&led.file_in.name);
-            led_debug("led_file_open_in: open file from stdin=%s", led_str_str(&led.file_in.name));
-            led.file_in.file = fopen(led_str_str(&led.file_in.name), "r");
-            led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_str_str(&led.file_in.name));
-            led.report.file_in_count++;
+            if (!led_str_isempty(&led.file_in.name)) {
+                led_debug("led_file_open_in: open file from stdin=%s", led_str_str(&led.file_in.name));
+                led.file_in.file = fopen(led_str_str(&led.file_in.name), "r");
+                led_assert(led.file_in.file != NULL, LED_ERR_FILE, "File not found: %s", led_str_str(&led.file_in.name));
+                led.report.file_in_count++;
+            } else {
+                led_debug("led_file_open_in: empty line from stdin, stopping");
+            }
         }
     }
 }
@@ -716,8 +734,53 @@ void led_report() {
 //-----------------------------------------------
 
 int main(int argc, char* argv[]) {
-    led_init(argc, argv);
+#ifdef _WIN32
+    // Suppress unused parameter warning for argc argv on Windows
+    (void)argc;
+    (void)argv;
+    
+    // On Windows, get wide-character command line arguments
+    int wargc;
+    wchar_t** wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+    if (wargv == NULL) {
+        return 1; // Error handling
+    }
 
+    // Allocate new argv for UTF-8 strings
+    char** new_argv = malloc((wargc + 1) * sizeof(char*));
+    if (new_argv == NULL) {
+        LocalFree(wargv);
+        return 1;
+    }
+
+    // Convert each wide-character argument to UTF-8
+    for (int i = 0; i < wargc; i++) {
+        int len = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL, NULL);
+        if (len == 0) {
+            for (int j = 0; j < i; j++) free(new_argv[j]);
+            free(new_argv);
+            LocalFree(wargv);
+            return 1;
+        }
+        new_argv[i] = malloc(len);
+        if (new_argv[i] == NULL) {
+            for (int j = 0; j < i; j++) free(new_argv[j]);
+            free(new_argv);
+            LocalFree(wargv);
+            return 1;
+        }
+        WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, new_argv[i], len, NULL, NULL);
+    }
+    new_argv[wargc] = NULL;
+
+    // Use the new UTF-8 arguments
+    led_init(wargc, new_argv);
+#else
+    // On Linux, use the original arguments
+    led_init(argc, argv);
+#endif
+
+    // Original program logic
     if (led.opt.help)
         led_help();
     else
@@ -737,5 +800,15 @@ int main(int argc, char* argv[]) {
     if (led.opt.report)
         led_report();
     led_free();
+
+#ifdef _WIN32
+    // Clean up allocated memory on Windows
+    for (int i = 0; i < wargc; i++) {
+        free(new_argv[i]);
+    }
+    free(new_argv);
+    LocalFree(wargv);
+#endif
+
     return 0;
 }

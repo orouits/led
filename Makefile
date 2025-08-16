@@ -16,7 +16,7 @@ APP			= led
 APPTEST 	= $(APP)_utest
 ARCNAME		= $(APP)-linux-amd64.tgz
 LIBS        = -lpcre2-8 -lb64
-VERSION     = 1.0.3
+VERSION     = 1.0.4
 INSTALLDIR  = /usr/local/bin/
 
 ####### Build rules

@@ -566,7 +566,7 @@ inline bool led_str_isblank(led_str_t* lstr) {
 // LED constants
 //-----------------------------------------------
 
-#define LED_BUF_MAX 0x10000 //64KB
+#define LED_BUF_MAX 0x80000 //512KB
 #define LED_FARG_MAX 3
 #define LED_SEL_MAX 2
 #define LED_FUNC_MAX 16
